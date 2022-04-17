@@ -136,8 +136,9 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		fmt.Printf("Got chat message: %+v\n", chatMessage)
 
 		// Discord integration
-		s.server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
-
+		if chatMessage.Type == binpacket.ChatTypeLocal || chatMessage.Type == binpacket.ChatTypeParty {
+			s.server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
+		}
 		// RAVI COMMANDS V2
 		if strings.HasPrefix(chatMessage.Message, "!ravi") {
 			if checkRaviSemaphore(s) {
