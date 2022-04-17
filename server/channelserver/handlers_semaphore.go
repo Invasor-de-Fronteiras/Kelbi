@@ -10,9 +10,6 @@ import (
 func removeSessionFromSemaphore(s *Session) {
 	s.server.semaphoreLock.Lock()
 	for _, semaphore := range s.server.semaphore {
-		if _, exists := semaphore.reservedClientSlots[s.charID]; exists {
-			delete(semaphore.reservedClientSlots, s.charID)
-		}
 		if _, exists := semaphore.clients[s]; exists {
 			delete(semaphore.clients, s)
 		}
@@ -30,53 +27,53 @@ func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysDeleteSemaphore)
 	sem := pkt.AckHandle
 	if s.server.semaphore != nil {
-	s.server.semaphoreLock.Lock()
-	for id := range s.server.semaphore {
-		switch sem {
-		case 917533:
-			if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k3" {
-				delete(s.server.semaphore["hs_l0u3B51J9k3"].reservedClientSlots, s.charID)
-				delete(s.server.semaphore["hs_l0u3B51J9k3"].clients, s)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k3" {
-				delete(s.server.semaphore["hs_l0u3B5129k3"].reservedClientSlots, s.charID)
-				delete(s.server.semaphore["hs_l0u3B5129k3"].clients, s)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak3" {
-				delete(s.server.semaphore["hs_l0u3B512Ak3"].reservedClientSlots, s.charID)
-				delete(s.server.semaphore["hs_l0u3B512Ak3"].clients, s)
-			}
-		case 851997:
-			if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k4" {
-				delete(s.server.semaphore["hs_l0u3B51J9k4"].reservedClientSlots, s.charID)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k4" {
-				delete(s.server.semaphore["hs_l0u3B5129k4"].reservedClientSlots, s.charID)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak4" {
-				delete(s.server.semaphore["hs_l0u3B512Ak4"].reservedClientSlots, s.charID)
-			}
-		case 786461:
-			if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k5" {
-				delete(s.server.semaphore["hs_l0u3B51J9k5"].reservedClientSlots, s.charID)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k5" {
-				delete(s.server.semaphore["hs_l0u3B5129k5"].reservedClientSlots, s.charID)
-			} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak5" {
-				delete(s.server.semaphore["hs_l0u3B512Ak5"].reservedClientSlots, s.charID)
-			}
-		default:
-			if len(s.server.semaphore[id].reservedClientSlots) != 0 {
-				if s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k3" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k4" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k5" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k3" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k4" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k5" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak3" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak4" &&
-				s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak5" {
-					delete(s.server.semaphore[id].reservedClientSlots, s.charID)
+		s.server.semaphoreLock.Lock()
+		for id := range s.server.semaphore {
+			switch sem {
+			case 917533:
+				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k3" {
+					delete(s.server.semaphore["hs_l0u3B51J9k3"].reservedClientSlots, s.charID)
+					delete(s.server.semaphore["hs_l0u3B51J9k3"].clients, s)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k3" {
+					delete(s.server.semaphore["hs_l0u3B5129k3"].reservedClientSlots, s.charID)
+					delete(s.server.semaphore["hs_l0u3B5129k3"].clients, s)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak3" {
+					delete(s.server.semaphore["hs_l0u3B512Ak3"].reservedClientSlots, s.charID)
+					delete(s.server.semaphore["hs_l0u3B512Ak3"].clients, s)
+				}
+			case 851997:
+				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k4" {
+					delete(s.server.semaphore["hs_l0u3B51J9k4"].reservedClientSlots, s.charID)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k4" {
+					delete(s.server.semaphore["hs_l0u3B5129k4"].reservedClientSlots, s.charID)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak4" {
+					delete(s.server.semaphore["hs_l0u3B512Ak4"].reservedClientSlots, s.charID)
+				}
+			case 786461:
+				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k5" {
+					delete(s.server.semaphore["hs_l0u3B51J9k5"].reservedClientSlots, s.charID)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k5" {
+					delete(s.server.semaphore["hs_l0u3B5129k5"].reservedClientSlots, s.charID)
+				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak5" {
+					delete(s.server.semaphore["hs_l0u3B512Ak5"].reservedClientSlots, s.charID)
+				}
+			default:
+				if len(s.server.semaphore[id].reservedClientSlots) != 0 {
+					if s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k3" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k4" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k5" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k3" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k4" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k5" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak3" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak4" &&
+						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak5" {
+						delete(s.server.semaphore[id].reservedClientSlots, s.charID)
+					}
 				}
 			}
 		}
-	}
-	s.server.semaphoreLock.Unlock()
+		s.server.semaphoreLock.Unlock()
 	}
 }
 
@@ -135,7 +132,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) { }
+func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysReleaseSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	//pkt := p.(*mhfpacket.MsgSysReleaseSemaphore)

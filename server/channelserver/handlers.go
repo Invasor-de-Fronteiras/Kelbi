@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
-  "fmt"
 	"time"
 
 	"github.com/Andoryuuta/byteframe"
@@ -182,16 +182,12 @@ func logoutPlayer(s *Session) {
 		return
 	}
 
-	s.stage.RLock()
-	for client := range s.stage.clients {
-		client.QueueSendMHF(&mhfpacket.MsgSysDeleteUser{
-			CharID: s.charID,
-		})
-	}
-	s.stage.RUnlock()
+	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
+		CharID: s.charID,
+	}, s)
 
-  delete(s.server.sessions, s.rawConn)
-  s.rawConn.Close()
+	delete(s.server.sessions, s.rawConn)
+	s.rawConn.Close()
 
 	if s.server.erupeConfig.DevModeOptions.ServerName != "" {
 		_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_name=$2", uint32(len(s.server.sessions)), s.server.erupeConfig.DevModeOptions.ServerName)
@@ -199,6 +195,14 @@ func logoutPlayer(s *Session) {
 			panic(err)
 		}
 	}
+
+	s.server.Lock()
+	for _, stage := range s.server.stages {
+		if _, exists := stage.reservedClientSlots[s.charID]; exists {
+			delete(stage.reservedClientSlots, s.charID)
+		}
+	}
+	s.server.Unlock()
 
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
@@ -298,7 +302,7 @@ func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		bf.WriteUint8(0x02) // Unk
 		bf.WriteUint8(0x00) // Unk
-		bf.WriteUint16(uint16(pkt.ServerChannelIDLength+1))
+		bf.WriteUint16(uint16(pkt.ServerChannelIDLength + 1))
 		bf.WriteNullTerminatedBytes([]byte(pkt.ServerChannelIDString))
 		// Normally you would lock the guild semaphore here by passing this
 		// to the EntranceServer, but that feature sucks.
@@ -550,365 +554,1192 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfEnumerateGuacot(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
-    var data bool
-    err :=  s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1",s.charID).Scan(&data)
-    if err ==nil {
-        tempresp := byteframe.NewByteFrame()
-        count := uint16(0)
-        var gook0 []byte
-        var gook1 []byte
-        var gook2 []byte
-        var gook3 []byte
-        var gook4 []byte
-        var gook5 []byte
-        var gook0status bool
-        var gook1status bool
-        var gook2status bool
-        var gook3status bool
-        var gook4status bool
-        var gook5status bool
-        _ =  s.server.db.QueryRow("SELECT gook0 FROM gook WHERE id = $1",s.charID).Scan(&gook0)
-        _ =  s.server.db.QueryRow("SELECT gook1 FROM gook WHERE id = $1",s.charID).Scan(&gook1)
-        _ =  s.server.db.QueryRow("SELECT gook2 FROM gook WHERE id = $1",s.charID).Scan(&gook2)
-        _ =  s.server.db.QueryRow("SELECT gook3 FROM gook WHERE id = $1",s.charID).Scan(&gook3)
-        _ =  s.server.db.QueryRow("SELECT gook4 FROM gook WHERE id = $1",s.charID).Scan(&gook4)
-        _ =  s.server.db.QueryRow("SELECT gook5 FROM gook WHERE id = $1",s.charID).Scan(&gook5)
-        _ =  s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1",s.charID).Scan(&gook0status)
-        _ =  s.server.db.QueryRow("SELECT gook1status FROM gook WHERE id = $1",s.charID).Scan(&gook1status)
-        _ =  s.server.db.QueryRow("SELECT gook2status FROM gook WHERE id = $1",s.charID).Scan(&gook2status)
-        _ =  s.server.db.QueryRow("SELECT gook3status FROM gook WHERE id = $1",s.charID).Scan(&gook3status)
-        _ =  s.server.db.QueryRow("SELECT gook4status FROM gook WHERE id = $1",s.charID).Scan(&gook4status)
-        _ =  s.server.db.QueryRow("SELECT gook5status FROM gook WHERE id = $1",s.charID).Scan(&gook5status)
-        if gook0status == true {
-            count++
-            tempresp.WriteBytes(gook0)
-        }
-        if gook1status == true {
-            count++
-            tempresp.WriteBytes(gook1)
-        }
-        if gook2status == true {
-            count++
-            tempresp.WriteBytes(gook2)
-        }
-        if gook3status == true {
-            count++
-            tempresp.WriteBytes(gook3)
-        }
-        if gook4status == true {
-            count++
-            tempresp.WriteBytes(gook4)
-        }
-        if gook5status == true {
-            count++
-            tempresp.WriteBytes(gook5)
-        }
-        if count == uint16(0) {
-            doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-        } else {
-            resp:= byteframe.NewByteFrame()
-            resp.WriteUint16(count)
-            resp.WriteBytes(tempresp.Data())
-            doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-        }
-    } else {
-        doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-    }
+	pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
+	var data bool
+	err := s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&data)
+	if err == nil {
+		tempresp := byteframe.NewByteFrame()
+		count := uint16(0)
+		var gook0 []byte
+		var gook1 []byte
+		var gook2 []byte
+		var gook3 []byte
+		var gook4 []byte
+		var gook5 []byte
+		var gook0status bool
+		var gook1status bool
+		var gook2status bool
+		var gook3status bool
+		var gook4status bool
+		var gook5status bool
+		_ = s.server.db.QueryRow("SELECT gook0 FROM gook WHERE id = $1", s.charID).Scan(&gook0)
+		_ = s.server.db.QueryRow("SELECT gook1 FROM gook WHERE id = $1", s.charID).Scan(&gook1)
+		_ = s.server.db.QueryRow("SELECT gook2 FROM gook WHERE id = $1", s.charID).Scan(&gook2)
+		_ = s.server.db.QueryRow("SELECT gook3 FROM gook WHERE id = $1", s.charID).Scan(&gook3)
+		_ = s.server.db.QueryRow("SELECT gook4 FROM gook WHERE id = $1", s.charID).Scan(&gook4)
+		_ = s.server.db.QueryRow("SELECT gook5 FROM gook WHERE id = $1", s.charID).Scan(&gook5)
+		_ = s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&gook0status)
+		_ = s.server.db.QueryRow("SELECT gook1status FROM gook WHERE id = $1", s.charID).Scan(&gook1status)
+		_ = s.server.db.QueryRow("SELECT gook2status FROM gook WHERE id = $1", s.charID).Scan(&gook2status)
+		_ = s.server.db.QueryRow("SELECT gook3status FROM gook WHERE id = $1", s.charID).Scan(&gook3status)
+		_ = s.server.db.QueryRow("SELECT gook4status FROM gook WHERE id = $1", s.charID).Scan(&gook4status)
+		_ = s.server.db.QueryRow("SELECT gook5status FROM gook WHERE id = $1", s.charID).Scan(&gook5status)
+		if gook0status == true {
+			count++
+			tempresp.WriteBytes(gook0)
+		}
+		if gook1status == true {
+			count++
+			tempresp.WriteBytes(gook1)
+		}
+		if gook2status == true {
+			count++
+			tempresp.WriteBytes(gook2)
+		}
+		if gook3status == true {
+			count++
+			tempresp.WriteBytes(gook3)
+		}
+		if gook4status == true {
+			count++
+			tempresp.WriteBytes(gook4)
+		}
+		if gook5status == true {
+			count++
+			tempresp.WriteBytes(gook5)
+		}
+		if count == uint16(0) {
+			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		} else {
+			resp := byteframe.NewByteFrame()
+			resp.WriteUint16(count)
+			resp.WriteBytes(tempresp.Data())
+			doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+		}
+	} else {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	}
 }
 
 func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
-    count := int(pkt.EntryCount)
-    fmt.Printf("handleMsgMhfUpdateGuacot:%d\n", count)
-    if count == 0 {
-        _,err := s.server.db.Exec("INSERT INTO gook(id,gook0status,gook1status,gook2status,gook3status,gook4status,gook5status) VALUES($1,bool(false),bool(false),bool(false),bool(false),bool(false),bool(false))", s.charID)
-        if err!=nil {
-            fmt.Printf("INSERT INTO gook failure\n")
-        }
-    } else {
-        for i := 0; i < int(pkt.EntryCount); i++ {
-            gookindex := int(pkt.Entries[i].Unk0)
-            buf := pkt.GuacotUpdateEntryToBytes(pkt.Entries[i])
-            //fmt.Printf("gookindex:%d\n", gookindex)
-            switch gookindex {
-            case 0:
-                s.server.db.Exec("UPDATE gook SET gook0 = $1 WHERE id = $2", buf, s.charID)
-                if pkt.Entries[i].Unk1 != uint16(0) {
-                    s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(true), s.charID)
-                } else {
-                    s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(false), s.charID)
-                }
-            case 1:
-                s.server.db.Exec("UPDATE gook SET gook1 = $1 WHERE id = $2", buf, s.charID)
-                if pkt.Entries[i].Unk1 != uint16(0) {
-                    s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(true), s.charID)
-                } else {
-                    s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(false), s.charID)
-                }
-            case 2:
-                s.server.db.Exec("UPDATE gook SET gook2 = $1 WHERE id = $2", buf, s.charID)
-                if pkt.Entries[i].Unk1 != uint16(0) {
-                    s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(true), s.charID)
-                } else {
-                    s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(false), s.charID)
-                }
-            case 3:
-                s.server.db.Exec("UPDATE gook SET gook3 = $1 WHERE id = $2", buf, s.charID)
-                if pkt.Entries[i].Unk1 != uint16(0) {
-                    s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(true), s.charID)
-                } else {
-                    s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(false), s.charID)
-                }
-            case 4:
-                s.server.db.Exec("UPDATE gook SET gook4 = $1 WHERE id = $2", buf,s.charID)
-                if pkt.Entries[i].Unk1 != uint16(0) {
-                    s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(true), s.charID)
-                } else {
-                    s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(false), s.charID)
-                }
-                }
-            }
-    }
-    doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
+	count := int(pkt.EntryCount)
+	fmt.Printf("handleMsgMhfUpdateGuacot:%d\n", count)
+	if count == 0 {
+		_, err := s.server.db.Exec("INSERT INTO gook(id,gook0status,gook1status,gook2status,gook3status,gook4status,gook5status) VALUES($1,bool(false),bool(false),bool(false),bool(false),bool(false),bool(false))", s.charID)
+		if err != nil {
+			fmt.Printf("INSERT INTO gook failure\n")
+		}
+	} else {
+		for i := 0; i < int(pkt.EntryCount); i++ {
+			gookindex := int(pkt.Entries[i].Unk0)
+			buf := pkt.GuacotUpdateEntryToBytes(pkt.Entries[i])
+			//fmt.Printf("gookindex:%d\n", gookindex)
+			switch gookindex {
+			case 0:
+				s.server.db.Exec("UPDATE gook SET gook0 = $1 WHERE id = $2", buf, s.charID)
+				if pkt.Entries[i].Unk1 != uint16(0) {
+					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(true), s.charID)
+				} else {
+					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(false), s.charID)
+				}
+			case 1:
+				s.server.db.Exec("UPDATE gook SET gook1 = $1 WHERE id = $2", buf, s.charID)
+				if pkt.Entries[i].Unk1 != uint16(0) {
+					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(true), s.charID)
+				} else {
+					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(false), s.charID)
+				}
+			case 2:
+				s.server.db.Exec("UPDATE gook SET gook2 = $1 WHERE id = $2", buf, s.charID)
+				if pkt.Entries[i].Unk1 != uint16(0) {
+					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(true), s.charID)
+				} else {
+					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(false), s.charID)
+				}
+			case 3:
+				s.server.db.Exec("UPDATE gook SET gook3 = $1 WHERE id = $2", buf, s.charID)
+				if pkt.Entries[i].Unk1 != uint16(0) {
+					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(true), s.charID)
+				} else {
+					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(false), s.charID)
+				}
+			case 4:
+				s.server.db.Exec("UPDATE gook SET gook4 = $1 WHERE id = $2", buf, s.charID)
+				if pkt.Entries[i].Unk1 != uint16(0) {
+					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(true), s.charID)
+				} else {
+					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(false), s.charID)
+				}
+			}
+		}
+	}
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfInfoScenarioCounter(s *Session, p mhfpacket.MHFPacket) {
 
 	pkt := p.(*mhfpacket.MsgMhfInfoScenarioCounter)
-
 	scenarioCounter := []struct {
-		Unk0 uint32 // Main ID?
-		Unk1 uint8
-		Unk2 uint8
+		MainID     uint32 // Main ID
+		Unk1       uint8  // Could be that its item exchange?
+		CatagoryID uint8  // Catagory ID  7 are DIVA Item exchanges 6 is Pallico Item exchanges 3 is Other Item exchanges 1 is Veteran 0 is Basic  Unsure what 5 and 4 are.
 	}{
+		//000000110000
 		{
-			Unk0: 0x00000000,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000011,
+			Unk1:       0,
+			CatagoryID: 0,
 		},
+		// 0000005D0001
 		{
-			Unk0: 0x00000001,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x0000005D,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 0000005C0001
 		{
-			Unk0: 0x00000002,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x0000005C,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000510001
 		{
-			Unk0: 0x00000003,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000051,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 0000005B0001
 		{
-			Unk0: 0x00000004,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x0000005B,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 0000005A0001
 		{
-			Unk0: 0x00000005,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x0000005A,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000590001
 		{
-			Unk0: 0x00000006,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000059,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000580001
 		{
-			Unk0: 0x00000007,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000058,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000570001
 		{
-			Unk0: 0x00000008,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000057,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000560001
 		{
-			Unk0: 0x00000009,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000056,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000550001
 		{
-			Unk0: 0x0000000A,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000055,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000540001
 		{
-			Unk0: 0x0000000B,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000054,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000530001
 		{
-			Unk0: 0x0000000C,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000053,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000520001
 		{
-			Unk0: 0x0000000D,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000052,
+			Unk1:       0,
+			CatagoryID: 1,
 		},
+		// 000000570103
 		{
-			Unk0: 0x0000000E,
-			Unk1: 1,
-			Unk2: 4,
+			MainID:     0x00000057,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000580103
 		{
-			Unk0: 0x00000032,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000058,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000590103
 		{
-			Unk0: 0x00000033,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000059,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000005A0103
 		{
-			Unk0: 0x00000034,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000005A,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000005B0103
 		{
-			Unk0: 0x00000035,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000005B,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000005C0103
 		{
-			Unk0: 0x00000036,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000005C,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000530103
 		{
-			Unk0: 0x00000037,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000053,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000560103
 		{
-			Unk0: 0x00000038,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000056,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000003C0103
 		{
-			Unk0: 0x0000003A,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000003C,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000003A0103
 		{
-			Unk0: 0x0000003F,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000003A,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000003B0103
 		{
-			Unk0: 0x00000040,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000003B,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000001B0103
 		{
-			Unk0: 0x00000041,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000001B,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000190103
 		{
-			Unk0: 0x00000047,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000019,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000001A0103
 		{
-			Unk0: 0x0000004B,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000001A,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000170103
 		{
-			Unk0: 0x0000003D,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000017,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000020103
 		{
-			Unk0: 0x00000044,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000002,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000030103
 		{
-			Unk0: 0x00000042,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000003,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000040103
 		{
-			Unk0: 0x0000004C,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000004,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 0000001F0103
 		{
-			Unk0: 0x00000046,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x0000001F,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000200103
 		{
-			Unk0: 0x0000004D,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000020,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000210103
 		{
-			Unk0: 0x00000048,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000021,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000220103
 		{
-			Unk0: 0x0000004A,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000022,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000230103
 		{
-			Unk0: 0x00000049,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000023,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000240103
 		{
-			Unk0: 0x0000004E,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000024,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000250103
 		{
-			Unk0: 0x00000045,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000025,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000280103
 		{
-			Unk0: 0x0000003E,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000028,
+			Unk1:       1,
+			CatagoryID: 3,
 		},
+		// 000000260103
 		{
-			Unk0: 0x0000004F,
-			Unk1: 1,
-			Unk2: 5,
+			MainID:     0x00000026,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 000000270103
+		{
+			MainID:     0x00000027,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 000000300103
+		{
+			MainID:     0x00000030,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 0000000C0103
+		{
+			MainID:     0x0000000C,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 0000000D0103
+		{
+			MainID:     0x0000000D,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 0000001E0103
+		{
+			MainID:     0x0000001E,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 0000001D0103
+		{
+			MainID:     0x0000001D,
+			Unk1:       1,
+			CatagoryID: 3,
+		},
+		// 0000002E0003
+		{
+			MainID:     0x0000002E,
+			Unk1:       0,
+			CatagoryID: 3,
+		},
+		// 000000000004
+		{
+			MainID:     0x00000000,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000010004
+		{
+			MainID:     0x00000001,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000020004
+		{
+			MainID:     0x00000002,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000030004
+		{
+			MainID:     0x00000003,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000040004
+		{
+			MainID:     0x00000004,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000050004
+		{
+			MainID:     0x00000005,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000060004
+		{
+			MainID:     0x00000006,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000070004
+		{
+			MainID:     0x00000007,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000080004
+		{
+			MainID:     0x00000008,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000090004
+		{
+			MainID:     0x00000009,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 0000000A0004
+		{
+			MainID:     0x0000000A,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 0000000B0004
+		{
+			MainID:     0x0000000B,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 0000000C0004
+		{
+			MainID:     0x0000000C,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 0000000D0004
+		{
+			MainID:     0x0000000D,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 0000000E0004
+		{
+			MainID:     0x0000000E,
+			Unk1:       0,
+			CatagoryID: 4,
+		},
+		// 000000320005
+		{
+			MainID:     0x00000032,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000330005
+		{
+			MainID:     0x00000033,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000340005
+		{
+			MainID:     0x00000034,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000350005
+		{
+			MainID:     0x00000035,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000360005
+		{
+			MainID:     0x00000036,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000370005
+		{
+			MainID:     0x00000037,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000380005
+		{
+			MainID:     0x00000038,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000003A0005
+		{
+			MainID:     0x0000003A,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000003F0005
+		{
+			MainID:     0x0000003F,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000400005
+		{
+			MainID:     0x00000040,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000410005
+		{
+			MainID:     0x00000041,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000430005
+		{
+			MainID:     0x00000043,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000470005
+		{
+			MainID:     0x00000047,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004B0005
+		{
+			MainID:     0x0000004B,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000003D0005
+		{
+			MainID:     0x0000003D,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000440005
+		{
+			MainID:     0x00000044,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000420005
+		{
+			MainID:     0x00000042,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004C0005
+		{
+			MainID:     0x0000004C,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000460005
+		{
+			MainID:     0x00000046,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004D0005
+		{
+			MainID:     0x0000004D,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000480005
+		{
+			MainID:     0x00000048,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004A0005
+		{
+			MainID:     0x0000004A,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000490005
+		{
+			MainID:     0x00000049,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004E0005
+		{
+			MainID:     0x0000004E,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000450005
+		{
+			MainID:     0x00000045,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000003E0005
+		{
+			MainID:     0x0000003E,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 0000004F0005
+		{
+			MainID:     0x0000004F,
+			Unk1:       0,
+			CatagoryID: 5,
+		},
+		// 000000000106
+		{
+			MainID:     0x00000000,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000010106
+		{
+			MainID:     0x00000001,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000020106
+		{
+			MainID:     0x00000002,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000030106
+		{
+			MainID:     0x00000003,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000040106
+		{
+			MainID:     0x00000004,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000050106
+		{
+			MainID:     0x00000005,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000060106
+		{
+			MainID:     0x00000006,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000070106
+		{
+			MainID:     0x00000007,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000080106
+		{
+			MainID:     0x00000008,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000090106
+		{
+			MainID:     0x00000009,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000110106
+		{
+			MainID:     0x00000011,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000A0106
+		{
+			MainID:     0x0000000A,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000B0106
+		{
+			MainID:     0x0000000B,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000C0106
+		{
+			MainID:     0x0000000C,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000D0106
+		{
+			MainID:     0x0000000D,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000E0106
+		{
+			MainID:     0x0000000E,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 0000000F0106
+		{
+			MainID:     0x0000000F,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000100106
+		{
+			MainID:     0x00000010,
+			Unk1:       1,
+			CatagoryID: 6,
+		},
+		// 000000320107
+		{
+			MainID:     0x00000032,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000350107
+		{
+			MainID:     0x00000035,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000003E0107
+		{
+			MainID:     0x0000003E,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000340107
+		{
+			MainID:     0x00000034,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000380107
+		{
+			MainID:     0x00000038,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000330107
+		{
+			MainID:     0x00000033,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000310107
+		{
+			MainID:     0x00000031,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000360107
+		{
+			MainID:     0x00000036,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000390107
+		{
+			MainID:     0x00000039,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000370107
+		{
+			MainID:     0x00000037,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000003D0107
+		{
+			MainID:     0x0000003D,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000003A0107
+		{
+			MainID:     0x0000003A,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000003C0107
+		{
+			MainID:     0x0000003C,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000003B0107
+		{
+			MainID:     0x0000003B,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002A0107
+		{
+			MainID:     0x0000002A,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000300107
+		{
+			MainID:     0x00000030,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000280107
+		{
+			MainID:     0x00000028,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000270107
+		{
+			MainID:     0x00000027,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002B0107
+		{
+			MainID:     0x0000002B,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002E0107
+		{
+			MainID:     0x0000002E,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000290107
+		{
+			MainID:     0x00000029,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002C0107
+		{
+			MainID:     0x0000002C,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002D0107
+		{
+			MainID:     0x0000002D,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000002F0107
+		{
+			MainID:     0x0000002F,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000250107
+		{
+			MainID:     0x00000025,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000220107
+		{
+			MainID:     0x00000022,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000210107
+		{
+			MainID:     0x00000021,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000200107
+		{
+			MainID:     0x00000020,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001C0107
+		{
+			MainID:     0x0000001C,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001A0107
+		{
+			MainID:     0x0000001A,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000240107
+		{
+			MainID:     0x00000024,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000260107
+		{
+			MainID:     0x00000026,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000230107
+		{
+			MainID:     0x00000023,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001B0107
+		{
+			MainID:     0x0000001B,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001E0107
+		{
+			MainID:     0x0000001E,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001F0107
+		{
+			MainID:     0x0000001F,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 0000001D0107
+		{
+			MainID:     0x0000001D,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000180107
+		{
+			MainID:     0x00000018,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000170107
+		{
+			MainID:     0x00000017,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000160107
+		{
+			MainID:     0x00000016,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000150107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000015,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000190107
+		{
+			MainID:     0x00000019,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000140107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000014,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000070107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000007,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000090107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000009,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000D0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000D,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000100107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000010,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000C0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000C,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000E0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000E,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000F0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000F,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000130107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000013,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000A0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000A,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000080107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000008,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 0000000B0107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x0000000B,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000120107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000012,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000110107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000011,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000060107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000006,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000050107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000005,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000040107
+		//MISSING FILE SO DISABLED!
+		// {
+		// 	MainID:     0x00000004,
+		// 	Unk1:       1,
+		// 	CatagoryID: 7,
+		// },
+		// 000000030107
+		{
+			MainID:     0x00000003,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000020107
+		{
+			MainID:     0x00000002,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000010107
+		{
+			MainID:     0x00000001,
+			Unk1:       1,
+			CatagoryID: 7,
+		},
+		// 000000000107
+		{
+			MainID:     0x00000000,
+			Unk1:       1,
+			CatagoryID: 7,
 		},
 	}
 
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint8(uint8(len(scenarioCounter))) // Entry count
 	for _, entry := range scenarioCounter {
-		resp.WriteUint32(entry.Unk0)
+		resp.WriteUint32(entry.MainID)
 		resp.WriteUint8(entry.Unk1)
-		resp.WriteUint8(entry.Unk2)
+		resp.WriteUint8(entry.CatagoryID)
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-
-	// DEBUG, DELETE ME!
-	/*
-		data, err := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "debug/info_scenario_counter_resp.bin"))
-		if err != nil {
-			panic(err)
-		}
-
-		doAckBufSucceed(s, pkt.AckHandle, data)
-	*/
-
 }
 
 func handleMsgMhfGetBbsSnsStatus(s *Session, p mhfpacket.MHFPacket) {}
@@ -960,9 +1791,9 @@ func handleMsgMhfReadBeatLevel(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfUpdateBeatLevel(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfUpdateBeatLevel)
+	pkt := p.(*mhfpacket.MsgMhfUpdateBeatLevel)
 
-    doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfReadBeatLevelAllRanking(s *Session, p mhfpacket.MHFPacket) {}
@@ -1186,9 +2017,9 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfGetUdShopCoin(s *Session, p mhfpacket.MHFPacket) {
-    pkt := p.(*mhfpacket.MsgMhfGetUdShopCoin)
-    data, _ := hex.DecodeString("0000000000000001")
-    doAckBufSucceed(s, pkt.AckHandle, data)
+	pkt := p.(*mhfpacket.MsgMhfGetUdShopCoin)
+	data, _ := hex.DecodeString("0000000000000001")
+	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
 func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {}
