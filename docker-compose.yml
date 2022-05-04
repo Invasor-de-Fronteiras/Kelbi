@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+    
+  db:
+    image: postgres:13.1-alpine
+    volumes:
+      - erupe-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=erupe
+    ports: 
+      - "5432:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  erupe-server:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: .
+  erupe-db-data:
+  

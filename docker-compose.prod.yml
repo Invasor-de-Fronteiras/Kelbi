@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  server:
+    image: erupe_server:1.0.1
+    volumes:
+      - erupe-server:/app/erupe
+    ports:
+      - "80:80"
+      - "53312:53312"
+      - "54001:54001"
+      - "54002:54002"
+      - "54003:54003"
+      - "54004:54004"
+      - "53310:53310"
+    networks: 
+      - backend
+
+
+networks:
+  backend:
+
+volumes:
+  erupe-server:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: .
+  erupe-db-data:
+  
