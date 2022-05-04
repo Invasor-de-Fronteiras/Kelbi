@@ -41,9 +41,10 @@ type SaveDumpOptions struct {
 
 // Discord holds the discord integration config.
 type Discord struct {
-	Enabled   bool
-	BotToken  string
-	ChannelID string
+	Enabled           bool
+	BotToken          string
+	ServerID          string
+	RealtimeChannelID string
 }
 
 // Database holds the postgres database config.
@@ -154,4 +155,3 @@ func LoadConfig() (*Config, error) {
 
 	return c, nil
 }
-

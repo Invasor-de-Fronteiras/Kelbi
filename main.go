@@ -9,6 +9,7 @@ import (
 
 	"github.com/Solenataris/Erupe/config"
 	"github.com/Solenataris/Erupe/server/channelserver"
+	"github.com/Solenataris/Erupe/server/discordbot"
 	"github.com/Solenataris/Erupe/server/entranceserver"
 	"github.com/Solenataris/Erupe/server/launcherserver"
 	"github.com/Solenataris/Erupe/server/signserver"
@@ -37,6 +38,23 @@ func main() {
 	erupeConfig, err := config.LoadConfig()
 	if err != nil {
 		logger.Fatal("Failed to load config", zap.Error(err))
+	}
+
+	// Discord bot
+	discordBot, err := discordbot.NewDiscordBot(discordbot.DiscordBotOptions{
+		Logger: logger,
+		Config: erupeConfig,
+	})
+
+	if err != nil {
+		logger.Fatal("Failed to create discord bot", zap.Error(err))
+	}
+
+	// Discord bot
+	err = discordBot.Start()
+
+	if err != nil {
+		logger.Fatal("Failed to starts discord bot", zap.Error(err))
 	}
 
 	// Create the postgres DB pool.
@@ -116,6 +134,7 @@ func main() {
 			Logger:      logger.Named("channel"),
 			ErupeConfig: erupeConfig,
 			DB:          db,
+			DiscordBot:  discordBot,
 		})
 
 	err = channelServer1.Start(erupeConfig.Channel.Port1)
@@ -129,6 +148,7 @@ func main() {
 			Logger:      logger.Named("channel"),
 			ErupeConfig: erupeConfig,
 			DB:          db,
+			DiscordBot:  discordBot,
 		})
 
 	err = channelServer2.Start(erupeConfig.Channel.Port2)
@@ -141,6 +161,7 @@ func main() {
 			Logger:      logger.Named("channel"),
 			ErupeConfig: erupeConfig,
 			DB:          db,
+			DiscordBot:  discordBot,
 		})
 
 	err = channelServer3.Start(erupeConfig.Channel.Port3)
@@ -153,6 +174,7 @@ func main() {
 			Logger:      logger.Named("channel"),
 			ErupeConfig: erupeConfig,
 			DB:          db,
+			DiscordBot:  discordBot,
 		})
 
 	err = channelServer4.Start(erupeConfig.Channel.Port4)

@@ -9,7 +9,7 @@ import (
 	"github.com/Solenataris/Erupe/config"
 	"github.com/Solenataris/Erupe/network/binpacket"
 	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/bwmarrin/discordgo"
+	"github.com/Solenataris/Erupe/server/discordbot"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -19,6 +19,7 @@ type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
 	ErupeConfig *config.Config
+	DiscordBot  *discordbot.DiscordBot
 }
 
 // Map key type for a user binary part.
@@ -52,7 +53,7 @@ type Server struct {
 	semaphore     map[string]*Semaphore
 
 	// Discord chat integration
-	discordSession *discordgo.Session
+	discordBot *discordbot.DiscordBot
 }
 
 // NewServer creates a new Server type.
@@ -67,7 +68,7 @@ func NewServer(config *Config) *Server {
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
-		discordSession:  nil,
+		discordBot:      config.DiscordBot,
 	}
 
 	// Mezeporta
@@ -103,16 +104,6 @@ func NewServer(config *Config) *Server {
 	// MezFes
 	s.stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
 
-	// Create the discord session, (not actually connecting to discord servers yet).
-	if s.erupeConfig.Discord.Enabled {
-		ds, err := discordgo.New("Bot " + s.erupeConfig.Discord.BotToken)
-		if err != nil {
-			s.logger.Fatal("Error creating Discord session.", zap.Error(err))
-		}
-		ds.AddHandler(s.onDiscordMessage)
-		s.discordSession = ds
-	}
-
 	return s
 }
 
@@ -127,14 +118,7 @@ func (s *Server) Start(port int) error {
 	go s.acceptClients()
 	go s.manageSessions()
 
-	// Start the discord bot for chat integration.
-	if s.erupeConfig.Discord.Enabled {
-		err = s.discordSession.Open()
-		if err != nil {
-			s.logger.Warn("Error opening Discord session.", zap.Error(err))
-			return err
-		}
-	}
+	s.discordBot.Session.AddHandler(s.onDiscordMessage)
 
 	return nil
 }
@@ -147,10 +131,6 @@ func (s *Server) Shutdown() {
 
 	s.listener.Close()
 	close(s.acceptConns)
-
-	if s.erupeConfig.Discord.Enabled {
-		s.discordSession.Close()
-	}
 }
 
 func (s *Server) acceptClients() {
@@ -241,6 +221,13 @@ func (s *Server) BroadcastChatMessage(message string) {
 		MessageType:    BinaryMessageTypeChat,
 		RawDataPayload: bf.Data(),
 	}, nil)
+}
+
+func (s *Server) DiscordChannelSend(charName string, content string) {
+	if s.erupeConfig.Discord.Enabled {
+		message := fmt.Sprintf("%s: %s", charName, content)
+		s.discordBot.RealtimeChannelSend(message)
+	}
 }
 
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
