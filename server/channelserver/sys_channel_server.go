@@ -20,6 +20,8 @@ type Config struct {
 	DB          *sqlx.DB
 	ErupeConfig *config.Config
 	DiscordBot  *discordbot.DiscordBot
+	Name        string
+	Enable      bool
 }
 
 // Map key type for a user binary part.
@@ -54,6 +56,8 @@ type Server struct {
 
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
+	name       string
+	enable     bool
 }
 
 // NewServer creates a new Server type.
@@ -69,6 +73,8 @@ func NewServer(config *Config) *Server {
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
 		discordBot:      config.DiscordBot,
+		name:            config.Name,
+		enable:          config.Enable,
 	}
 
 	// Mezeporta

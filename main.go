@@ -133,8 +133,8 @@ func main() {
 		&channelserver.Config{
 			Logger:      logger.Named("channel"),
 			ErupeConfig: erupeConfig,
-			DB:          db,
-			DiscordBot:  discordBot,
+			Name:        erupeConfig.Entrance.Entries[0].Name,
+			Enable:      erupeConfig.Entrance.Entries[0].Channels[0].MaxPlayers > 0,
 		})
 
 	err = channelServer1.Start(erupeConfig.Channel.Port1)
@@ -149,6 +149,8 @@ func main() {
 			ErupeConfig: erupeConfig,
 			DB:          db,
 			DiscordBot:  discordBot,
+			Name:        erupeConfig.Entrance.Entries[1].Name,
+			Enable:      erupeConfig.Entrance.Entries[1].Channels[0].MaxPlayers > 0,
 		})
 
 	err = channelServer2.Start(erupeConfig.Channel.Port2)
@@ -162,6 +164,8 @@ func main() {
 			ErupeConfig: erupeConfig,
 			DB:          db,
 			DiscordBot:  discordBot,
+			Name:        erupeConfig.Entrance.Entries[2].Name,
+			Enable:      erupeConfig.Entrance.Entries[2].Channels[0].MaxPlayers > 0,
 		})
 
 	err = channelServer3.Start(erupeConfig.Channel.Port3)
@@ -175,6 +179,8 @@ func main() {
 			ErupeConfig: erupeConfig,
 			DB:          db,
 			DiscordBot:  discordBot,
+			Name:        erupeConfig.Entrance.Entries[3].Name,
+			Enable:      erupeConfig.Entrance.Entries[3].Channels[0].MaxPlayers > 0,
 		})
 
 	err = channelServer4.Start(erupeConfig.Channel.Port4)

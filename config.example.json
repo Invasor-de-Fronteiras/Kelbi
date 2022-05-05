@@ -18,14 +18,14 @@
     "discord": {
         "enabled": false,
         "bottoken": "",
-        "serverID": "",
-        "RealtimeChannelID": ""
+        "realtimeChannelID": "",
+        "serverId": ""
     },
     "database": {
         "host": "localhost",
         "port": 5432,
         "user": "postgres",
-        "password": "",
+        "password": "password",
         "database": "erupe"
     },
     "launcher": {
