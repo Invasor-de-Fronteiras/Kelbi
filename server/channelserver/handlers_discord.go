@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -96,6 +97,10 @@ func PlayerList(s *Server) string {
 	list := ""
 	count := 0
 	listPlayers := getPlayerList(s)
+
+	sort.SliceStable(listPlayers, func(i, j int) bool {
+		return listPlayers[i].CharName < listPlayers[j].CharName
+	})
 
 	for _, lp := range listPlayers {
 		list += lp.toString() + "\n"
