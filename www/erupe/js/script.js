@@ -8,7 +8,9 @@ var modalState = false;
 
 
 function soundSel() {
-	window.external.playSound('IDR_WAV_SEL');
+	// window.external.playSound('IDR_WAV_SEL');
+  var music = new Audio('./audio/sys_cursor.mp3');
+  music.play();
 }
 
 function soundOk() {
@@ -20,7 +22,9 @@ function soundPreLogin() {
 }
 
 function soundLogin() {
-	window.external.playSound('IDR_WAV_LOGIN');
+	// window.external.playSound('IDR_WAV_LOGIN');
+  var music = new Audio('./audio/sys_starting.mp3');
+  music.play();
 }
 
 function soundNiku() {
