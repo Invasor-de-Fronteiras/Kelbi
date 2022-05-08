@@ -26,7 +26,7 @@ const (
 	BroadcastTypeWorld    = 0x0a
 )
 
-func sendServerChatMessage(s *Session, message string) {
+func SendMessageToUser(s *Session, message string) {
 	// Make the inside of the casted binary
 	bf := byteframe.NewByteFrame()
 	bf.SetLE()
@@ -57,7 +57,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 			_ = tmp.ReadBytes(9)
 			tmp.SetLE()
 			frame := tmp.ReadUint32()
-			sendServerChatMessage(s, fmt.Sprintf("TIME : %d'%d.%03d (%dframe)", frame/30/60, frame/30%60, int(math.Round(float64(frame%30*100)/3)), frame))
+			SendMessageToUser(s, fmt.Sprintf("TIME : %d'%d.%03d (%dframe)", frame/30/60, frame/30%60, int(math.Round(float64(frame%30*100)/3)), frame))
 		}
 	}
 
@@ -146,10 +146,10 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						return
 					}
 					if raviStarted == 0 {
-						sendServerChatMessage(s, fmt.Sprintf("Raviente will start in less than 10 seconds"))
+						SendMessageToUser(s, fmt.Sprintf("Raviente will start in less than 10 seconds"))
 						s.server.db.Exec("UPDATE raviregister SET ravistarted = $1", raviPosted)
 					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Raviente has already started"))
+						SendMessageToUser(s, fmt.Sprintf("Raviente has already started"))
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bressend") {
@@ -161,10 +161,10 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						return
 					}
 					if berserkRes > 0 {
-						sendServerChatMessage(s, fmt.Sprintf("Sending ressurection support"))
+						SendMessageToUser(s, fmt.Sprintf("Sending ressurection support"))
 						s.server.db.Exec("UPDATE ravistate SET unknown20 = $1", 0)
 					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Ressurection support has not been requested"))
+						SendMessageToUser(s, fmt.Sprintf("Ressurection support has not been requested"))
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bsedsend") {
@@ -182,7 +182,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						panic(err)
 						return
 					}
-					sendServerChatMessage(s, fmt.Sprintf("Sending sedation support if requested"))
+					SendMessageToUser(s, fmt.Sprintf("Sending sedation support if requested"))
 					s.server.db.Exec("UPDATE ravisupport SET support2 = $1", (phase1HP + phase2HP + phase3HP + phase4HP + phase5HP))
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bsedreq") {
@@ -200,7 +200,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						panic(err)
 						return
 					}
-					sendServerChatMessage(s, fmt.Sprintf("Requesting sedation support"))
+					SendMessageToUser(s, fmt.Sprintf("Requesting sedation support"))
 					s.server.db.Exec("UPDATE ravisupport SET support2 = $1", ((phase1HP + phase2HP + phase3HP + phase4HP + phase5HP) + 12))
 				}
 				if strings.HasPrefix(chatMessage.Message, "!setmultiplier ") {
@@ -214,17 +214,17 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						return
 					}
 					if numerr != nil || n != 1 {
-						sendServerChatMessage(s, fmt.Sprintf("Please use the format !setmultiplier x"))
+						SendMessageToUser(s, fmt.Sprintf("Please use the format !setmultiplier x"))
 					} else if damageMultiplier == 1 {
 						if num > 20 {
-							sendServerChatMessage(s, fmt.Sprintf("Max multiplier for Ravi is 20, setting to this value"))
+							SendMessageToUser(s, fmt.Sprintf("Max multiplier for Ravi is 20, setting to this value"))
 							s.server.db.Exec("UPDATE ravistate SET damagemultiplier = $1", 20)
 						} else {
-							sendServerChatMessage(s, fmt.Sprintf("Setting Ravi damage multiplier to %d", num))
+							SendMessageToUser(s, fmt.Sprintf("Setting Ravi damage multiplier to %d", num))
 							s.server.db.Exec("UPDATE ravistate SET damagemultiplier = $1", num)
 						}
 					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Multiplier can only be set once, please restart Ravi to set again"))
+						SendMessageToUser(s, fmt.Sprintf("Multiplier can only be set once, please restart Ravi to set again"))
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!checkmultiplier") {
@@ -233,7 +233,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					if row != nil {
 						return
 					}
-					sendServerChatMessage(s, fmt.Sprintf("Ravi's current damage multiplier is %d", damageMultiplier))
+					SendMessageToUser(s, fmt.Sprintf("Ravi's current damage multiplier is %d", damageMultiplier))
 				}
 			}
 		}
@@ -244,9 +244,9 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		// 	var x, y int16
 		// 	n, err := fmt.Sscanf(chatMessage.Message, "!tele %d %d", &x, &y)
 		// 	if err != nil || n != 2 {
-		// 		sendServerChatMessage(s, "Invalid command. Usage:\"!tele 500 500\"")
+		// 		SendMessageToUser(s, "Invalid command. Usage:\"!tele 500 500\"")
 		// 	} else {
-		// 		sendServerChatMessage(s, fmt.Sprintf("Teleporting to %d %d", x, y))
+		// 		SendMessageToUser(s, fmt.Sprintf("Teleporting to %d %d", x, y))
 
 		// 		// Make the inside of the casted binary
 		// 		payload := byteframe.NewByteFrame()
