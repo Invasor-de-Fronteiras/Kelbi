@@ -1,8 +1,10 @@
 package channelserver
 
 import (
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"fmt"
+
 	"github.com/Andoryuuta/byteframe"
+	"github.com/Solenataris/Erupe/network/mhfpacket"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +16,8 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 
 	stage, ok := s.server.stages[pkt.StageID]
 	if !ok {
-		s.logger.Fatal("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
+		char := fmt.Sprintf("(%s: %d)", s.Name, s.charID)
+		s.logger.Fatal("Can't enumerate clients for stage that doesn't exist! "+char, zap.String("stageID", pkt.StageID))
 	}
 
 	// Unlock the stages map.
