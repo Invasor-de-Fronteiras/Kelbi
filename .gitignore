@@ -9,5 +9,8 @@ bin/scenarios/*.bin
 bin/debug/*.bin
 savedata/
 Erupe.exe
+config.json
+.env
+
 *.lnk
 *.bat

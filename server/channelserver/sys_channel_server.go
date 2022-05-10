@@ -18,8 +18,8 @@ import (
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
-	ErupeConfig *config.Config
 	DiscordBot  *discordbot.DiscordBot
+	ErupeConfig *config.Config
 	Name        string
 	Enable      bool
 }
@@ -33,14 +33,13 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
-	logger      *zap.Logger
-	db          *sqlx.DB
-	erupeConfig *config.Config
-	acceptConns chan net.Conn
-	deleteConns chan net.Conn
-	sessions    map[net.Conn]*Session
-	listener    net.Listener // Listener that is created when Server.Start is called.
-
+	logger         *zap.Logger
+	db             *sqlx.DB
+	erupeConfig    *config.Config
+	acceptConns    chan net.Conn
+	deleteConns    chan net.Conn
+	sessions       map[net.Conn]*Session
+	listener       net.Listener // Listener that is created when Server.Start is called.
 	isShuttingDown bool
 
 	stagesLock sync.RWMutex
@@ -56,8 +55,9 @@ type Server struct {
 
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
-	name       string
-	enable     bool
+
+	name   string
+	enable bool
 }
 
 // NewServer creates a new Server type.
@@ -124,7 +124,9 @@ func (s *Server) Start(port int) error {
 	go s.acceptClients()
 	go s.manageSessions()
 
-	s.discordBot.Session.AddHandler(s.onDiscordMessage)
+	if s.erupeConfig.Discord.Enabled {
+		s.discordBot.Session.AddHandler(s.onDiscordMessage)
+	}
 
 	return nil
 }
@@ -136,6 +138,7 @@ func (s *Server) Shutdown() {
 	s.Unlock()
 
 	s.listener.Close()
+
 	close(s.acceptConns)
 }
 
@@ -218,7 +221,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 		Type:       5,
 		Flags:      0x80,
 		Message:    message,
-		SenderName: "Erupe",
+		SenderName: s.name,
 	}
 	msgBinChat.Build(bf)
 

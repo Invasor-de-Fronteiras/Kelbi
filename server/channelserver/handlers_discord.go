@@ -128,7 +128,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
-	if m.ChannelID != s.erupeConfig.Discord.RealtimeChannelID {
+	if m.ChannelID == s.erupeConfig.Discord.RealtimeChannelID {
 		message := fmt.Sprintf("[DISCORD] %s: %s", m.Author.Username, m.Content)
 		s.BroadcastChatMessage(message)
 	}
