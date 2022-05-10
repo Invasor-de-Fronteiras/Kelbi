@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -57,23 +58,53 @@ func CountChars(s *Server) string {
 	return message
 }
 
-func PlayerList(s *Server) string {
-	list := ""
-	count := 0
+type ListPlayer struct {
+	CharName    string
+	InQuest     bool
+	WeaponEmoji string
+}
+
+func (p *ListPlayer) toString() string {
+	status := ""
+	if p.InQuest {
+		status = "(in quest)"
+	}
+
+	return fmt.Sprintf("%s %s %s", p.WeaponEmoji, p.CharName, status)
+}
+
+func getPlayerList(s *Server) []ListPlayer {
+	list := []ListPlayer{}
+
 	for _, stage := range s.stages {
 		for client := range stage.clients {
 			char, err := s.getCharacterForUser(int(client.charID))
-
-			status := ""
-			if stage.isCharInQuestByID(client.charID) {
-				status = "(in quest)"
-			}
-
 			if err == nil {
-				list = list + weapons[char.WeaponType] + " " + char.Name + " " + status + "\n"
-				count += 1
+				list = append(list, ListPlayer{
+					CharName:    char.Name,
+					InQuest:     stage.isCharInQuestByID(client.charID),
+					WeaponEmoji: weapons[char.WeaponType],
+				})
+
 			}
 		}
+	}
+
+	return list
+}
+
+func PlayerList(s *Server) string {
+	list := ""
+	count := 0
+	listPlayers := getPlayerList(s)
+
+	sort.SliceStable(listPlayers, func(i, j int) bool {
+		return listPlayers[i].CharName < listPlayers[j].CharName
+	})
+
+	for _, lp := range listPlayers {
+		list += lp.toString() + "\n"
+		count++
 	}
 
 	message := fmt.Sprintf("<:5658sus:969620902385946777> Invasores in Server: [%s ] <:5658sus:969620902385946777> \n========== Total %d ==========\n", s.name, count)
