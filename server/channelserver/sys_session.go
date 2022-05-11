@@ -64,7 +64,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 				Encoding: japanese.ShiftJIS,
 			},
 		},
-		sessionStart: Time_Current_Adjusted().Unix(),
+		sessionStart:   Time_Current_Adjusted().Unix(),
 		stageMoveStack: stringstack.New(),
 	}
 	return s
@@ -169,8 +169,9 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	// This shouldn't be needed, but it's better to recover and let the connection die than to panic the server.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("[%s]", s.Name)
+			fmt.Printf("[%s] ", s.Name)
 			fmt.Println("Recovered from panic", r)
+
 		}
 	}()
 

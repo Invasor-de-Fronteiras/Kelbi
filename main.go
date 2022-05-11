@@ -62,6 +62,8 @@ func main() {
 		}
 
 		discordBot = bot
+	} else {
+		logger.Info("Discord bot is disabled")
 	}
 
 	// Create the postgres DB pool.
