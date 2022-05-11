@@ -113,6 +113,39 @@ func (s *Stage) isCharInQuestByID(charID uint32) bool {
 	return false
 }
 
+func (s *Stage) isQuest() bool {
+	return len(s.reservedClientSlots) > 0
+}
+
+func (stage Stage) GetName() string {
+	switch stage.id {
+	case MezeportaStageId:
+		return "Mezeporta"
+	case GuildHallLv1StageId:
+		return "Guild Hall Lv1"
+	case GuildHallLv2StageId:
+		return "Guild Hall Lv2"
+	case GuildHallLv3StageId:
+		return "Guild Hall Lv3"
+	case PugiFarmStageId:
+		return "Pugi Farm"
+	case RastaBarStageId:
+		return "Rasta Bar"
+	case CarvaneStageId:
+		return "Carvane"
+	case GookFarmStageId:
+		return "Gook Farm"
+	case DivaFountainStageId:
+		return "Diva Fountain"
+	case DivaHallStageId:
+		return "Diva Hall"
+	case MezFesStageId:
+		return "Mez Fes"
+	default:
+		return ""
+	}
+}
+
 func (s *Stage) GetNewObjectID(CharID uint32) uint32 {
 	ObjId := uint8(0)
 	for seq := uint8(0x7f); seq > uint8(0); seq-- {
