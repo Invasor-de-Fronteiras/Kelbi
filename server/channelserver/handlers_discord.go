@@ -174,8 +174,14 @@ func getCharInfo(server *Server, charName string) string {
 		return "Character not found"
 	}
 
+	objInfo := ""
+
 	obj := server.FindStageObjectByChar(c.charID)
-	objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+	// server.logger.Info("Found object: %+v", zap.Object("obj", obj))
+
+	if obj != nil {
+		objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+	}
 
 	return fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s", c.Name, s.GetName(), s.id, objInfo)
 }
@@ -208,6 +214,6 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 
 	if m.ChannelID == s.erupeConfig.Discord.RealtimeChannelID {
 		message := fmt.Sprintf("[DISCORD] %s: %s", m.Author.Username, m.Content)
-		s.BroadcastChatMessage(message)
+		s.BroadcastChatMessage(s.discordBot.NormalizeDiscordMessage(message))
 	}
 }
