@@ -117,7 +117,7 @@ func (s *Stage) isQuest() bool {
 	return len(s.reservedClientSlots) > 0
 }
 
-func (stage Stage) GetName() string {
+func (stage *Stage) GetName() string {
 	switch stage.id {
 	case MezeportaStageId:
 		return "Mezeporta"

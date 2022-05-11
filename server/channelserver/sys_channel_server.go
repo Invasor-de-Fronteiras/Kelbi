@@ -251,3 +251,21 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 
 	return nil
 }
+
+func (s *Server) FindStageObjectByChar(charID uint32) *StageObject {
+	s.stagesLock.RLock()
+	defer s.stagesLock.RUnlock()
+	for _, stage := range s.stages {
+		stage.RLock()
+		for objId := range stage.objects {
+			obj := stage.objects[objId]
+			if obj.ownerCharID == charID {
+				stage.RUnlock()
+				return obj
+			}
+		}
+		stage.RUnlock()
+	}
+
+	return nil
+}

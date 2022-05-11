@@ -147,18 +147,62 @@ func PlayerList(s *Server) string {
 	return message
 }
 
+func cleanStr(str string) string {
+	return strings.ToLower(strings.Trim(str, " "))
+}
+
+func getCharInfo(server *Server, charName string) string {
+	var s *Stage
+	var c *Session
+
+	for _, stage := range server.stages {
+		for client := range stage.clients {
+
+			if client.Name == "" {
+				continue
+			}
+
+			if cleanStr(client.Name) == cleanStr(charName) {
+				s = stage
+				c = client
+			}
+
+		}
+	}
+
+	if s == nil {
+		return "Character not found"
+	}
+
+	obj := server.FindStageObjectByChar(c.charID)
+	objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+
+	return fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s", c.Name, s.GetName(), s.id, objInfo)
+}
+
 // onDiscordMessage handles receiving messages from discord and forwarding them ingame.
 func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore messages from our bot, or ones that are not in the correct channel.
-	if m.Author.ID == ds.State.User.ID {
+	if m.Author.ID == ds.State.User.ID || !s.enable {
 		return
 	}
 
 	args := strings.Split(m.Content, " ")
 	commandName := args[0]
 	// Move to slash commadns
-	if commandName == "!players" && s.enable {
+	if commandName == "!players" {
 		ds.ChannelMessageSend(m.ChannelID, PlayerList(s))
+		return
+	}
+
+	if commandName == "-char" {
+		if len(args) < 2 {
+			ds.ChannelMessageSend(m.ChannelID, "Usage: !char <char name>")
+			return
+		}
+
+		charName := strings.Join(args[1:], " ")
+		ds.ChannelMessageSend(m.ChannelID, getCharInfo(s, charName))
 		return
 	}
 
