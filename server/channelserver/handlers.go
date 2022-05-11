@@ -133,6 +133,8 @@ func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
+	s.logger.Info("LOGIN", zap.Uint32("charID", s.charID))
+
 	pkt := p.(*mhfpacket.MsgSysLogin)
 	name := ""
 
@@ -153,6 +155,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.server.db.QueryRow("SELECT name FROM characters WHERE id = $1", pkt.CharID0).Scan(&name)
 	s.Lock()
 	s.Name = name
+	s.logger = s.server.logger.Named(name)
 	s.charID = pkt.CharID0
 	s.rights = rights
 	s.Unlock()
@@ -179,6 +182,8 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func logoutPlayer(s *Session) {
+	s.logger.Info("Logout")
+
 	if s.stage == nil {
 		return
 	}

@@ -62,48 +62,82 @@ type ListPlayer struct {
 	CharName    string
 	InQuest     bool
 	WeaponEmoji string
+	QuestEmoji  string
+	StageName   string
 }
 
-func (p *ListPlayer) toString() string {
+func (p *ListPlayer) toString(length int) string {
 	status := ""
 	if p.InQuest {
-		status = "(in quest)"
+		status = "(in quest " + p.QuestEmoji + ")"
+	} else {
+		status = p.StageName
 	}
 
-	return fmt.Sprintf("%s %s %s", p.WeaponEmoji, p.CharName, status)
+	missingSpace := length - len(p.CharName)
+	whitespaces := strings.Repeat(" ", missingSpace+5)
+
+	return fmt.Sprintf("%s %s %s %s", p.WeaponEmoji, p.CharName, whitespaces, status)
 }
 
-func getPlayerList(s *Server) []ListPlayer {
+func getPlayerList(s *Server) ([]ListPlayer, int) {
 	list := []ListPlayer{}
+	questEmojis := []string{
+		":white_circle:",
+		":black_circle:",
+		":red_circle:",
+		":blue_circle:",
+		":brown_circle:",
+		":green_circle:",
+		":purple_circle:",
+		":yellow_circle:",
+		":orange_circle:",
+	}
+
+	bigNameLen := 0
 
 	for _, stage := range s.stages {
+		if len(stage.clients) == 0 {
+			continue
+		}
+
+		questEmoji := questEmojis[len(questEmojis)-1]
+		questEmojis = questEmojis[:len(questEmojis)-1]
+
+		isQuest := stage.isQuest()
 		for client := range stage.clients {
 			char, err := s.getCharacterForUser(int(client.charID))
 			if err == nil {
+				if len(char.Name) > bigNameLen {
+					bigNameLen = len(char.Name)
+				}
+
 				list = append(list, ListPlayer{
 					CharName:    char.Name,
-					InQuest:     stage.isCharInQuestByID(client.charID),
+					InQuest:     isQuest,
+					QuestEmoji:  questEmoji,
 					WeaponEmoji: weapons[char.WeaponType],
+					StageName:   stage.GetName(),
 				})
 
 			}
 		}
 	}
 
-	return list
+	return list, bigNameLen
 }
 
 func PlayerList(s *Server) string {
 	list := ""
 	count := 0
-	listPlayers := getPlayerList(s)
+	listPlayers, bigNameLen := getPlayerList(s)
 
 	sort.SliceStable(listPlayers, func(i, j int) bool {
 		return listPlayers[i].CharName < listPlayers[j].CharName
 	})
 
 	for _, lp := range listPlayers {
-		list += lp.toString() + "\n"
+		list += lp.toString(bigNameLen) + "\n"
 		count++
 	}
 
