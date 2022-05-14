@@ -69,11 +69,12 @@ func (s *Server) setupOriginalLauncherRotues(r *mux.Router) {
 }
 
 func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
+
 	// TW
 	twMain := r.Host("mhfg.capcom.com.tw").Subrouter()
-	twMain.PathPrefix("/g6_launcher/").Handler(http.StripPrefix("/g6_launcher/", http.FileServer(http.Dir("./www/erupe/"))))
+	twMain.PathPrefix("/g6_launcher/").Handler(http.StripPrefix("/g6_launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
 
 	// JP
 	jpMain := r.Host("cog-members.mhf-z.jp").Subrouter()
-	jpMain.PathPrefix("/launcher/").Handler(http.StripPrefix("/launcher/", http.FileServer(http.Dir("./www/erupe"))))
+	jpMain.PathPrefix("/launcher/").Handler(http.StripPrefix("/launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
 }

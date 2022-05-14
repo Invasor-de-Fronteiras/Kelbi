@@ -1,13 +1,9 @@
 import React from "react";
-import HelloWorld from "./components/HelloWorld";
-import RenderForm from "./components/RenderForm";
 
 const App: React.FC<{}> = () => {
   return (
-    <>
-      <HelloWorld />
-      <RenderForm />
-    </>
+     <h1>Hello Man!</h1>
+    
   );
 };
 
