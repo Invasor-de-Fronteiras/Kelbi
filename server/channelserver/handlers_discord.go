@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -57,23 +58,87 @@ func CountChars(s *Server) string {
 	return message
 }
 
+type ListPlayer struct {
+	CharName    string
+	InQuest     bool
+	WeaponEmoji string
+	QuestEmoji  string
+	StageName   string
+}
+
+func (p *ListPlayer) toString(length int) string {
+	status := ""
+	if p.InQuest {
+		status = "(in quest " + p.QuestEmoji + ")"
+	} else {
+		status = p.StageName
+	}
+
+	missingSpace := length - len(p.CharName)
+	whitespaces := strings.Repeat(" ", missingSpace+5)
+
+	return fmt.Sprintf("%s %s %s %s", p.WeaponEmoji, p.CharName, whitespaces, status)
+}
+
+func getPlayerList(s *Server) ([]ListPlayer, int) {
+	list := []ListPlayer{}
+	questEmojis := []string{
+		":white_circle:",
+		":black_circle:",
+		":red_circle:",
+		":blue_circle:",
+		":brown_circle:",
+		":green_circle:",
+		":purple_circle:",
+		":yellow_circle:",
+		":orange_circle:",
+	}
+
+	bigNameLen := 0
+
+	for _, stage := range s.stages {
+		if len(stage.clients) == 0 {
+			continue
+		}
+
+		questEmoji := questEmojis[len(questEmojis)-1]
+		questEmojis = questEmojis[:len(questEmojis)-1]
+
+		isQuest := stage.isQuest()
+		for client := range stage.clients {
+			char, err := s.getCharacterForUser(int(client.charID))
+			if err == nil {
+				if len(char.Name) > bigNameLen {
+					bigNameLen = len(char.Name)
+				}
+
+				list = append(list, ListPlayer{
+					CharName:    char.Name,
+					InQuest:     isQuest,
+					QuestEmoji:  questEmoji,
+					WeaponEmoji: weapons[char.WeaponType],
+					StageName:   stage.GetName(),
+				})
+
+			}
+		}
+	}
+
+	return list, bigNameLen
+}
+
 func PlayerList(s *Server) string {
 	list := ""
 	count := 0
-	for _, stage := range s.stages {
-		for client := range stage.clients {
-			char, err := s.getCharacterForUser(int(client.charID))
+	listPlayers, bigNameLen := getPlayerList(s)
 
-			status := ""
-			if stage.isCharInQuestByID(client.charID) {
-				status = "(in quest)"
-			}
+	sort.SliceStable(listPlayers, func(i, j int) bool {
+		return listPlayers[i].CharName < listPlayers[j].CharName
+	})
 
-			if err == nil {
-				list = list + weapons[char.WeaponType] + " " + char.Name + " " + status + "\n"
-				count += 1
-			}
-		}
+	for _, lp := range listPlayers {
+		list += lp.toString(bigNameLen) + "\n"
+		count++
 	}
 
 	message := fmt.Sprintf("<:5658sus:969620902385946777> Invasores in Server: [%s ] <:5658sus:969620902385946777> \n========== Total %d ==========\n", s.name, count)
@@ -82,23 +147,73 @@ func PlayerList(s *Server) string {
 	return message
 }
 
+func cleanStr(str string) string {
+	return strings.ToLower(strings.Trim(str, " "))
+}
+
+func getCharInfo(server *Server, charName string) string {
+	var s *Stage
+	var c *Session
+
+	for _, stage := range server.stages {
+		for client := range stage.clients {
+
+			if client.Name == "" {
+				continue
+			}
+
+			if cleanStr(client.Name) == cleanStr(charName) {
+				s = stage
+				c = client
+			}
+
+		}
+	}
+
+	if s == nil {
+		return "Character not found"
+	}
+
+	objInfo := ""
+
+	obj := server.FindStageObjectByChar(c.charID)
+	// server.logger.Info("Found object: %+v", zap.Object("obj", obj))
+
+	if obj != nil {
+		objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+	}
+
+	return fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s", c.Name, s.GetName(), s.id, objInfo)
+}
+
 // onDiscordMessage handles receiving messages from discord and forwarding them ingame.
 func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore messages from our bot, or ones that are not in the correct channel.
-	if m.Author.ID == ds.State.User.ID {
+	if m.Author.ID == ds.State.User.ID || !s.enable {
 		return
 	}
 
 	args := strings.Split(m.Content, " ")
 	commandName := args[0]
 	// Move to slash commadns
-	if commandName == "!players" && s.enable {
+	if commandName == "!players" {
 		ds.ChannelMessageSend(m.ChannelID, PlayerList(s))
+		return
+	}
+
+	if commandName == "-char" {
+		if len(args) < 2 {
+			ds.ChannelMessageSend(m.ChannelID, "Usage: !char <char name>")
+			return
+		}
+
+		charName := strings.Join(args[1:], " ")
+		ds.ChannelMessageSend(m.ChannelID, getCharInfo(s, charName))
 		return
 	}
 
 	if m.ChannelID == s.erupeConfig.Discord.RealtimeChannelID {
 		message := fmt.Sprintf("[DISCORD] %s: %s", m.Author.Username, m.Content)
-		s.BroadcastChatMessage(message)
+		s.BroadcastChatMessage(s.discordBot.NormalizeDiscordMessage(message))
 	}
 }

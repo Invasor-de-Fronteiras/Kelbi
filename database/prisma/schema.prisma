@@ -1,0 +1,433 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model account_ban {
+  user_id     Int     @id(map: "ban_pkey")
+  title       String?
+  reason      String?
+  date        String?
+  pass_origin String?
+  pass_block  String?
+}
+
+model account_history {
+  report_id Int       @id @default(autoincrement())
+  user_id   Int?
+  title     String?
+  reason    String?
+  date      DateTime? @db.Date
+}
+
+model account_moderation {
+  id       Int     @id @default(autoincrement())
+  username String?
+  password String?
+  type     String?
+}
+
+model account_sub {
+  id               Int       @id(map: "account_auth_pkey") @default(autoincrement())
+  discord_id       String?
+  erupe_account    String?
+  erupe_password   String?
+  date_inscription DateTime? @db.Date
+  country          String?
+  presentation     String?
+}
+
+model characters {
+  id                                                             Int                  @id @default(autoincrement())
+  user_id                                                        Int?
+  is_female                                                      Boolean?
+  is_new_character                                               Boolean?
+  name                                                           String?              @db.VarChar(15)
+  unk_desc_string                                                String?              @db.VarChar(31)
+  gr                                                             Int?
+  hrp                                                            Int?
+  weapon_type                                                    Int?
+  last_login                                                     Int?
+  savedata                                                       Bytes?
+  decomyset                                                      Bytes?
+  hunternavi                                                     Bytes?
+  otomoairou                                                     Bytes?
+  partner                                                        Bytes?
+  platebox                                                       Bytes?
+  platedata                                                      Bytes?
+  platemyset                                                     Bytes?
+  rengokudata                                                    Bytes?
+  savemercenary                                                  Bytes?
+  restrict_guild_scout                                           Boolean              @default(false)
+  minidata                                                       Bytes?
+  gacha_trial                                                    Int?
+  gacha_prem                                                     Int?
+  gacha_items                                                    Bytes?
+  daily_time                                                     DateTime?            @db.Timestamp(6)
+  frontier_points                                                Int?
+  netcafe_points                                                 Int?
+  house_info                                                     Bytes?
+  login_boost                                                    Bytes?
+  skin_hist                                                      Bytes?
+  kouryou_point                                                  Int?
+  gcp                                                            Int?
+  trophy                                                         Bytes?
+  guild_post_checked                                             DateTime             @default(now()) @db.Timestamp(6)
+  time_played                                                    Int                  @default(0)
+  weapon_id                                                      Int                  @default(0)
+  users                                                          users?               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guild_applications_charactersToguild_applications_actor_id     guild_applications[] @relation("charactersToguild_applications_actor_id")
+  guild_applications_charactersToguild_applications_character_id guild_applications[] @relation("charactersToguild_applications_character_id")
+  guild_characters                                               guild_characters?
+  login_boost_state                                              login_boost_state[]
+  lucky_box_state                                                lucky_box_state[]    @ignore
+  mail_charactersTomail_recipient_id                             mail[]               @relation("charactersTomail_recipient_id")
+  mail_charactersTomail_sender_id                                mail[]               @relation("charactersTomail_sender_id")
+  shop_item_state                                                shop_item_state[]    @ignore
+  stepup_state                                                   stepup_state[]       @ignore
+}
+
+model event_week {
+  id              Int @id
+  event_id        Int
+  date_expiration Int
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model fpoint_items {
+  hash      Int?
+  itemtype  Int? @db.SmallInt
+  itemid    Int?
+  quant     Int?
+  itemvalue Int?
+  tradetype Int? @db.SmallInt
+
+  @@ignore
+}
+
+model gacha_shop {
+  hash       BigInt
+  reqgr      Int
+  reqhr      Int
+  gachaname  String  @db.VarChar(255)
+  gachalink0 String  @db.VarChar(255)
+  gachalink1 String  @db.VarChar(255)
+  gachalink2 String  @db.VarChar(255)
+  extraicon  Int
+  gachatype  Int
+  hideflag   Boolean
+
+  @@id([hash, reqgr, reqhr, gachaname, gachalink0, gachalink1, gachalink2, extraicon, gachatype, hideflag])
+}
+
+model gacha_shop_items {
+  shophash   Int?
+  entrytype  Int?  @db.SmallInt
+  itemhash   Int   @unique
+  currtype   Int?  @db.SmallInt
+  currnumber Int?
+  currquant  Int?
+  percentage Int?
+  rarityicon Int?  @db.SmallInt
+  rollscount Int?  @db.SmallInt
+  itemcount  Int?  @db.SmallInt
+  dailylimit Int?  @db.SmallInt
+  itemtype   Int[]
+  itemid     Int[]
+  quantity   Int[]
+}
+
+model gook {
+  id          Int      @id @default(autoincrement())
+  gook0       Bytes?
+  gook1       Bytes?
+  gook2       Bytes?
+  gook3       Bytes?
+  gook4       Bytes?
+  gook5       Bytes?
+  gook0status Boolean?
+  gook1status Boolean?
+  gook2status Boolean?
+  gook3status Boolean?
+  gook4status Boolean?
+  gook5status Boolean?
+}
+
+model guild_applications {
+  id                                                     Int                    @id @default(autoincrement())
+  guild_id                                               Int
+  character_id                                           Int
+  actor_id                                               Int
+  application_type                                       guild_application_type
+  created_at                                             DateTime               @default(now()) @db.Timestamp(6)
+  characters_charactersToguild_applications_actor_id     characters             @relation("charactersToguild_applications_actor_id", fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  characters_charactersToguild_applications_character_id characters             @relation("charactersToguild_applications_character_id", fields: [character_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guilds                                                 guilds                 @relation(fields: [guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([guild_id, character_id], map: "guild_application_character_id")
+  @@index([application_type], map: "guild_application_type_index")
+}
+
+model guild_characters {
+  id               Int         @id @default(autoincrement())
+  guild_id         Int?
+  character_id     Int?     @unique(map: "guild_character_unique_index")
+  joined_at        DateTime?   @default(now()) @db.Timestamp(6)
+  avoid_leadership Boolean     @default(false)
+  order_index      Int         @default(1)
+  characters       characters? @relation(fields: [character_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guilds           guilds?     @relation(fields: [guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model guild_posts {
+  id         Int      @id @default(autoincrement())
+  guild_id   Int
+  author_id  Int
+  post_type  Int
+  stamp_id   Int
+  title      String
+  body       String
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  liked_by   String   @default("")
+}
+
+model guilds {
+  id                 Int                  @id @default(autoincrement())
+  name               String?              @db.VarChar(24)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  leader_id          Int
+  main_motto         Int?                 @default(0)
+  rank_rp            Int                  @default(0)
+  comment            String               @default("") @db.VarChar(255)
+  festival_colour    festival_colour?     @default(none)
+  icon               Bytes?
+  sub_motto          Int?                 @default(0)
+  item_box           Bytes?
+  event_rp           Int                  @default(0)
+  guild_applications guild_applications[]
+  guild_characters   guild_characters[]
+}
+
+model history {
+  user_id   Int?
+  admin_id  Int?
+  report_id Int     @id
+  title     String?
+  reason    String?
+}
+
+model login_boost_state {
+  char_id    Int?
+  week_req   Int?        @db.SmallInt
+  week_count Int?        @db.SmallInt
+  available  Boolean?
+  end_time   Int?
+  ID         Int         @id @default(autoincrement())
+  characters characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([char_id, week_req], map: "id_week")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model lucky_box_state {
+  char_id       Int?
+  shophash      Int
+  used_itemhash Int[]
+  characters    characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([char_id, shophash], map: "lucky_box_state_id_shophash")
+  @@ignore
+}
+
+model mail {
+  id                                       Int        @id @default(autoincrement())
+  sender_id                                Int
+  recipient_id                             Int
+  subject                                  String     @default("") @db.VarChar
+  body                                     String     @default("") @db.VarChar
+  read                                     Boolean    @default(false)
+  attached_item_received                   Boolean    @default(false)
+  attached_item                            Int?
+  attached_item_amount                     Int        @default(1)
+  is_guild_invite                          Boolean    @default(false)
+  created_at                               DateTime   @default(now()) @db.Timestamp(6)
+  deleted                                  Boolean    @default(false)
+  characters_charactersTomail_recipient_id characters @relation("charactersTomail_recipient_id", fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  characters_charactersTomail_sender_id    characters @relation("charactersTomail_sender_id", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([recipient_id, deleted, created_at, id], map: "mail_recipient_deleted_created_id_index")
+}
+
+model normal_shop_items {
+  shoptype           Int?
+  shopid             Int?
+  itemhash           Int  @id @unique
+  itemid             Int?
+  points             Int?
+  tradequantity      Int?
+  rankreqlow         Int?
+  rankreqhigh        Int?
+  rankreqg           Int?
+  storelevelreq      Int?
+  maximumquantity    Int?
+  boughtquantity     Int?
+  roadfloorsrequired Int?
+  weeklyfataliskills Int?
+}
+
+model questlists {
+  ind       Int    @id
+  questlist Bytes?
+}
+
+model raviregister {
+  id           Int  @id @default(autoincrement())
+  refid        Int
+  nextravi     Int
+  ravistarted  Int?
+  raviposttime Int?
+  ravitype     Int?
+  maxplayers   Int?
+  ravikilled   Int?
+  carvequest   Int?
+  register1    Int?
+  register2    Int?
+  register3    Int?
+  register4    Int?
+  register5    Int?
+}
+
+model ravistate {
+  id               Int  @id @default(autoincrement())
+  refid            Int
+  phase1hp         Int
+  phase2hp         Int?
+  phase3hp         Int?
+  phase4hp         Int?
+  phase5hp         Int?
+  phase6hp         Int?
+  phase7hp         Int?
+  phase8hp         Int?
+  phase9hp         Int?
+  unknown1         Int?
+  unknown2         Int?
+  unknown3         Int?
+  unknown4         Int?
+  unknown5         Int?
+  unknown6         Int?
+  unknown7         Int?
+  unknown8         Int?
+  unknown9         Int?
+  unknown10        Int?
+  unknown11        Int?
+  unknown12        Int?
+  unknown13        Int?
+  unknown14        Int?
+  unknown15        Int?
+  unknown16        Int?
+  unknown17        Int?
+  unknown18        Int?
+  unknown19        Int?
+  unknown20        Int?
+  damagemultiplier Int?
+}
+
+model ravisupport {
+  id        Int  @id @default(autoincrement())
+  refid     Int
+  support1  Int
+  support2  Int?
+  support3  Int?
+  support4  Int?
+  support5  Int?
+  support6  Int?
+  support7  Int?
+  support8  Int?
+  support9  Int?
+  support10 Int?
+  support11 Int?
+  support12 Int?
+  support13 Int?
+  support14 Int?
+  support15 Int?
+  support16 Int?
+  support17 Int?
+  support18 Int?
+  support19 Int?
+  support20 Int?
+  support21 Int?
+  support22 Int?
+  support23 Int?
+  support24 Int?
+  support25 Int?
+}
+
+model schema_migrations {
+  version BigInt  @id
+  dirty   Boolean
+}
+
+model servers {
+  server_id        Int     @id @default(autoincrement())
+  server_name      String?
+  season           Int?
+  current_players  Int?
+  event_id         Int?
+  event_expiration Int?
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model shop_item_state {
+  char_id      Int?
+  itemhash     Int
+  usedquantity Int?
+  characters   characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([char_id, itemhash], map: "shop_item_state_id_itemhash")
+  @@ignore
+}
+
+model sign_sessions {
+  id             Int     @id @default(autoincrement())
+  user_id        Int?
+  auth_token_num BigInt?
+  auth_token_str String?
+  users          users?  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model stepup_state {
+  char_id          Int?
+  shophash         Int
+  step_progression Int?
+  step_time        DateTime?   @db.Timestamp(6)
+  characters       characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([char_id, shophash], map: "stepup_state_id_shophash")
+  @@ignore
+}
+
+model users {
+  id            Int             @id @default(autoincrement())
+  username      String          @unique
+  password      String
+  item_box      Bytes?
+  rights        Int             @default(14)
+  characters    characters[]
+  sign_sessions sign_sessions[]
+}
+
+enum festival_colour {
+  none
+  red
+  blue
+}
+
+enum guild_application_type {
+  applied
+  invited
+}

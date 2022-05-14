@@ -13,34 +13,19 @@ Currently allows a JP MHF client (with GameGuard removed) to:
 
 # Installation
 ## Server
-1. Clone the repo with `git clone https://github.com/Andoryuuta/Erupe.git`
-2. Install PostgreSQL
-3. Launch psql shell, `CREATE DATABASE erupe;`.
-4. Setup database with golang-migrate:
+1. Start database with docker
 
-    Windows:
-    ```
-    > go get -tags 'postgres' -u github.com/golang-migrate/migrate/v4/cmd/migrate/
+```shell
+docker-compose up -d
+```
 
-    > set POSTGRESQL_URL=postgres://postgres:password@localhost:5432/erupe?sslmode=disable
+2. Run migrations
 
-    > cd erupe
-
-    > migrate -database %POSTGRESQL_URL% -path migrations up
-    ```
-
-    Linux:
-    ```
-    > go get -tags 'postgres' -u github.com/golang-migrate/migrate/v4/cmd/migrate/
-
-    > export POSTGRESQL_URL=postgres://postgres:password@localhost:5432/erupe?sslmode=disable
-
-    > cd erupe
-
-    > migrate -database $POSTGRESQL_URL -path migrations up
-    ```
-
-    (Replacing `postgres:password` with your postgres username and password)
+```shell
+cd database
+npm i
+npm run db:push
+```
 
 5. Edit the config.json
 

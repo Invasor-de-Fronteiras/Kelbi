@@ -58,6 +58,7 @@ type Database struct {
 
 // Launcher holds the launcher server config.
 type Launcher struct {
+	Path                     string
 	Port                     int
 	UseOriginalLauncherFiles bool
 }
