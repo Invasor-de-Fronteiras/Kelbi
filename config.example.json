@@ -13,13 +13,14 @@
 			"Enabled": true,
 			"OutputDir": "savedata"
 		}
-		
     },
     "discord": {
         "enabled": false,
         "bottoken": "",
         "realtimeChannelID": "",
-        "serverId": ""
+        "serverId": "",
+        "devRoles": [],
+        "devMode": false
     },
     "database": {
         "host": "localhost",

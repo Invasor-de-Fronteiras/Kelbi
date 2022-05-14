@@ -45,6 +45,8 @@ type Discord struct {
 	BotToken          string
 	ServerID          string
 	RealtimeChannelID string
+	DevRoles          []string
+	DevMode           bool
 }
 
 // Database holds the postgres database config.
