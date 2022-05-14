@@ -4,6 +4,8 @@ www/jp/
 vendor/
 bin/*.bin
 bin/quests/*.bin
+bin/quests/BACKUP
+bin/quests/*.txt
 bin/questlists/*.bin
 bin/scenarios/*.bin
 bin/debug/*.bin
