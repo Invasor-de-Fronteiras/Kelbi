@@ -7,6 +7,8 @@
     "webpack": "webpack",
     "start": "webpack --watch --mode development",
     "build": "webpack --mode production",
+    "lint": "npx eslint --ext .tsx,.ts --fix ./src",
+    "format": "prettier --write \"./**/*.{json,css,js,yml}\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
