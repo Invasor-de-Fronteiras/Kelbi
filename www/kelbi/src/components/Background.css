@@ -1,0 +1,13 @@
+#img-bg {
+    animation-duration: 0.5s;
+    animation-name: fadeIn;
+}
+
+@keyframes  fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

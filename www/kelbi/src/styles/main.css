@@ -3,3 +3,33 @@
   padding: 0;
   border: 0;
 }
+
+html,
+body {
+  height: 100%;
+  margin: 0px;
+  width: 100%;
+  overflow: hidden;
+}
+
+
+.input {
+  background-color: #d1d5db;
+  padding: 10px;
+  border-radius: 3px;
+}
+
+.input::placeholder {
+  color: #1e293b;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0;
+}
+
+#main {
+  display: flex;
+  flex-direction: row;
+}

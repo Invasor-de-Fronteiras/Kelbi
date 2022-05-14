@@ -1,0 +1,18 @@
+#left-side {
+  display: flex;
+  flex-direction: column;
+  width: 40%;
+  border-right: #000 1px solid;
+
+  align-items: center;
+  padding: 50px;
+
+}
+
+#icon-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+}
+

@@ -1,0 +1,11 @@
+#sign-in h1 {
+  text-transform: uppercase;
+  font-size: 2rem;
+}
+
+#sign-in {
+  margin-top: 50px;
+  display: block;
+  width: 100%;
+  background-color: red;
+}
