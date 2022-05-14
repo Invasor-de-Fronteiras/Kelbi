@@ -48,16 +48,9 @@ const images = [
   BgImg19,
 ];
 
+const bgImg = randomArr(images);
+
 export function Background() {
-  const [bgImg, setImg] = useState(randomArr(images));
-
-  useEffect(() => {
-    let interval = setInterval(() => {
-      setImg(randomArr(images));
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div>
       <img id='img-bg' src={bgImg} height='600px' width='100%' />
