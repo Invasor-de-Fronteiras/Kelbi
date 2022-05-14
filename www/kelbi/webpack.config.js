@@ -36,6 +36,6 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(__dirname, "public", "index.html"),
     }),
-    new ES3Plugin()
+    new ES3Plugin(),
   ],
 };
