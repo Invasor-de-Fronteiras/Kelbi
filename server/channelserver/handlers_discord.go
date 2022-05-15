@@ -84,7 +84,6 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 	list := []ListPlayer{}
 	questEmojis := []string{
 		":white_circle:",
-		":black_circle:",
 		":red_circle:",
 		":blue_circle:",
 		":brown_circle:",
@@ -147,6 +146,90 @@ func PlayerList(s *Server) string {
 	return message
 }
 
+func debug(s *Server) string {
+	list := ""
+
+	for _, stage := range s.stages {
+		if !stage.isQuest() && len(stage.objects) == 0 {
+			continue
+		}
+
+		list += fmt.Sprintf("    -> Stage: %s StageId: %s\n", stage.GetName(), stage.id)
+		isQuest := "false"
+		hasDeparted := "false"
+
+		if stage.isQuest() {
+			isQuest = "true"
+		}
+
+		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
+
+		if stage.isQuest() {
+			if stage.hasDeparted {
+				hasDeparted = "true"
+			}
+
+			list += fmt.Sprintf("    '-> isDeparted: %s\n", hasDeparted)
+			list += fmt.Sprintf("    '-> reserveSlots (%d/%d)\n", len(stage.reservedClientSlots), stage.maxPlayers)
+
+			for charid, _ := range stage.reservedClientSlots {
+				char, err := s.getCharacterForUser(int(charid))
+				if err == nil {
+					list += fmt.Sprintf("        '-> %s\n", char.Name)
+				}
+			}
+		}
+
+		list += "    '-> objects: \n"
+		for _, obj := range stage.objects {
+			objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+			list += fmt.Sprintf("        '-> ObjectId: %d - %s\n", obj.id, objInfo)
+		}
+	}
+
+	message := fmt.Sprintf("Objects in Server: [%s ]\n", s.name)
+	message += list
+
+	return message
+}
+
+func questlist(s *Server) string {
+	list := ""
+
+	for _, stage := range s.stages {
+		if !stage.isQuest() {
+			continue
+		}
+
+		hasDeparted := ""
+		if stage.hasDeparted {
+			hasDeparted = " - departed"
+		}
+		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.id, len(stage.reservedClientSlots), stage.maxPlayers, hasDeparted, stage.createdAt)
+
+		for charid, _ := range stage.reservedClientSlots {
+			char, err := s.getCharacterForUser(int(charid))
+			if err == nil {
+				list += fmt.Sprintf("        '-> %s\n", char.Name)
+			}
+		}
+	}
+
+	message := fmt.Sprintf("Quests in Server: [%s ]\n", s.name)
+	message += list
+
+	return message
+}
+
+func removeStageById(s *Server, stageId string) string {
+	if s.stages[stageId] != nil {
+		delete(s.stages, stageId)
+		return "Stage deleted!"
+	}
+
+	return "Stage not found!"
+}
+
 func cleanStr(str string) string {
 	return strings.ToLower(strings.Trim(str, " "))
 }
@@ -186,6 +269,18 @@ func getCharInfo(server *Server, charName string) string {
 	return fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s", c.Name, s.GetName(), s.id, objInfo)
 }
 
+func (s *Server) isDiscordAdmin(ds *discordgo.Session, m *discordgo.MessageCreate) bool {
+	for _, role := range m.Member.Roles {
+		for _, id := range s.erupeConfig.Discord.DevRoles {
+			if id == role {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // onDiscordMessage handles receiving messages from discord and forwarding them ingame.
 func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore messages from our bot, or ones that are not in the correct channel.
@@ -193,8 +288,14 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
+	// Ignore other channels in devMode
+	if s.erupeConfig.Discord.DevMode && m.ChannelID != s.erupeConfig.Discord.RealtimeChannelID {
+		return
+	}
+
 	args := strings.Split(m.Content, " ")
 	commandName := args[0]
+
 	// Move to slash commadns
 	if commandName == "!players" {
 		ds.ChannelMessageSend(m.ChannelID, PlayerList(s))
@@ -209,6 +310,27 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 
 		charName := strings.Join(args[1:], " ")
 		ds.ChannelMessageSend(m.ChannelID, getCharInfo(s, charName))
+		return
+	}
+
+	if commandName == "!debug" && s.isDiscordAdmin(ds, m) {
+		ds.ChannelMessageSend(m.ChannelID, debug(s))
+		return
+	}
+
+	if commandName == "!questlist" && s.isDiscordAdmin(ds, m) {
+		ds.ChannelMessageSend(m.ChannelID, questlist(s))
+		return
+	}
+
+	if commandName == "!remove-stage" && s.isDiscordAdmin(ds, m) {
+		if len(args) < 2 {
+			ds.ChannelMessageSend(m.ChannelID, "Usage: !remove-stage <stage id>")
+			return
+		}
+
+		stageId := strings.Join(args[1:], " ")
+		ds.ChannelMessageSend(m.ChannelID, removeStageById(s, stageId))
 		return
 	}
 

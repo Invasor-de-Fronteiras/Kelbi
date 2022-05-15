@@ -3,6 +3,8 @@ package channelserver
 import (
 	"sync"
 
+	"time"
+
 	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/network/mhfpacket"
 )
@@ -56,6 +58,7 @@ type Stage struct {
 	maxPlayers  uint16
 	hasDeparted bool
 	password    string
+	createdAt   string
 }
 
 // NewStage creates a new stage with intialized values.
@@ -69,6 +72,7 @@ func NewStage(ID string) *Stage {
 		maxPlayers:          4,
 		gameObjectCount:     1,
 		objectList:          make(map[uint8]*ObjectMap),
+		createdAt:           time.Now().Format("01-02-2006 15:04:05"),
 	}
 	s.InitObjectList()
 	return s
