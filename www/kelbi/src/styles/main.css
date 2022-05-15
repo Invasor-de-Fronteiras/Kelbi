@@ -30,6 +30,10 @@ body {
   margin: 10px 0;
 }
 
+.input-group label {
+  display: none;
+}
+
 #main {
   display: flex;
   flex-direction: row;

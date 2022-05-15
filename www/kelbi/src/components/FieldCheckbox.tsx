@@ -1,6 +1,18 @@
 import React from 'react';
 
-export function FieldCheckbox() {
+interface FieldCheckboxProps {
+  name: string;
+  label?: string;
+  value?: boolean;
+  onChange?: (newValue: boolean) => void;
+}
+
+export function FieldCheckbox({
+  name,
+  value,
+  onChange = () => null,
+  ...props
+}: FieldCheckboxProps) {
   return (
     <div
       style={{
@@ -9,12 +21,19 @@ export function FieldCheckbox() {
         alignItems: 'center',
       }}>
       <label
+        htmlFor={name}
         style={{
           marginRight: '10px',
         }}>
         Remember me
       </label>
-      <input type='checkbox' />
+      <input
+        type='checkbox'
+        id={name}
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        {...props}
+      />
     </div>
   );
 }
