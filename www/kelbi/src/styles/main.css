@@ -1,3 +1,27 @@
+:root {
+  --main-color: #2b2a2f;
+  --main-bg-color: #f8f8f8;
+  --secondary-bg-color: #eaeaea;
+  --placeholder-color: #8c8c8c;
+}
+
+.main-color {
+  color: #2b2a2f;
+}
+
+.main-bg-color {
+  background-color: #f8f8f8;
+}
+
+.secondary-bg-color {
+  background-color: #eaeaea;
+}
+
+
+*::placeholder {
+  color: #8c8c8c;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -13,16 +37,12 @@ body {
   overflow: hidden;
 }
 
-
 .input {
-  background-color: #CBD5E0;
+  background-color: #eaeaea;
   padding: 10px;
   border-radius: 3px;
 }
 
-.input::placeholder {
-  color: #1e293b;
-}
 
 .input-group {
   display: flex;

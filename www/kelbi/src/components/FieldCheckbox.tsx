@@ -20,13 +20,6 @@ export function FieldCheckbox({
         flexDirection: 'row',
         alignItems: 'center',
       }}>
-      <label
-        htmlFor={name}
-        style={{
-          marginRight: '10px',
-        }}>
-        Remember me
-      </label>
       <input
         type='checkbox'
         id={name}
@@ -34,6 +27,13 @@ export function FieldCheckbox({
         onChange={(e) => onChange(e.target.checked)}
         {...props}
       />
+      <label
+        htmlFor={name}
+        style={{
+          marginLeft: '10px',
+        }}>
+        manter login
+      </label>
     </div>
   );
 }

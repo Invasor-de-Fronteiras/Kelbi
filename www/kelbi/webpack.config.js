@@ -26,7 +26,7 @@ module.exports = {
         use: ['ts-loader'],
       },
       {
-        test: /\.(css|scss)$/,
+        test: /\.(css)$/,
         use: [
           devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
           'css-loader',

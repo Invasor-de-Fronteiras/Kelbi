@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 
 import BgImg1 from '../assets/background/1.jpg';
 import BgImg2 from '../assets/background/2.jpg';
@@ -19,8 +19,6 @@ import BgImg16 from '../assets/background/16.jpg';
 import BgImg17 from '../assets/background/17.jpg';
 import BgImg18 from '../assets/background/18.jpg';
 import BgImg19 from '../assets/background/19.jpg';
-
-import './Background.css';
 
 function randomArr<T>(arr: T[]) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -48,14 +46,24 @@ const images = [
   BgImg19,
 ];
 
-// const bgImg = randomArr(images);
-
 export function Background() {
   const bgImg = useMemo(() => randomArr(images), []);
 
   return (
     <div>
-      <img id='img-bg' src={bgImg} height='600px' width='100%' />
+      <img
+        id='img-bg'
+        src={bgImg}
+        height='600px'
+        // width='100%'
+        width='1124px'
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: -1,
+        }}
+      />
     </div>
   );
 }

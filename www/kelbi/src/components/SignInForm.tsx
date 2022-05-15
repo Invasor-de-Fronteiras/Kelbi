@@ -63,21 +63,16 @@ export function SignInForm() {
 
   return (
     <form id='sign-in' onSubmit={onSubmit}>
-      <h1>Sign In </h1>
+      <h1>Fazer login </h1>
       <FieldInput
-        placeholder='Account ID'
+        placeholder='Nome de usuário'
         type='text'
         isRequired
         {...makeInputProps('accountId')}
       />
-      <FieldInput
-        placeholder='Password'
-        type='password'
-        isRequired
-        {...makeInputProps('password')}
-      />
+      <FieldInput placeholder='Senha' type='password' isRequired {...makeInputProps('password')} />
       <FieldCheckbox {...makeCheckboxProps('rememberMe')} />
-      <button type='submit'>Sign In</button>
+      <button type='submit'>Entrar</button>
     </form>
   );
 }
