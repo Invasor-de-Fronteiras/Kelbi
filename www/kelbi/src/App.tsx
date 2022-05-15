@@ -8,6 +8,7 @@ import { LogoIcon } from './components/LogoIcon';
 
 import './styles/app.css';
 import { Background } from './components/Background';
+import { LauncherButtonGroup } from './components/buttons/LauncherButtonGroup';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         </div>
       </div>
       <Background />
+      <LauncherButtonGroup />
     </div>
   );
 }

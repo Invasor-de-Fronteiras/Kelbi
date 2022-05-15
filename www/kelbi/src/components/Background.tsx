@@ -55,7 +55,9 @@ export function Background() {
         id='img-bg'
         src={bgImg}
         height='600px'
+        // FOR IMAGE SEPARATE
         // width='100%'
+        // FOR IMAGE FULLSCREEN
         width='1124px'
         style={{
           position: 'absolute',
