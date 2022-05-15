@@ -18,9 +18,11 @@ function App() {
         </div>
         <SignInForm />
         <div id='left-side-footer'>
-          <GrConfigure size={50} />
-          <SiDiscord size={50} />
-          <AiFillGithub size={50} />
+          <GrConfigure className='icon' size={20} />
+          <div>
+            <SiDiscord className='icon discord-icon' size={20} />
+            <AiFillGithub className='icon' size={20} />
+          </div>
         </div>
       </div>
       <Background />

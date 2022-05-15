@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import BgImg1 from '../assets/background/1.jpg';
 import BgImg2 from '../assets/background/2.jpg';
@@ -48,9 +48,11 @@ const images = [
   BgImg19,
 ];
 
-const bgImg = randomArr(images);
+// const bgImg = randomArr(images);
 
 export function Background() {
+  const bgImg = useMemo(() => randomArr(images), []);
+
   return (
     <div>
       <img id='img-bg' src={bgImg} height='600px' width='100%' />

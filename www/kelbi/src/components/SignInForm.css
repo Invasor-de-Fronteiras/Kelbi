@@ -1,5 +1,4 @@
 #sign-in h1 {
-  text-transform: uppercase;
   font-size: 2rem;
 }
 
@@ -7,5 +6,13 @@
   margin-top: 50px;
   display: block;
   width: 100%;
-  background-color: red;
+}
+
+#sign-in button {
+  background-color: #1e293b;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 3px;
+  margin-top: 10px;
 }
