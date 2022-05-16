@@ -19,10 +19,7 @@ import BgImg16 from '../assets/background/16.jpg';
 import BgImg17 from '../assets/background/17.jpg';
 import BgImg18 from '../assets/background/18.jpg';
 import BgImg19 from '../assets/background/19.jpg';
-
-function randomArr<T>(arr: T[]) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+import { randomArr } from '../utils/util';
 
 const images = [
   BgImg1,

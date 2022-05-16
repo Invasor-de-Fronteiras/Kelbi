@@ -20,6 +20,10 @@
 }
 
 
+#left-side-header {
+  margin-bottom: 50px;
+}
+
 #left-side-footer {
   margin: 150px 0;
   display: flex;

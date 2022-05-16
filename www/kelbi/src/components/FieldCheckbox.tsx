@@ -3,6 +3,7 @@ import React from 'react';
 interface FieldCheckboxProps {
   name: string;
   label?: string;
+  disabled?: boolean;
   value?: boolean;
   onChange?: (newValue: boolean) => void;
 }

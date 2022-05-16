@@ -47,6 +47,10 @@ body {
   border-radius: 3px;
 }
 
+.input:hover {
+  background-color: #d2d2d2;
+}
+
 
 .input-group {
   display: flex;
@@ -65,4 +69,30 @@ body {
 
 .icon {
   cursor: pointer;
+}
+
+button {
+  background-color: #1e293b;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 3px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 70px;
+}
+
+*:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button .loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 3px;
 }

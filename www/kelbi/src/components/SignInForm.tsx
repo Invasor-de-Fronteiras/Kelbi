@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { useLauncher } from '../context/LauncherContext';
 import { FieldCheckbox } from './FieldCheckbox';
 import { FieldInput } from './FieldInput';
-
 import './SignInForm.css';
+import { Button } from './Button';
 
 interface FormValues {
   accountId: string;
@@ -11,6 +12,8 @@ interface FormValues {
 }
 
 export function SignInForm() {
+  const { isLoading, setIsLoading } = useLauncher();
+
   const [form, setForm] = useState({
     values: {
       accountId: '',
@@ -25,6 +28,7 @@ export function SignInForm() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
   };
 
   const makeInputProps = (name: Exclude<keyof FormValues, 'rememberMe'>) => {
@@ -69,10 +73,17 @@ export function SignInForm() {
         type='text'
         isRequired
         {...makeInputProps('accountId')}
+        disabled={isLoading}
       />
-      <FieldInput placeholder='Senha' type='password' isRequired {...makeInputProps('password')} />
-      <FieldCheckbox {...makeCheckboxProps('rememberMe')} />
-      <button type='submit'>Entrar</button>
+      <FieldInput
+        placeholder='Senha'
+        type='password'
+        isRequired
+        {...makeInputProps('password')}
+        disabled={isLoading}
+      />
+      <FieldCheckbox {...makeCheckboxProps('rememberMe')} disabled={isLoading} />
+      <Button isLoading={isLoading}>Entrar</Button>
     </form>
   );
 }
