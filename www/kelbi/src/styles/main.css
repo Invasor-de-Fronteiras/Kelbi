@@ -119,3 +119,21 @@ button .loading {
   align-items: center;
   margin-right: 3px;
 }
+
+.checkbox-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.checkbox-group:hover {
+  cursor: pointer;
+}
+
+.checkbox-group.disabled {
+  cursor: not-allowed;
+}
+
+.checkbox-group label {
+  margin-left: 6px;
+}

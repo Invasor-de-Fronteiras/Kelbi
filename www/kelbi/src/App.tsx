@@ -1,5 +1,5 @@
 import React from 'react';
-import { SignInForm } from './components/SignInForm';
+import { SignInForm } from './layout/SignInForm';
 
 import { AiFillGithub } from 'react-icons/ai';
 import { GrConfigure } from 'react-icons/gr';

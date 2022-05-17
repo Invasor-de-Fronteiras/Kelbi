@@ -1,11 +1,12 @@
 import React from 'react';
 import { useLauncher } from '../context/LauncherContext';
-import { FieldCheckbox } from './FieldCheckbox';
-import { FieldInput } from './FieldInput';
-import './SignInForm.css';
-import { Button } from './Button';
+import { FieldCheckbox } from '../components/FieldCheckbox';
+import { FieldInput } from '../components/FieldInput';
+import { Button } from '../components/Button';
 import { FormikProvider, useFormik } from 'formik';
 import * as Yup from 'yup';
+
+import './SignInForm.css';
 
 interface FormValues {
   accountId: string;
@@ -14,7 +15,7 @@ interface FormValues {
 }
 
 const validationSchema = Yup.object().shape({
-  email: Yup.string().email('E-mail inválido.').required('Campo obrigatório.'),
+  email: Yup.string().required('Campo obrigatório.'),
   password: Yup.string().min(6, 'Senha muito curta.').required('Campo obrigatório.'),
   rememberMe: Yup.boolean().required('Campo obrigatório.'),
 });
@@ -35,15 +36,14 @@ export function SignInForm() {
       rememberMe: false,
     },
     validationSchema,
-    onSubmit: async () => {
+    onSubmit: async (data) => {
+      console.log(data);
       setIsLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsLoading(false);
     },
     ...startButtonInDisabledState,
   });
-
-  console.log(formik);
 
   return (
     <FormikProvider value={formik}>
@@ -63,7 +63,9 @@ export function SignInForm() {
           name='password'
           disabled={isLoading}
         />
-        <FieldCheckbox name='rememberMe' disabled={isLoading} />
+        <FieldCheckbox name='rememberMe' disabled={isLoading}>
+          manter login
+        </FieldCheckbox>
         <Button
           type='submit'
           isLoading={isLoading}
