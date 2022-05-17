@@ -6,7 +6,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const devMode = process.env.NODE_ENV !== 'production';
 
 module.exports = {
-  entry: './src/index.tsx',
+  entry: ['@babel/polyfill', './src/index.tsx'],
   output: { path: path.join(__dirname, 'build'), filename: 'index.bundle.js' },
   // mode: process.env.NODE_ENV || "development",
   resolve: {
@@ -23,7 +23,7 @@ module.exports = {
       {
         test: /\.(ts|tsx)$/,
         exclude: /node_modules/,
-        use: ['ts-loader'],
+        use: ['babel-loader'],
       },
       {
         test: /\.(css)$/,

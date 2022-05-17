@@ -5,7 +5,18 @@ import Palico from '../assets/loading/palico.gif';
 import { randomArr } from '../utils/util';
 
 export function Loading() {
-  const loadingImg = useMemo(() => randomArr([Palamute, Palico]), []);
+  const data = useMemo(
+    () =>
+      randomArr([
+        { img: Palamute, width: '100', height: '100' },
+        {
+          img: Palico,
+          width: '100%',
+          height: '100%',
+        },
+      ]),
+    [],
+  );
 
   return (
     <div
@@ -14,8 +25,7 @@ export function Loading() {
         bottom: 0,
         right: 0,
       }}>
-      <img id='img-bg' src={loadingImg} height='100' width='100' />
-      {/* {message && <span className='loading-message'>{message}</span>} */}
+      <img id='img-bg' src={data.img} height={data.height} width={data.width} />
     </div>
   );
 }

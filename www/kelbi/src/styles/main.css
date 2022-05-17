@@ -21,7 +21,6 @@
   background-color: #eaeaea;
 }
 
-
 *::placeholder {
   color: #8c8c8c;
 }
@@ -50,7 +49,6 @@ body {
 .input:hover {
   background-color: #d2d2d2;
 }
-
 
 .input-group {
   display: flex;

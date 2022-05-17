@@ -1,19 +1,19 @@
 .launcher-buttons {
-    margin-top: 1px;
-    position: absolute;
-    right: 0;
+  margin-top: 1px;
+  position: absolute;
+  right: 0;
 }
 
 .launcher-buttons .icon {
-    color: #000;
-    margin-right: 5px;
-    padding: 2px;
+  color: #000;
+  margin-right: 5px;
+  padding: 2px;
 }
 #minimize-window-button:hover {
-    background-color: #f8f8f8;
+  background-color: #f8f8f8;
 }
 
 #close-window-button:hover {
-    background-color: #ef4444;
-    color: #fff;
+  background-color: #ef4444;
+  color: #fff;
 }
