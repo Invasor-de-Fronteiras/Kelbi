@@ -66,7 +66,12 @@ body {
 }
 
 .icon {
+  color: #1e293b;
   cursor: pointer;
+}
+
+.icon:hover {
+  color: #395074;
 }
 
 button {
@@ -80,6 +85,15 @@ button {
   justify-content: center;
   align-items: center;
   min-width: 70px;
+  cursor: pointer;
+}
+
+*:hover {
+  transition: 0.7s;
+}
+
+button:hover {
+  background-color:#395074;
 }
 
 *:disabled {
