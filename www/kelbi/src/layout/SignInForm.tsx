@@ -7,15 +7,16 @@ import { FormikProvider, useFormik } from 'formik';
 import * as Yup from 'yup';
 
 import './SignInForm.css';
+import { useLogin } from '../hooks/useLogin';
 
 interface FormValues {
-  accountId: string;
+  username: string;
   password: string;
   rememberMe: boolean;
 }
 
 const validationSchema = Yup.object().shape({
-  email: Yup.string().required('Campo obrigatório.'),
+  username: Yup.string().required('Campo obrigatório.'),
   password: Yup.string().min(6, 'Senha muito curta.').required('Campo obrigatório.'),
   rememberMe: Yup.boolean().required('Campo obrigatório.'),
 });
@@ -27,32 +28,27 @@ const startButtonInDisabledState = {
 };
 
 export function SignInForm() {
-  const { isLoading, setIsLoading } = useLauncher();
+  const { error, isLoading, mutate } = useLogin();
 
   const formik = useFormik({
     initialValues: {
-      email: '',
-      password: '',
-      rememberMe: false,
+      username: localStorage.getItem('username') ?? '',
+      password: localStorage.getItem('password') ?? '',
+      rememberMe: localStorage.getItem('rememberMe') === 'true',
     },
     validationSchema,
-    onSubmit: async (data) => {
-      console.log(data);
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setIsLoading(false);
-    },
+    onSubmit: async (data) => mutate(data),
     ...startButtonInDisabledState,
   });
 
   return (
     <FormikProvider value={formik}>
       <form id='sign-in' onSubmit={formik.handleSubmit}>
-        <h1>Fazer login </h1>
+        <h1>Fazer login {error ? 'tem erro' : ''}</h1>
         <FieldInput
           placeholder='Nome de usuário'
           type='text'
-          name='email'
+          name='username'
           isRequired
           disabled={isLoading}
         />

@@ -10,15 +10,18 @@ import './styles/app.css';
 import { Background } from './components/Background';
 import { LauncherButtonGroup } from './components/buttons/LauncherButtonGroup';
 import { openConfig, openDiscord, openGithub } from './utils/launcher';
+import { useLauncher } from './context/LauncherContext';
 
 function App() {
+  const { loggedIn } = useLauncher();
+
   return (
     <div id='main'>
       <div id='left-side'>
         <div id='left-side-header'>
           <LogoIcon />
         </div>
-        <SignInForm />
+        {loggedIn ? <span>VC ESTÁ LOGADO</span> : <SignInForm />}
         <div id='left-side-footer'>
           <GrConfigure className='icon' size={20} onClick={openConfig} />
           <div>
