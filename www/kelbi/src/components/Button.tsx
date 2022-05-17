@@ -5,9 +5,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
 }
 
-export function Button({ isLoading, children, ...props }: ButtonProps) {
+export function Button({ isLoading, children, disabled, ...props }: ButtonProps) {
   return (
-    <button {...props} disabled={isLoading}>
+    <button {...props} disabled={disabled ?? isLoading}>
       {isLoading ? <span className='loading'>Carregando...</span> : children}
     </button>
   );

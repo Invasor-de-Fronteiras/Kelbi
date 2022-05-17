@@ -1,4 +1,5 @@
-import { useField } from 'formik';
+import classNames from 'classnames';
+import { ErrorMessage, useField } from 'formik';
 import React, { ComponentProps } from 'react';
 // import { useField } from 'formik';
 
@@ -9,14 +10,23 @@ interface FieldInputProps extends ComponentProps<'input'> {
 }
 
 export function FieldInput({ name, isRequired, label, ...props }: FieldInputProps) {
-  const [field] = useField(name);
+  const [field, meta] = useField(name);
 
-  // const hasAnErrorAndHasBeenTouched = !!meta.error && meta.touched;
+  const hasAnErrorAndHasBeenTouched = !!meta.error && meta.touched;
 
   return (
     <div className='input-group'>
       <label htmlFor={name}>{label}</label>
-      <input id={name} className='input' {...props} required={isRequired} {...field} />
+      <input
+        id={name}
+        className={classNames('input', {
+          'input-error': hasAnErrorAndHasBeenTouched,
+        })}
+        {...props}
+        required={isRequired}
+        {...field}
+      />
+      <ErrorMessage name={name} render={(err) => <span className='error-message'>{err}</span>} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { FieldInput } from './FieldInput';
 import './SignInForm.css';
 import { Button } from './Button';
 import { FormikProvider, useFormik } from 'formik';
+import * as Yup from 'yup';
 
 interface FormValues {
   accountId: string;
@@ -12,21 +13,37 @@ interface FormValues {
   rememberMe: boolean;
 }
 
+const validationSchema = Yup.object().shape({
+  email: Yup.string().email('E-mail inválido.').required('Campo obrigatório.'),
+  password: Yup.string().min(6, 'Senha muito curta.').required('Campo obrigatório.'),
+  rememberMe: Yup.boolean().required('Campo obrigatório.'),
+});
+
+const startButtonInDisabledState = {
+  initialErrors: {
+    rememberMe: 'ignore',
+  },
+};
+
 export function SignInForm() {
   const { isLoading, setIsLoading } = useLauncher();
 
   const formik = useFormik({
     initialValues: {
-      accountId: '',
+      email: '',
       password: '',
       rememberMe: false,
     },
+    validationSchema,
     onSubmit: async () => {
       setIsLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsLoading(false);
     },
+    ...startButtonInDisabledState,
   });
+
+  console.log(formik);
 
   return (
     <FormikProvider value={formik}>
@@ -35,8 +52,8 @@ export function SignInForm() {
         <FieldInput
           placeholder='Nome de usuário'
           type='text'
+          name='email'
           isRequired
-          name='accountId'
           disabled={isLoading}
         />
         <FieldInput
@@ -47,7 +64,10 @@ export function SignInForm() {
           disabled={isLoading}
         />
         <FieldCheckbox name='rememberMe' disabled={isLoading} />
-        <Button type='submit' isLoading={isLoading}>
+        <Button
+          type='submit'
+          isLoading={isLoading}
+          disabled={formik.isValidating || !formik.isValid}>
           Entrar
         </Button>
       </form>

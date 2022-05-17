@@ -46,6 +46,17 @@ body {
   border-radius: 3px;
 }
 
+ .input-error {
+  border-color: #dc143c;
+  box-shadow: #dc143c 0px 0px 0px 1px;
+}
+
+.error-message {
+  color: #dc143c;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
 .input:hover {
   background-color: #d2d2d2;
 }
