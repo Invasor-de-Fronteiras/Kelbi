@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import { ErrorMessage, useField } from 'formik';
 import React, { ComponentProps } from 'react';
-// import { useField } from 'formik';
 
 interface FieldInputProps extends ComponentProps<'input'> {
   name: string;

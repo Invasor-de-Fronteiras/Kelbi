@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import BgImg1 from '../assets/background/1.jpg';
 import BgImg2 from '../assets/background/2.jpg';
@@ -46,23 +46,10 @@ const images = [
 export function Background() {
   const bgImg = useMemo(() => randomArr(images), []);
 
-  return (
-    <div>
-      <img
-        id='img-bg'
-        src={bgImg}
-        height='600px'
-        // FOR IMAGE SEPARATE
-        // width='100%'
-        // FOR IMAGE FULLSCREEN
-        width='1124px'
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: -1,
-        }}
-      />
-    </div>
-  );
+  useEffect(() => {
+    const bg = document.body;
+    bg.style.backgroundImage = `url(${bgImg})`;
+  }, []);
+
+  return null;
 }

@@ -34,10 +34,10 @@
 
 html,
 body {
-  height: 100%;
+  /* height: 100%;
   margin: 0px;
-  width: 100%;
-  overflow: hidden;
+  width: 100%; */
+  /* overflow: hidden; */
 }
 
 .input {
@@ -71,10 +71,7 @@ body {
   display: none;
 }
 
-#main {
-  display: flex;
-  flex-direction: row;
-}
+
 
 .icon {
   color: #1e293b;

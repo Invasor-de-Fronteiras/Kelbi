@@ -5,6 +5,8 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const devMode = process.env.NODE_ENV !== 'production';
 
+const productionPlugins = [new MiniCssExtractPlugin(), new ES3Plugin()];
+
 module.exports = {
   entry: ['@babel/polyfill', './src/index.tsx'],
   output: { path: path.join(__dirname, 'build'), filename: 'index.bundle.js' },
@@ -43,7 +45,6 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public', 'index.html'),
     }),
-    new MiniCssExtractPlugin(),
-    new ES3Plugin(),
+    ...(devMode ? [] : productionPlugins),
   ],
 };
