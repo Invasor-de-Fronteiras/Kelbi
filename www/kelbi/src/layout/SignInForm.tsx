@@ -4,6 +4,7 @@ import { FieldInput } from '../components/FieldInput';
 import { Button } from '../components/Button';
 import { FormikProvider, useFormik } from 'formik';
 import * as Yup from 'yup';
+import { RiErrorWarningFill } from 'react-icons/ri';
 
 import './SignInForm.css';
 import { useLogin } from '../hooks/useLogin';
@@ -20,12 +21,6 @@ const validationSchema = Yup.object().shape({
   rememberMe: Yup.boolean().required('Campo obrigatório.'),
 });
 
-const startButtonInDisabledState = {
-  initialErrors: {
-    rememberMe: 'ignore',
-  },
-};
-
 export function SignInForm() {
   const { error, isLoading, mutate } = useLogin();
 
@@ -38,17 +33,15 @@ export function SignInForm() {
   const formik = useFormik({
     initialValues,
     validationSchema,
+    isInitialValid: validationSchema.isValidSync(initialValues),
     onSubmit: async (data) => mutate(data),
-    // test if isInitialValid works
-    initialErrors: validationSchema.isValidSync(initialValues)
-      ? {}
-      : startButtonInDisabledState.initialErrors,
   });
 
   return (
     <FormikProvider value={formik}>
       <form id='sign-in' onSubmit={formik.handleSubmit}>
-        <h1>Fazer login {error ? 'tem erro' : ''}</h1>
+        <h1>Fazer login</h1>
+
         <FieldInput
           placeholder='Nome de usuário'
           type='text'
@@ -72,6 +65,38 @@ export function SignInForm() {
           disabled={formik.isValidating || !formik.isValid}>
           Entrar
         </Button>
+        {error && (
+          <div
+            style={{
+              marginTop: '10px',
+              backgroundColor: '#B00020',
+              padding: '10px',
+            }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+              <span
+                style={{
+                  color: '#fff',
+                }}>
+                Oops!
+              </span>
+              <RiErrorWarningFill size={20} color='#fff' />
+            </div>
+            <span
+              style={{
+                color: '#fff',
+                marginTop: '5px',
+                fontSize: '14px',
+              }}>
+              {error?.message}
+            </span>
+          </div>
+        )}
       </form>
     </FormikProvider>
   );

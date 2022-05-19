@@ -7,14 +7,19 @@ const devMode = process.env.NODE_ENV !== 'production';
 
 const productionPlugins = [new MiniCssExtractPlugin(), new ES3Plugin()];
 
+const outputPath = path.resolve(__dirname, devMode ? './dev-build' : './build');
+
 module.exports = {
   entry: ['@babel/polyfill', './src/index.tsx'],
-  output: { path: path.join(__dirname, 'build'), filename: 'index.bundle.js' },
+  output: { path: outputPath, filename: '[name].js', chunkFilename: '[id].[chunkhash].js' },
   // mode: process.env.NODE_ENV || "development",
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
-  devServer: { contentBase: path.join(__dirname, 'src') },
+  devServer: { static: outputPath },
+  optimization: {
+    runtimeChunk: 'single',
+  },
   module: {
     rules: [
       // {

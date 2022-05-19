@@ -7,7 +7,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ isLoading, children, disabled, ...props }: ButtonProps) {
   return (
-    <button {...props} disabled={disabled ?? isLoading}>
+    <button {...props} disabled={disabled || isLoading}>
       {isLoading ? <span className='loading'>Carregando...</span> : children}
     </button>
   );
