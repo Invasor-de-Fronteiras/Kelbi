@@ -39,6 +39,7 @@ export function SignInForm() {
     initialValues,
     validationSchema,
     onSubmit: async (data) => mutate(data),
+    // test if isInitialValid works
     initialErrors: validationSchema.isValidSync(initialValues)
       ? {}
       : startButtonInDisabledState.initialErrors,

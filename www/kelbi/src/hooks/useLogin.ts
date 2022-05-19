@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { useLauncher } from '../context/LauncherContext';
-import { useMutation } from './useMutation';
+import { getLastAuthResult, getSignResult, LastAuthResult, SignResult } from '../utils/launcher';
 
 export interface LoginInput {
   username: string;
@@ -8,21 +9,55 @@ export interface LoginInput {
 }
 
 export function useLogin() {
-  return useMutation<Promise<void>, LoginInput>(
-    async ({ username, password }: LoginInput): Promise<void> =>
+  const { setIsLoading, setLoggedIn } = useLauncher();
+
+  const [state, setState] = useState<{
+    isLoading: boolean;
+    error: Error | null;
+  }>({
+    isLoading: false,
+    error: null,
+  });
+
+  const mutate = (input: LoginInput) => {
+    setState({ isLoading: true, error: null });
+    setIsLoading(true);
+
+    try {
+      // TESTAR SEM + OU COM TERCEIRO INPUT INCORRETO
       //@ts-ignore
-      window.external.loginCog(username + '+', password, password),
-    {
-      onSuccess: (_, { password, rememberMe, username }) => {
-        localStorage.setItem('rememberMe', String(rememberMe));
+      window.external.loginCog(input.username + '', input.password, input.password);
+    } catch (err) {
+      //@ts-ignore
+      setState({ isLoading: false, error: err });
+    }
+  };
 
-        if (rememberMe) {
-          localStorage.setItem('username', username);
-          localStorage.setItem('password', password);
-        }
+  useEffect(() => {
+    if (!state.isLoading) return;
 
-        // setLoggedIn(true);
-      },
-    },
-  );
+    const interval = setInterval(() => {
+      const lastAuth = getLastAuthResult();
+      const signRes = getSignResult();
+
+      if (lastAuth === LastAuthResult.InLoading) {
+        setState({ isLoading: true, error: null });
+        setIsLoading(true);
+      } else if (lastAuth === LastAuthResult.AuthSuccess && signRes === SignResult.SignSuccess) {
+        setLoggedIn(true);
+        setIsLoading(false);
+        setState({ isLoading: false, error: null });
+      } else if (
+        lastAuth === LastAuthResult.AuthErrorAcc &&
+        signRes === SignResult.NotMatchPassword
+      ) {
+        setState({ isLoading: false, error: new Error('senha incorreta!') });
+        setIsLoading(false);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [state]);
+
+  return { ...state, mutate };
 }
