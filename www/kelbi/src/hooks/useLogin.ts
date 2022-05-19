@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLauncher } from '../context/LauncherContext';
 import { getLastAuthResult, getSignResult, LastAuthResult, SignResult } from '../utils/launcher';
 
 export interface LoginInput {
   username: string;
   password: string;
-  rememberMe: boolean;
+  autoLogin: boolean;
 }
 
-export function useLogin() {
-  const { setIsLoading, setLoggedIn } = useLauncher();
+interface LoginHookProps {
+  onSuccess?: (input: LoginInput) => void;
+}
 
+export function useLogin({ onSuccess = () => null }: LoginHookProps) {
+  const { setIsLoading, setLoggedIn } = useLauncher();
   const [state, setState] = useState<{
     isLoading: boolean;
     error: Error | null;
@@ -23,49 +26,53 @@ export function useLogin() {
     setState({ isLoading: true, error: null });
     setIsLoading(true);
 
+    const handleSuccess = () => {
+      setLoggedIn(true);
+      setIsLoading(false);
+      setState({ isLoading: false, error: null });
+      onSuccess(input);
+    };
+
+    const handleError = (error: Error) => {
+      setState({ isLoading: false, error });
+      setIsLoading(false);
+    };
+
     try {
       // TESTAR SEM + OU COM TERCEIRO INPUT INCORRETO
       // TESTEI, MAS SEM RESULTADOS
       //@ts-ignore
       window.external.loginCog(input.username, input.password, input.password);
+
+      const interval = setInterval(() => {
+        const lastAuth = getLastAuthResult();
+        const signRes = getSignResult();
+
+        if (lastAuth === LastAuthResult.None || signRes === SignResult.None) {
+          return;
+        }
+
+        if (lastAuth === LastAuthResult.InLoading) {
+          setState({ isLoading: true, error: null });
+          setIsLoading(true);
+          return;
+        }
+
+        clearInterval(interval);
+
+        if (lastAuth === LastAuthResult.AuthSuccess && signRes === SignResult.SignSuccess) {
+          handleSuccess();
+        } else if (signRes === SignResult.NotMatchPassword) {
+          handleError(new Error('senha incorreta!'));
+        } else {
+          handleError(new Error(`falha na autenticação! ${lastAuth} ${signRes}`));
+        }
+      }, 100);
     } catch (err) {
       //@ts-ignore
-      setState({ isLoading: false, error: err });
+      handleError(err);
     }
   };
-
-  useEffect(() => {
-    if (!state.isLoading) return;
-
-    const interval = setInterval(() => {
-      const lastAuth = getLastAuthResult();
-      const signRes = getSignResult();
-
-      if (lastAuth === LastAuthResult.None || signRes === SignResult.None) {
-        return;
-      }
-
-      if (lastAuth === LastAuthResult.InLoading) {
-        setState({ isLoading: true, error: null });
-        setIsLoading(true);
-      } else if (lastAuth === LastAuthResult.AuthSuccess && signRes === SignResult.SignSuccess) {
-        setLoggedIn(true);
-        setIsLoading(false);
-        setState({ isLoading: false, error: null });
-      } else if (signRes === SignResult.NotMatchPassword) {
-        setState({ isLoading: false, error: new Error('senha incorreta!') });
-        setIsLoading(false);
-      } else {
-        setState({
-          isLoading: false,
-          error: new Error(`falha na autenticação! ${lastAuth} ${signRes}`),
-        });
-        setIsLoading(false);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [state]);
 
   return { ...state, mutate, cleanError: () => setState({ ...state, error: null }) };
 }
