@@ -8,19 +8,21 @@ export interface LoginInput {
 }
 
 export function useLogin() {
-  const { setLoggedIn } = useLauncher();
+  return useMutation<Promise<void>, LoginInput>(
+    async ({ username, password }: LoginInput): Promise<void> =>
+      //@ts-ignore
+      window.external.loginCog(username + '+', password, password),
+    {
+      onSuccess: (_, { password, rememberMe, username }) => {
+        localStorage.setItem('rememberMe', String(rememberMe));
 
-  return useMutation(({ username, password, rememberMe }: LoginInput): void => {
-    //@ts-ignore
-    window.external.loginCog(username + '+', password, password);
+        if (rememberMe) {
+          localStorage.setItem('username', username);
+          localStorage.setItem('password', password);
+        }
 
-    localStorage.setItem('rememberMe', String(rememberMe));
-
-    if (rememberMe) {
-      localStorage.setItem('username', username);
-      localStorage.setItem('password', password);
-    }
-
-    setLoggedIn(true);
-  });
+        // setLoggedIn(true);
+      },
+    },
+  );
 }

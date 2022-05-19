@@ -44,3 +44,149 @@ export function closeWindow() {
   // @ts-ignore
   window.external.closeWindow();
 }
+
+export enum LastAuthResult {
+  None = 'AUTH_NULL',
+  AuthSuccess = 'AUTH_SUCCESS',
+  InLoading = 'AUTH_PROGRESS',
+  AuthErrorAcc = 'AUTH_ERROR_ACC',
+}
+
+export function getLastAuthResult(): LastAuthResult {
+  // @ts-ignore
+  return window.external.getLastAuthResult();
+}
+
+export enum SignResult {
+  None = 'SIGN_UNKNOWN',
+  SignSuccess = 'SIGN_SUCCESS',
+  NotMatchPassword = 'SIGN_EPASS',
+}
+
+export function getSignResult(): SignResult {
+  // @ts-ignore
+  return window.external.getSignResult();
+}
+
+export function isEnableSessionId() {
+  try {
+    // @ts-ignore
+    return window.external.isEnableSessionId();
+  } catch {
+    // IGNORANDO ERRO IGUAL LAUNCHER ORIGIONAL
+    // TODO: DEBUGAR QUANDO DA ERROR
+    return false;
+  }
+}
+
+export function getCharacterXML() {
+  // @ts-ignore
+  return window.external.getCharacterInfo();
+}
+
+interface Character {
+  uid: string;
+  name: string;
+  weapon: Weapon;
+  HR: number;
+  GR: number;
+  gender: CharacterGender;
+  lastLogin: Date;
+}
+
+export function getCharacters(): Character[] {
+  const parser = new DOMParser();
+  const xml = getCharacterXML();
+
+  if (!xml) return [];
+
+  const doc = parser.parseFromString(xml, 'text/xml');
+
+  const chars: Character[] = [];
+  const docs = doc.getElementsByTagName('Character');
+
+  if (!docs.length) return [];
+
+  for (const i in docs) {
+    const attributes = docs[i].attributes;
+    const char = {
+      uid: attributes?.uid?.value!,
+      name: attributes?.name?.value!,
+      weapon: parserWeapon(attributes?.weapon?.value!),
+      HR: parseInt(attributes?.HR?.value!, 10),
+      GR: parseInt(attributes?.GR?.value!, 10),
+      gender: parseCharGender(attributes?.sex?.value!),
+      lastLogin: parseCharLastLogin(attributes?.lastLogin?.value!),
+    };
+
+    chars.push(char);
+  }
+
+  return chars;
+}
+
+enum Weapon {
+  SwordAndShield = 'Sword & Shield',
+  DualSwords = 'Dual Swords',
+  Greatsword = 'Greatsword',
+  Longsword = 'Longsword',
+  Hammer = 'Hammer',
+  HuntingHorn = 'Hunting Horn',
+  Lance = 'Lance',
+  Gunlance = 'Gunlance',
+  Tonfa = 'Tonfa',
+  SwitchAxe = 'Switch Axe',
+  MagnetSpike = 'Magnet Spike',
+  HeavyBowgun = 'Heavy Bowgun',
+  LightBowgun = 'Light Bowgun',
+  Bow = 'Bow',
+  Unknown = 'Unknown',
+}
+
+function parserWeapon(weapon: string): Weapon {
+  switch (weapon) {
+    case '片手剣':
+      return Weapon.SwordAndShield;
+    case '双剣':
+      return Weapon.DualSwords;
+    case '大剣':
+      return Weapon.Greatsword;
+    case '太刀':
+      return Weapon.Longsword;
+    case 'ハンマー':
+      return Weapon.Hammer;
+    case '狩猟笛':
+      return Weapon.HuntingHorn;
+    case 'ランス':
+      return Weapon.Lance;
+    case 'ガンランス':
+      return Weapon.Gunlance;
+    case '穿龍棍':
+      return Weapon.Tonfa;
+    case 'スラッシュアックスＦ':
+      return Weapon.SwitchAxe;
+    case 'マグネットスパイク':
+      return Weapon.MagnetSpike;
+    case 'ヘビィボウガン':
+      return Weapon.HeavyBowgun;
+    case 'ライトボウガン':
+      return Weapon.LightBowgun;
+    case '弓':
+      return Weapon.Bow;
+    default:
+      return Weapon.Unknown;
+  }
+}
+
+enum CharacterGender {
+  Male = 'Male',
+  Famele = 'Famele',
+}
+function parseCharGender(gender: string): CharacterGender {
+  if (gender === 'M') return CharacterGender.Male;
+  return CharacterGender.Famele;
+}
+
+function parseCharLastLogin(lastLogin: string): Date {
+  return new Date(1e3 * parseInt(lastLogin, 10));
+}

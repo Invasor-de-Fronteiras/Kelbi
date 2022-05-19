@@ -26,8 +26,8 @@
   }
   
   #left-side-header {
-    padding: 20px 0;
-
+    padding-top: 30px ;
+    padding-bottom: 40px;
   }
   
   #left-side-body {
@@ -40,7 +40,7 @@
     flex-direction: row;
     justify-content: space-between;
     width: 100%;
-    margin-bottom: 5px;
+    margin-bottom: 7px;
   }
   
   .discord-icon {

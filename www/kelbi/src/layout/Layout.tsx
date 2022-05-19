@@ -10,6 +10,7 @@ import { LauncherButtonGroup } from '../components/buttons/LauncherButtonGroup';
 import { openConfig, openDiscord, openGithub } from '../utils/launcher';
 
 import './Layout.css';
+import { DevTool } from '../components/DevTool';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,6 +34,8 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </div>
+      <DevTool />
+
       <Background />
       <LauncherButtonGroup />
     </>

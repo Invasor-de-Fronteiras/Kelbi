@@ -9,9 +9,16 @@ interface MutationHook<T, V> {
 }
 
 type MutationFn<T, V> = (variables?: V) => Promise<T>;
+type MutationHookOptions<T, V> = {
+  onError?: (error: Error) => void;
+  onSuccess?: (data: T, variables: V) => void;
+};
 
-export function useMutation<T, V>(handler: MutationFn<T, V>): MutationHook<T, V> {
-  const { setIsLoading } = useLauncher();
+export function useMutation<T, V>(
+  handler: MutationFn<T, V>,
+  options: MutationHookOptions<T, V>,
+): MutationHook<T, V> {
+  const { setIsLoading, isLoading } = useLauncher();
 
   // TODO: implement useReducer
   const [state, setState] = useState({
@@ -22,7 +29,7 @@ export function useMutation<T, V>(handler: MutationFn<T, V>): MutationHook<T, V>
 
   const mutate = useCallback<MutationFn<T, V>>(
     // @ts-ignore
-    async (props) => {
+    async (props: V) => {
       setState({
         isLoading: true,
         error: null,
@@ -39,9 +46,13 @@ export function useMutation<T, V>(handler: MutationFn<T, V>): MutationHook<T, V>
           // @ts-ignore
           data,
         });
+        options?.onSuccess?.(data, props);
 
         return data;
       } catch (error) {
+        // @ts-ignore
+        options.onError?.(error);
+
         setState({
           isLoading: false,
           //@ts-ignore
@@ -57,6 +68,7 @@ export function useMutation<T, V>(handler: MutationFn<T, V>): MutationHook<T, V>
 
   return {
     ...state,
+    isLoading,
     mutate,
   };
 }

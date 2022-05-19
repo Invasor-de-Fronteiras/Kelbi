@@ -29,15 +29,19 @@ const startButtonInDisabledState = {
 export function SignInForm() {
   const { error, isLoading, mutate } = useLogin();
 
+  const initialValues = {
+    username: localStorage.getItem('username') ?? '',
+    password: localStorage.getItem('password') ?? '',
+    rememberMe: localStorage.getItem('rememberMe') === 'true',
+  };
+
   const formik = useFormik({
-    initialValues: {
-      username: localStorage.getItem('username') ?? '',
-      password: localStorage.getItem('password') ?? '',
-      rememberMe: localStorage.getItem('rememberMe') === 'true',
-    },
+    initialValues,
     validationSchema,
     onSubmit: async (data) => mutate(data),
-    ...startButtonInDisabledState,
+    initialErrors: validationSchema.isValidSync(initialValues)
+      ? {}
+      : startButtonInDisabledState.initialErrors,
   });
 
   return (
