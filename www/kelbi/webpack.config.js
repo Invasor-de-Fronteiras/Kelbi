@@ -38,6 +38,7 @@ module.exports = {
           devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
           'css-loader',
           'css-modules-typescript-loader',
+          'postcss-loader',
         ],
       },
       {

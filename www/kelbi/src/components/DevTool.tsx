@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { randomHexColor } from '../utils/util';
 
+// data from original launcher
 const _UPD_BAR_WID = 302;
 const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
 

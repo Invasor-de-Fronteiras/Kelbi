@@ -11,6 +11,7 @@
     "format": "prettier --write \"./**/*.{json,css,js,yml}\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "browserslist": "dead",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -42,6 +43,9 @@
     "html-webpack-plugin": "^5.2.0",
     "mini-css-extract-plugin": "^2.6.0",
     "path": "^0.12.7",
+    "postcss": "^8.4.14",
+    "postcss-loader": "^7.0.0",
+    "postcss-preset-env": "^7.6.0",
     "prettier": "^2.6.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -57,6 +61,7 @@
     "@babel/polyfill": "^7.12.1",
     "classnames": "^2.3.1",
     "formik": "^2.2.9",
+    "postcss-color-rgba-fallback": "^4.0.0",
     "react-icons": "^4.3.1"
   }
 }
