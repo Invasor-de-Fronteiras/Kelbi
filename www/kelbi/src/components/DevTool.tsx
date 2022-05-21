@@ -6,23 +6,7 @@ const _UPD_BAR_WID = 302;
 const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
 
 export function DevTool() {
-  const [data, setData] = useState({
-    updatePercentageTotal: null,
-    accountRights: null,
-    mhfBootMode: null,
-    lastServerIndex: null,
-    serverListXML: null,
-    mhfMutexNumber: null,
-    userId: null,
-    password: null,
-    lastAuthResult: null,
-    signResult: null,
-    enableSessionId: null,
-    charsXML: null,
-    extractLog: null,
-    updateStatus: null,
-    launcherReturnCode: null,
-  });
+  const [data, setData] = useState({});
   const [err, setErr] = useState(null);
 
   useEffect(() => {
@@ -107,7 +91,7 @@ export function DevTool() {
             return (
               <div key={key}>
                 <span style={{ color: randomHexColor() }}>{key}:</span>
-                <span>{data[key]}</span>
+                <span>{typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key]}</span>
               </div>
             );
           })}

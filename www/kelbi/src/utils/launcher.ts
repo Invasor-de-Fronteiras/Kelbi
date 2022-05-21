@@ -84,7 +84,7 @@ export function getCharacterXML() {
   return window.external.getCharacterInfo();
 }
 
-interface Character {
+export interface Character {
   uid: string;
   name: string;
   weapon: Weapon;
@@ -97,18 +97,19 @@ interface Character {
 export function getCharacters(): Character[] {
   const parser = new DOMParser();
   const xml = getCharacterXML();
-
   if (!xml) return [];
 
   const doc = parser.parseFromString(xml, 'text/xml');
 
-  const chars: Character[] = [];
   const docs = doc.getElementsByTagName('Character');
-
   if (!docs.length) return [];
 
+  const chars: Character[] = [];
   for (const i in docs) {
     const attributes = docs[i].attributes;
+
+    if (!attributes) continue;
+
     const char = {
       uid: attributes?.uid?.value!,
       name: attributes?.name?.value!,

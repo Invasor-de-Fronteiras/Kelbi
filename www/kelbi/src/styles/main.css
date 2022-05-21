@@ -134,3 +134,15 @@ button .loading {
 .checkbox-group label {
   margin-left: 6px;
 }
+
+.debug {
+  border: 1px solid #00ffff;
+}
+
+.hover-pointer:hover {
+  cursor: pointer;
+}
+
+.hover-help:hover {
+  cursor: help;
+}
