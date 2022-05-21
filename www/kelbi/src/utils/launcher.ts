@@ -17,7 +17,7 @@ interface LauncherFunctions {
 
 type LauncherSongs = 'IDR_WAV_SEL' | 'IDR_WAV_OK' | 'IDR_WAV_PRE_LOGIN' | 'IDR_NIKU';
 
-function openBrowser(url: string) {
+export function openBrowser(url: string) {
   // @ts-ignore
   window.external.openBrowser(url);
 }
