@@ -6,7 +6,7 @@ import { useGetCharacters } from '../hooks/useGetCharacters';
 export function SelectCharacter() {
   const { characters, isNewAccount, loading } = useGetCharacters();
 
-  if (loading) return <SelectCharacterLoading />;
+  // if (loading) return <SelectCharacterLoading />;
   return (
     <div>
       <div
@@ -15,6 +15,42 @@ export function SelectCharacter() {
           maxHeight: '230px',
           marginBottom: '30px',
         }}>
+        <CharacterCard
+          tabIndex={1}
+          char={{
+            GR: 33,
+            name: 'Banbaro',
+            HR: 0,
+            gender: 'Famele',
+            lastLogin: new Date(),
+            uid: 'wra',
+            weapon: 'Bow',
+          }}
+        />
+        <CharacterCard
+          tabIndex={2}
+          char={{
+            GR: 33,
+            name: 'Banbaro',
+            HR: 0,
+            gender: 'Famele',
+            lastLogin: new Date(),
+            uid: 'wra',
+            weapon: 'Bow',
+          }}
+        />
+        <CharacterCard
+          tabIndex={3}
+          char={{
+            GR: 33,
+            name: 'Banbaro',
+            HR: 0,
+            gender: 'Famele',
+            lastLogin: new Date(),
+            uid: 'wra',
+            weapon: 'Bow',
+          }}
+        />
         {characters.map((char) => (
           <CharacterCard char={char} key={char.uid} />
         ))}
