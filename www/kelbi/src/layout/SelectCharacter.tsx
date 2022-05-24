@@ -61,7 +61,7 @@ export function SelectCharacter() {
           flexDirection: 'row',
           justifyContent: 'space-between',
         }}>
-        <button style={{ flex: 1, marginRight: 5 }}>Novo Char</button>
+        <button style={{ flex: 1, marginRight: 5 }}>Novo personagem</button>
         <button style={{ flex: 1, marginLeft: 5 }}>Sair da conta</button>
       </div>
       <div

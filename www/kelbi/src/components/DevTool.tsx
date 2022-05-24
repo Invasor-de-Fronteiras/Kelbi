@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { randomHexColor } from '../utils/util';
+import { BiShow } from 'react-icons/bi';
 
 // data from original launcher
 const _UPD_BAR_WID = 302;
 const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
 
+/**
+ * Component for debugging
+ */
 export function DevTool() {
   const [data, setData] = useState({});
   const [err, setErr] = useState(null);
@@ -88,12 +92,7 @@ export function DevTool() {
         {(Object.keys(data) as (keyof typeof data)[])
           .filter((key) => !!data[key])
           .map((key) => {
-            return (
-              <div key={key}>
-                <span style={{ color: randomHexColor() }}>{key}:</span>
-                <span>{typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key]}</span>
-              </div>
-            );
+            return <DebugItem data={data[key]} key={key} name={key} />;
           })}
         {data?.updatePercentageTotal && (
           <>
@@ -110,6 +109,32 @@ export function DevTool() {
           <span>msg: {err?.message}</span>
           <span>stack: {err?.stack}</span>
         </div>
+      )}
+    </div>
+  );
+}
+
+interface DebugItemProps {
+  name: string;
+  data: any;
+}
+
+function DebugItem({ data, name }: DebugItemProps) {
+  const [accordion, setAccordion] = useState(false);
+  const color = useMemo(() => randomHexColor(), []);
+  const value = useMemo(() => (typeof data === 'object' ? JSON.stringify(data) : data), [data]);
+  return (
+    <div key={name}>
+      <BiShow onClick={() => setAccordion(!accordion)} />
+      <span style={{ color }}>{name}:</span>
+      <span>{value}</span>
+      {accordion && (
+        <input
+          style={{
+            border: '1px solid #ccc',
+          }}
+          value={value}
+        />
       )}
     </div>
   );
