@@ -14,3 +14,13 @@ export function normalizeDate(date: Date) {
 
   return `${day}/${month}/${year}`;
 }
+
+export function removeItem<T>(array: T[], validate: (item: T) => boolean) {
+  for (let i = array.length - 1; i >= 0; i--) {
+    if (validate(array[i])) {
+      array.splice(i, 1);
+    }
+  }
+
+  return array;
+}

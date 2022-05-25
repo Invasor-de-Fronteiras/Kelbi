@@ -1,12 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-import BabaroWalking from '../assets/loading/banbaro-walking.gif';
+import BanbaroWalking from '../assets/loading/banbaro-walking.gif';
+import { Button } from '../components/Button';
 import { CharacterCard } from '../components/CharacterCard';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 export function SelectCharacter() {
-  const { characters, isNewAccount, loading } = useGetCharacters();
+  const { characters, isNewAccount, loading, username } = useGetCharacters();
 
-  // if (loading) return <SelectCharacterLoading />;
+  if (loading) return <SelectCharacterLoading />;
+
+  if (isNewAccount) {
+    return (
+      <div>
+        <h4 className='text-center'>
+          Olá {username}, Queremos lhe desejar boa sorte e boas-vindas, que você não desista do jogo
+          antes do G Rank!
+        </h4>
+        <div className='flex items-center justify-center flex-col'>
+          <Button>Entrar</Button>
+          <Button>Trocar de conta</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div
@@ -15,7 +32,7 @@ export function SelectCharacter() {
           maxHeight: '230px',
           marginBottom: '30px',
         }}>
-        <CharacterCard
+        {/* <CharacterCard
           tabIndex={1}
           char={{
             GR: 33,
@@ -50,9 +67,9 @@ export function SelectCharacter() {
             uid: 'wra',
             weapon: 'Bow',
           }}
-        />
-        {characters.map((char) => (
-          <CharacterCard char={char} key={char.uid} />
+        /> */}
+        {characters.map((char, index) => (
+          <CharacterCard char={char} key={char.uid} tabIndex={index} />
         ))}
       </div>
       <div
@@ -61,21 +78,33 @@ export function SelectCharacter() {
           flexDirection: 'row',
           justifyContent: 'space-between',
         }}>
-        <button style={{ flex: 1, marginRight: 5 }}>Novo personagem</button>
-        <button style={{ flex: 1, marginLeft: 5 }}>Sair da conta</button>
-      </div>
-      <div
-        className='checkbox-group'
-        style={{
-          marginTop: '10px',
-        }}>
-        <input type='checkbox' id='auto-login' />
-        <label htmlFor='auto-login'>Manter login</label>
+        <Button>Novo personagem</Button>
+        <Button>Trocar de conta</Button>
+        <AutoLoginCheckbox />
       </div>
     </div>
   );
 }
 
+function AutoLoginCheckbox() {
+  const [checked, setChecked] = useState(() => localStorage.getItem('autoLogin') === 'true');
+
+  function handleChange(e) {
+    localStorage.setItem('autoLogin', e.target.checked);
+    setChecked(e.target.checked);
+  }
+
+  return (
+    <div
+      className='checkbox-group'
+      style={{
+        marginTop: '10px',
+      }}>
+      <input type='checkbox' id='auto-login' onChange={handleChange} checked={checked} />
+      <label htmlFor='auto-login'>Continuar conectado</label>
+    </div>
+  );
+}
 function SelectCharacterLoading() {
   return (
     <div
@@ -85,7 +114,7 @@ function SelectCharacterLoading() {
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      <img id='img-bg' src={BabaroWalking} height='100%' width='100%' />
+      <img id='img-bg' src={BanbaroWalking} height='100%' width='100%' />
       <span
         style={{
           marginTop: '5px',

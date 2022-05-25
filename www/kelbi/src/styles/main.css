@@ -93,6 +93,8 @@ button {
   justify-content: center;
   align-items: center;
   min-width: 70px;
+  max-width: 200px;
+  width: 100%;
   cursor: pointer;
 }
 

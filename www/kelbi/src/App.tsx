@@ -8,7 +8,7 @@ import { SelectCharacter } from './layout/SelectCharacter';
 function App() {
   const { loggedIn } = useLauncher();
 
-  return <Layout>{true ? <SelectCharacter /> : <SignInForm />}</Layout>;
+  return <Layout>{loggedIn ? <SelectCharacter /> : <SignInForm />}</Layout>;
 }
 
 export default App;

@@ -126,7 +126,7 @@ export function getCharacters(): Character[] {
   return chars;
 }
 
-enum Weapon {
+export enum Weapon {
   SwordAndShield = 'Sword & Shield',
   DualSwords = 'Dual Swords',
   Greatsword = 'Greatsword',
@@ -191,3 +191,12 @@ function parseCharGender(gender: string): CharacterGender {
 function parseCharLastLogin(lastLogin: string): Date {
   return new Date(1e3 * parseInt(lastLogin, 10));
 }
+
+export function getUserId(): string {
+  //@ts-ignore
+  return window.external.getUserId();
+}
+
+export const isNeAccountChar = (char: Character) => {
+  return char.name === '??????' && char.weapon === Weapon.Unknown;
+};

@@ -6,18 +6,25 @@ import {
   getSignResult,
   LastAuthResult,
   SignResult,
+  isNeAccountChar,
+  getUserId,
 } from '../utils/launcher';
+import { removeItem } from '../utils/util';
 
 interface GetCharacterHook {
   loading: boolean;
   characters: Character[];
   isNewAccount: boolean;
+  username: string;
 }
 
 export function useGetCharacters(): GetCharacterHook {
-  const [loading, setLoading] = useState(true);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [isNewAccount, setIsNewAccount] = useState(false);
+  const [state, setState] = useState<GetCharacterHook>({
+    loading: true,
+    characters: [],
+    isNewAccount: false,
+    username: '',
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,7 +33,6 @@ export function useGetCharacters(): GetCharacterHook {
       const chars = getCharacters();
 
       if (lastAuth === LastAuthResult.InLoading) {
-        setLoading(true);
         return;
       }
 
@@ -37,13 +43,27 @@ export function useGetCharacters(): GetCharacterHook {
         signRes === SignResult.SignSuccess &&
         chars.length > 0
       ) {
-        setLoading(false);
-        setCharacters(chars);
+        let isNewAccount = false;
+        let characters = removeItem(chars, (char) => {
+          if (isNeAccountChar(char)) {
+            isNewAccount = true;
+            return true;
+          }
+
+          return false;
+        });
+
+        setState({
+          loading: false,
+          characters,
+          isNewAccount,
+          username: getUserId(),
+        });
       }
     }, 100);
 
     return () => clearInterval(interval);
   }, []);
 
-  return { loading, characters, isNewAccount };
+  return state;
 }

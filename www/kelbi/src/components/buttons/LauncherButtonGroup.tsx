@@ -9,7 +9,7 @@ import './LauncherButtonGroup.css';
 export function LauncherButtonGroup() {
   return (
     <div className='launcher-buttons'>
-      <FaQuestion size={15} className='icon' />
+      {/* <FaQuestion size={15} className='icon' /> */}
       <MdOutlineMinimize id='minimize-window-button' size={15} onClick={minimizeWindow} />
       <AiOutlineClose id='close-window-button' className='icon' size={15} onClick={closeWindow} />
     </div>

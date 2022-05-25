@@ -4,6 +4,7 @@ import App from './App';
 import { LauncherProvider } from './context/LauncherContext';
 
 import './styles/main.css';
+import './styles/framework.css';
 
 ReactDOM.render(
   <React.StrictMode>
