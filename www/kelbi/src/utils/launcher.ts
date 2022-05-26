@@ -184,11 +184,11 @@ function parserWeapon(weapon: string): Weapon {
 
 enum CharacterGender {
   Male = 'Male',
-  Famele = 'Famele',
+  Female = 'Female',
 }
 function parseCharGender(gender: string): CharacterGender {
   if (gender === 'M') return CharacterGender.Male;
-  return CharacterGender.Famele;
+  return CharacterGender.Female;
 }
 
 function parseCharLastLogin(lastLogin: string): Date {
