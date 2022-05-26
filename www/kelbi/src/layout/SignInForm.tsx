@@ -9,12 +9,6 @@ import { RiErrorWarningFill } from 'react-icons/ri';
 import './SignInForm.css';
 import { useLogin } from '../hooks/useLogin';
 
-interface FormValues {
-  username: string;
-  password: string;
-  autoLogin: boolean;
-}
-
 const validationSchema = Yup.object().shape({
   username: Yup.string().required('Campo obrigatório.'),
   password: Yup.string().min(6, 'Senha muito curta.').required('Campo obrigatório.'),

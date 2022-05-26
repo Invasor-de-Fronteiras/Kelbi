@@ -10,7 +10,7 @@ interface LauncherContextProps {
 
 const LauncherContext = createContext({} as LauncherContextProps);
 
-export function LauncherProvider({ children }: any) {
+export function LauncherProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLauncher } from '../context/LauncherContext';
-import { getLastAuthResult, getSignResult, LastAuthResult, SignResult } from '../utils/launcher';
+import { LastAuthResult, SignResult } from '../utils/launcher';
 
 export interface LoginInput {
   username: string;
@@ -39,12 +39,11 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
     };
 
     try {
-      //@ts-ignore
       window.external.loginCog(input.username, input.password, input.password);
 
       const interval = setInterval(() => {
-        const lastAuth = getLastAuthResult();
-        const signRes = getSignResult();
+        const lastAuth = window.external.getLastAuthResult();
+        const signRes = window.external.getSignResult();
 
         if (lastAuth === LastAuthResult.None || signRes === SignResult.None) {
           return;
@@ -67,7 +66,6 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
         }
       }, 100);
     } catch (err) {
-      //@ts-ignore
       handleError(err);
     }
   };

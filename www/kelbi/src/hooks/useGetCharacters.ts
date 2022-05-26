@@ -1,37 +1,28 @@
+import type { Character } from '../utils/launcher';
+
 import { useEffect, useState } from 'react';
-import {
-  Character,
-  getCharacters,
-  getLastAuthResult,
-  getSignResult,
-  LastAuthResult,
-  SignResult,
-  isNeAccountChar,
-  getUserId,
-} from '../utils/launcher';
+
+import { getCharacters, isNeAccountChar, LastAuthResult, SignResult } from '../utils/launcher';
 import { removeItem } from '../utils/util';
 
 interface GetCharacterHook {
   loading: boolean;
   characters: Character[];
   isNewAccount: boolean;
-  username: string;
   newAccountUID: string;
 }
 
 export function useGetCharacters(): GetCharacterHook {
-  const [state, setState] = useState<GetCharacterHook>({
+  const [state, setState] = useState<Omit<GetCharacterHook, 'isNewAccount'>>({
     loading: true,
     characters: [],
-    isNewAccount: false,
-    username: '',
     newAccountUID: '',
   });
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const lastAuth = getLastAuthResult();
-      const signRes = getSignResult();
+      const lastAuth = window.external.getLastAuthResult();
+      const signRes = window.external.getSignResult();
       const chars = getCharacters();
 
       if (lastAuth === LastAuthResult.InLoading) {
@@ -47,7 +38,7 @@ export function useGetCharacters(): GetCharacterHook {
       ) {
         let newAccountUID = '';
 
-        let characters = removeItem(chars, (char) => {
+        const characters = removeItem(chars, (char) => {
           if (isNeAccountChar(char)) {
             newAccountUID = char.uid;
             return true;
@@ -59,8 +50,6 @@ export function useGetCharacters(): GetCharacterHook {
         setState({
           loading: false,
           characters,
-          username: getUserId(),
-          isNewAccount: characters.length === 0,
           newAccountUID,
         });
       }
@@ -69,5 +58,8 @@ export function useGetCharacters(): GetCharacterHook {
     return () => clearInterval(interval);
   }, []);
 
-  return state;
+  return {
+    ...state,
+    isNewAccount: state.characters.length === 0,
+  };
 }

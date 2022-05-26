@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useEffect, useMemo, useState } from 'react';
 import { randomHexColor } from '../utils/util';
 import { BiShow } from 'react-icons/bi';
@@ -14,37 +16,22 @@ export function DevTool() {
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    let timeout = setInterval(() => {
+    const timeout = setInterval(() => {
       try {
-        //@ts-ignore
         const updatePercentageTotal = window.external.getUpdatePercentageTotal();
-        //@ts-ignore
         const accountRights = window.external.getAccountRights();
-        //@ts-ignore
         const mhfBootMode = window.external.getMhfBootMode();
-        //@ts-ignore
         const lastServerIndex = window.external.getIniLastServerIndex();
-        //@ts-ignore
         const serverListXML = window.external.getServerListXml();
-        //@ts-ignore
         const mhfMutexNumber = window.external.getMhfMutexNumber();
-        //@ts-ignore
         const userId = window.external.getUserId();
-        //@ts-ignore
         const password = window.external.getPassword();
-        //@ts-ignore
         const lastAuthResult = window.external.getLastAuthResult();
-        //@ts-ignore
         const signResult = window.external.getSignResult();
-        //@ts-ignore
         const enableSessionId = window.external.isEnableSessionId();
-        //@ts-ignore
         const charsXML = window.external.getCharacterInfo();
-        //@ts-ignore
         const extractLog = window.external.extractLog();
-        //@ts-ignore
         const updateStatus = window.external.getUpdateStatus();
-        //@ts-ignore
         const launcherReturnCode = window.external.getLauncherReturnCode();
 
         setData({
@@ -65,7 +52,6 @@ export function DevTool() {
           launcherReturnCode,
         });
       } catch (err) {
-        //@ts-ignore
         setErr(err);
       }
     }, 100);
@@ -94,9 +80,11 @@ export function DevTool() {
           .map((key) => {
             return <DebugItem data={data[key]} key={key} name={key} />;
           })}
+        {/** @ts-ignore */}
         {data?.updatePercentageTotal && (
           <>
             <span>
+              {/** @ts-ignore */}
               calc updatePercentageTotal: {Math.ceil(data.updatePercentageTotal * _UPD_BAR_PER)}
             </span>
           </>
@@ -105,8 +93,11 @@ export function DevTool() {
       {err && (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <h2>Error</h2>
+          {/** @ts-ignore */}
           <span>name: {err?.name}</span>
+          {/** @ts-ignore */}
           <span>msg: {err?.message}</span>
+          {/** @ts-ignore */}
           <span>stack: {err?.stack}</span>
         </div>
       )}

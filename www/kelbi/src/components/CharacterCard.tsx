@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Character } from '../utils/launcher';
 import { normalizeDate } from '../utils/util';
 import { RiDeleteBinLine } from 'react-icons/ri';
@@ -6,18 +6,18 @@ import { RiDeleteBinLine } from 'react-icons/ri';
 interface CharacterCardProps {
   char: Character;
   tabIndex: number;
+  onSelect: () => void;
+  isSelected: boolean;
 }
 
-export function CharacterCard({ char, tabIndex }: CharacterCardProps) {
-  const [selected, setSelected] = useState(false);
-
+export function CharacterCard({ char, tabIndex, isSelected, onSelect }: CharacterCardProps) {
   return (
     <div
       role='option'
       tabIndex={tabIndex}
-      onClick={() => setSelected(!selected)}
+      onClick={onSelect}
       style={{
-        backgroundColor: selected ? '#f83' : '#fff',
+        backgroundColor: isSelected ? '#f83' : '#fff',
         marginBottom: '10px',
         padding: '3px',
       }}>

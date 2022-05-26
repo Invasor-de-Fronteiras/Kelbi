@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import BgImg1 from '../assets/background/1.jpg';
 import BgImg2 from '../assets/background/2.jpg';
