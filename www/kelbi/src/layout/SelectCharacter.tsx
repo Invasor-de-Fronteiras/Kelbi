@@ -5,7 +5,30 @@ import { Button } from '../components/Button';
 import { CharacterCard } from '../components/CharacterCard';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 export function SelectCharacter() {
-  const { characters, isNewAccount, loading, username } = useGetCharacters();
+  const { characters, isNewAccount, newAccountUID, loading, username } = useGetCharacters();
+
+  const handleStartGame = () => {
+    // @ts-ignore
+    window.external.selectCharacter(newAccountUID, newAccountUID);
+    // @ts-ignore
+    window.external.exitLauncher();
+  };
+
+  const handleChangeAccount = () => {
+    localStorage.removeItem('autoLogin');
+    localStorage.removeItem('password');
+    localStorage.removeItem('username');
+    // @ts-ignore
+    window.external.restartMhf();
+  };
+
+  const handleCreateNewChar = () => {
+    alert(`${username} is ready to create new character!`);
+  };
+
+  const handleDeleteChar = () => {
+    alert(`${username} is ready to delete character!`);
+  };
 
   if (loading) return <SelectCharacterLoading />;
 
@@ -17,8 +40,8 @@ export function SelectCharacter() {
           antes do G Rank!
         </h4>
         <div className='flex items-center justify-center flex-col'>
-          <Button>Entrar</Button>
-          <Button>Trocar de conta</Button>
+          <Button onClick={handleStartGame}>Entrar</Button>
+          <Button onClick={handleChangeAccount}>Trocar de conta</Button>
         </div>
       </div>
     );
@@ -72,14 +95,9 @@ export function SelectCharacter() {
           <CharacterCard char={char} key={char.uid} tabIndex={index} />
         ))}
       </div>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-        }}>
-        <Button>Novo personagem</Button>
-        <Button>Trocar de conta</Button>
+      <div className='flex flex-row justify-between'>
+        <Button onClick={handleCreateNewChar}>Novo personagem</Button>
+        <Button onClick={handleChangeAccount}>Trocar de conta</Button>
         <AutoLoginCheckbox />
       </div>
     </div>
@@ -89,9 +107,9 @@ export function SelectCharacter() {
 function AutoLoginCheckbox() {
   const [checked, setChecked] = useState(() => localStorage.getItem('autoLogin') === 'true');
 
-  function handleChange(e) {
-    localStorage.setItem('autoLogin', e.target.checked);
-    setChecked(e.target.checked);
+  function handleChange(checked: boolean) {
+    localStorage.setItem('autoLogin', String(checked));
+    setChecked(checked);
   }
 
   return (
@@ -99,21 +117,21 @@ function AutoLoginCheckbox() {
       className='checkbox-group'
       style={{
         marginTop: '10px',
-      }}>
-      <input type='checkbox' id='auto-login' onChange={handleChange} checked={checked} />
+      }}
+      onClick={() => handleChange(!checked)}>
+      <input
+        type='checkbox'
+        id='auto-login'
+        onChange={(e) => handleChange(e.target.checked)}
+        checked={checked}
+      />
       <label htmlFor='auto-login'>Continuar conectado</label>
     </div>
   );
 }
 function SelectCharacterLoading() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
+    <div className='flex items-center justify-center flex-col'>
       <img id='img-bg' src={BanbaroWalking} height='100%' width='100%' />
       <span
         style={{

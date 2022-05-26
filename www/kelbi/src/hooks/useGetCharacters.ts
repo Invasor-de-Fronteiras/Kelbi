@@ -16,6 +16,7 @@ interface GetCharacterHook {
   characters: Character[];
   isNewAccount: boolean;
   username: string;
+  newAccountUID: string;
 }
 
 export function useGetCharacters(): GetCharacterHook {
@@ -24,6 +25,7 @@ export function useGetCharacters(): GetCharacterHook {
     characters: [],
     isNewAccount: false,
     username: '',
+    newAccountUID: '',
   });
 
   useEffect(() => {
@@ -43,10 +45,11 @@ export function useGetCharacters(): GetCharacterHook {
         signRes === SignResult.SignSuccess &&
         chars.length > 0
       ) {
-        let isNewAccount = false;
+        let newAccountUID = '';
+
         let characters = removeItem(chars, (char) => {
           if (isNeAccountChar(char)) {
-            isNewAccount = true;
+            newAccountUID = char.uid;
             return true;
           }
 
@@ -56,8 +59,9 @@ export function useGetCharacters(): GetCharacterHook {
         setState({
           loading: false,
           characters,
-          isNewAccount,
           username: getUserId(),
+          isNewAccount: !!newAccountUID,
+          newAccountUID,
         });
       }
     }, 100);
