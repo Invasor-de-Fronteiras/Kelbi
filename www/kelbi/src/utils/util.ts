@@ -24,3 +24,14 @@ export function removeItem<T>(array: T[], validate: (item: T) => boolean) {
 
   return array;
 }
+
+// this function was created for performance reasons for when the item has possibility in the final array
+export function findByEnd<T>(array: T[], fn: (item: T) => boolean): T | null {
+  for (let i = array.length - 1; i >= 0; i--) {
+    if (fn(array[i])) {
+      return array[i];
+    }
+  }
+
+  return null;
+}

@@ -4,14 +4,21 @@ import BanbaroWalking from '../assets/loading/banbaro-walking.gif';
 import { Button } from '../components/Button';
 import { CharacterCard } from '../components/CharacterCard';
 import { useGetCharacters } from '../hooks/useGetCharacters';
+import { getCharacters, isNeAccountChar } from '../utils/launcher';
+import { findByEnd } from '../utils/util';
+
+// TODO: move new accounts to an own file
 export function SelectCharacter() {
   const { characters, isNewAccount, newAccountUID, loading, username } = useGetCharacters();
 
   const handleStartGame = () => {
+    // START GAME FOR NEW ACCOUNT
     // @ts-ignore
     window.external.selectCharacter(newAccountUID, newAccountUID);
     // @ts-ignore
     window.external.exitLauncher();
+
+    // START GAME FOR SELECTED CHARACTER
   };
 
   const handleChangeAccount = () => {
@@ -23,7 +30,29 @@ export function SelectCharacter() {
   };
 
   const handleCreateNewChar = () => {
-    alert(`${username} is ready to create new character!`);
+    const username = localStorage.getItem('username');
+    const password = localStorage.getItem('password');
+
+    // check if has a new char for not need create other
+
+    // @ts-ignore
+    window.external.loginCog(username + '+', password, password);
+
+    setInterval(() => {
+      //Todo: check loading by lastAuthResult
+      const chars = getCharacters();
+      const newChar = findByEnd(chars, isNeAccountChar);
+
+      if (!newChar) {
+        // Todo: throw error or continue in loading
+        return;
+      }
+
+      // @ts-ignore
+      window.external.selectCharacter(newAccountUID, newAccountUID);
+      // @ts-ignore
+      window.external.exitLauncher();
+    }, 100);
   };
 
   const handleDeleteChar = () => {

@@ -39,8 +39,6 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
     };
 
     try {
-      // TESTAR SEM + OU COM TERCEIRO INPUT INCORRETO
-      // TESTEI, MAS SEM RESULTADOS
       //@ts-ignore
       window.external.loginCog(input.username, input.password, input.password);
 

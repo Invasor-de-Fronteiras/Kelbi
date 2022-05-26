@@ -60,7 +60,7 @@ export function useGetCharacters(): GetCharacterHook {
           loading: false,
           characters,
           username: getUserId(),
-          isNewAccount: !!newAccountUID,
+          isNewAccount: characters.length === 0,
           newAccountUID,
         });
       }
