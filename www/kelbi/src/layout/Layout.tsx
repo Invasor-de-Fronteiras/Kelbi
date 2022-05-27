@@ -10,6 +10,7 @@ import { LauncherButtonGroup } from '../components/buttons/LauncherButtonGroup';
 import { openConfig, openDiscord, openGithub } from '../utils/launcher';
 
 import './Layout.css';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DevTool } from '../components/DevTool';
 
 interface LayoutProps {

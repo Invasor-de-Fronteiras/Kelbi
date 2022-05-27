@@ -5,7 +5,7 @@ import { Button } from '../components/Button';
 import { CharacterCard } from '../components/CharacterCard';
 import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
-import { startGame } from '../utils/launcher';
+import { openDiscord, startGame } from '../utils/launcher';
 
 export function SelectCharacter() {
   const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
@@ -37,8 +37,17 @@ export function SelectCharacter() {
     return (
       <div>
         <h4 className='text-center'>
-          Olá {window.external.getUserId()}, Queremos lhe desejar boa sorte e boas-vindas, que você
-          não desista do jogo antes do G Rank!
+          Bem vindo! Esperamos que você se divirta e faça novas amizades. Estamos no{' '}
+          <span
+            onClick={() => openDiscord()}
+            style={{
+              color: '#7289DA',
+            }}
+          >
+            Discord
+          </span>{' '}
+          para ajudar no que for possível, então qualquer dúvida ou sugestão entre em contato.
+          <br />~ Grato Invasores
         </h4>
         <div className='flex items-center justify-center flex-col'>
           <Button onClick={handleStartGame}>Entrar</Button>
