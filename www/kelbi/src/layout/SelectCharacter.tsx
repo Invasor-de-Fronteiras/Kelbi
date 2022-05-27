@@ -7,28 +7,31 @@ import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 import { startGame } from '../utils/launcher';
 
-// TODO: move new accounts to an own file
 export function SelectCharacter() {
   const { mutate: handleCreateNewChar } = useCreateCharacter();
+  const [localLoadingMessage, setLoadingMessage] = useState<string | null>(null);
 
-  const { characters, isNewAccount, newAccountUID, loading } = useGetCharacters();
+  const { characters, isNewAccount, newAccountUID, loading: charLoading } = useGetCharacters();
   const [selectedCharId, setSelectedCharId] = useState('');
 
-  const handleStartGame = () => {
-    // START GAME FOR NEW ACCOUNT
-    startGame(selectedCharId ?? newAccountUID);
+  const loading = localLoadingMessage !== null || charLoading;
+  const loadingMessage = localLoadingMessage ?? 'Buscando seus dados...';
 
-    // START GAME FOR SELECTED CHARACTER
+  const handleStartGame = () => {
+    setLoadingMessage('Abrindo o jogo...');
+    startGame(selectedCharId ?? newAccountUID);
   };
 
   const handleChangeAccount = () => {
+    setLoadingMessage('Trocando de conta...');
+
     localStorage.removeItem('autoLogin');
     localStorage.removeItem('password');
     localStorage.removeItem('username');
     window.external.restartMhf();
   };
 
-  if (loading) return <SelectCharacterLoading />;
+  if (loading) return <SelectCharacterLoading message={loadingMessage} />;
 
   if (isNewAccount) {
     return (
@@ -45,26 +48,35 @@ export function SelectCharacter() {
     );
   }
 
+  const layoutWidth = 300;
+
   return (
     <div>
       <div
         style={{
           overflowY: 'auto',
-          maxHeight: '230px',
-          marginBottom: '30px',
-        }}>
+          maxHeight: '70%',
+          paddingRight: 10,
+          marginTop: 50,
+          top: 0,
+          position: 'absolute',
+          marginLeft: layoutWidth + 100,
+        }}
+      >
         {characters.map((char, index) => (
           <CharacterCard
             char={char}
             key={char.uid}
             tabIndex={index}
             isSelected={char.uid === selectedCharId}
-            onSelect={() => setSelectedCharId(char.uid)}
+            onSelect={() => setSelectedCharId((id) => (id === char.uid ? null : char.uid))}
           />
         ))}
       </div>
-      <div className='flex flex-col justify-between'>
-        <Button onClick={handleStartGame}>Entrar</Button>
+      <div className='flex flex-col items-center'>
+        <Button onClick={handleStartGame} disabled={!selectedCharId}>
+          Entrar
+        </Button>
         <Button onClick={handleCreateNewChar}>Novo personagem</Button>
         <Button onClick={handleChangeAccount}>Trocar de conta</Button>
         <AutoLoginCheckbox />
@@ -87,7 +99,8 @@ function AutoLoginCheckbox() {
       style={{
         marginTop: '10px',
       }}
-      onClick={() => handleChange(!checked)}>
+      onClick={() => handleChange(!checked)}
+    >
       <input
         type='checkbox'
         id='auto-login'
@@ -99,15 +112,16 @@ function AutoLoginCheckbox() {
   );
 }
 
-function SelectCharacterLoading() {
+function SelectCharacterLoading({ message }: { message: string }) {
   return (
     <div className='flex items-center justify-center flex-col'>
       <img id='img-bg' src={BarbaryWalking} height='100%' width='100%' />
       <span
         style={{
           marginTop: '5px',
-        }}>
-        Buscando seus dados...
+        }}
+      >
+        {message}
       </span>
     </div>
   );

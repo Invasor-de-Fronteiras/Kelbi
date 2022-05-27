@@ -32,13 +32,13 @@
   font-family: Roboto, sans-serif;
 }
 
-html,
+/* html,
 body {
   /* height: 100%;
   margin: 0px;
-  width: 100%; */
-  /* overflow: hidden; */
-}
+  width: 100%; 
+  /* overflow: hidden;
+} */
 
 .input {
   background-color: #eaeaea;
@@ -46,7 +46,7 @@ body {
   border-radius: 3px;
 }
 
- .input-error {
+.input-error {
   border-color: #dc143c;
   box-shadow: #dc143c 0px 0px 0px 1px;
 }
@@ -70,8 +70,6 @@ body {
 .input-group label {
   display: none;
 }
-
-
 
 .icon {
   color: #1e293b;
@@ -103,7 +101,7 @@ button {
 }
 
 button:hover {
-  background-color:#395074;
+  background-color: #395074;
 }
 
 *:disabled {

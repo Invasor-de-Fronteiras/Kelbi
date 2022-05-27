@@ -21,7 +21,8 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
         loggedIn,
         setLoggedIn,
         setIsLoading,
-      }}>
+      }}
+    >
       {children}
       {isLoading && <Loading />}
     </LauncherContext.Provider>

@@ -33,7 +33,7 @@ export function SignInForm() {
   const formik = useFormik({
     initialValues,
     validationSchema,
-    isInitialValid: validationSchema.isValidSync(initialValues),
+    validateOnMount: validationSchema.isValidSync(initialValues),
     onSubmit: (data) => mutate(data),
   });
 
@@ -67,7 +67,8 @@ export function SignInForm() {
         <Button
           type='submit'
           isLoading={isLoading}
-          disabled={formik.isValidating || !formik.isValid}>
+          disabled={formik.isValidating || !formik.isValid}
+        >
           Entrar
         </Button>
         {error && <SignInError error={error} />}
@@ -83,18 +84,21 @@ function SignInError({ error }: { error: Error }) {
         marginTop: '10px',
         backgroundColor: '#B00020',
         padding: '10px',
-      }}>
+      }}
+    >
       <div
         style={{
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-        }}>
+        }}
+      >
         <span
           style={{
             color: '#fff',
-          }}>
+          }}
+        >
           Oops!
         </span>
         <RiErrorWarningFill size={20} color='#fff' />
@@ -104,7 +108,8 @@ function SignInError({ error }: { error: Error }) {
           color: '#fff',
           marginTop: '5px',
           fontSize: '14px',
-        }}>
+        }}
+      >
         {error?.message}
       </span>
     </div>

@@ -1,0 +1,7 @@
+.character-card:hover {
+  cursor: pointer;
+}
+
+.character-card {
+  opacity: 0.8;
+}

@@ -5,6 +5,7 @@ import { LauncherProvider } from './context/LauncherContext';
 
 import './styles/main.css';
 import './styles/framework.css';
+import './utils/faker-launcher';
 
 ReactDOM.render(
   <React.StrictMode>

@@ -33,7 +33,8 @@ export function Loading() {
         bottom: 0,
         right: 0,
       }}
-      onClick={() => (data.href ? openBrowser(data.href) : null)}>
+      onClick={() => (data.href ? openBrowser(data.href) : null)}
+    >
       <img id='img-bg' src={data.img} height={data.height} width={data.width} />
     </div>
   );

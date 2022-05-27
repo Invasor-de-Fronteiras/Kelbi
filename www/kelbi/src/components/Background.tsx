@@ -49,6 +49,8 @@ export function Background() {
   useEffect(() => {
     const bg = document.body;
     bg.style.backgroundImage = `url(${bgImg})`;
+    bg.style.backgroundSize = 'cover';
+    bg.style.backgroundPosition = 'center';
   }, []);
 
   return null;

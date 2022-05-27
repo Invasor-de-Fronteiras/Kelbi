@@ -31,8 +31,8 @@ declare global {
   }
 }
 
-type LauncherSongs = 'IDR_WAV_SEL' | 'IDR_WAV_OK' | 'IDR_WAV_PRE_LOGIN' | 'IDR_NIKU';
-type BoostModeTypes = '_MHF_NORMAL';
+export type LauncherSongs = 'IDR_WAV_SEL' | 'IDR_WAV_OK' | 'IDR_WAV_PRE_LOGIN' | 'IDR_NIKU';
+export type BoostModeTypes = '_MHF_NORMAL';
 
 export enum LastAuthResult {
   None = 'AUTH_NULL',
@@ -61,16 +61,6 @@ export function openGithub() {
 
 export function openConfig() {
   window.external.openMhlConfig();
-}
-
-export function isEnableSessionId() {
-  try {
-    return window.external.isEnableSessionId();
-  } catch {
-    // IGNORANDO ERRO IGUAL LAUNCHER ORIGIONAL
-    // TODO: DEBUGAR QUANDO DA ERROR
-    return false;
-  }
 }
 
 export interface Character {
@@ -182,10 +172,11 @@ function parserWeapon(weapon: string): Weapon {
   }
 }
 
-enum CharacterGender {
+export enum CharacterGender {
   Male = 'Male',
   Female = 'Female',
 }
+
 function parseCharGender(gender: string): CharacterGender {
   if (gender === 'M') return CharacterGender.Male;
   return CharacterGender.Female;

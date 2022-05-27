@@ -14,6 +14,7 @@ const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
 export function DevTool() {
   const [data, setData] = useState({});
   const [err, setErr] = useState(null);
+  const [show, setShow] = useState(true);
 
   useEffect(() => {
     const timeout = setInterval(() => {
@@ -71,35 +72,43 @@ export function DevTool() {
         top: 0,
         right: 0,
         marginRight: '10%',
-      }}>
-      <h1>Dev Tool</h1>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <h2>States</h2>
-        {(Object.keys(data) as (keyof typeof data)[])
-          .filter((key) => !!data[key])
-          .map((key) => {
-            return <DebugItem data={data[key]} key={key} name={key} />;
-          })}
-        {/** @ts-ignore */}
-        {data?.updatePercentageTotal && (
-          <>
-            <span>
-              {/** @ts-ignore */}
-              calc updatePercentageTotal: {Math.ceil(data.updatePercentageTotal * _UPD_BAR_PER)}
-            </span>
-          </>
-        )}
+      }}
+    >
+      <div className='flex flex-row items-center justify-center'>
+        <h1>Dev Tool</h1>
+        <BiShow style={{ marginLeft: 10 }} size={25} onClick={() => setShow(!show)} />
       </div>
-      {err && (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2>Error</h2>
-          {/** @ts-ignore */}
-          <span>name: {err?.name}</span>
-          {/** @ts-ignore */}
-          <span>msg: {err?.message}</span>
-          {/** @ts-ignore */}
-          <span>stack: {err?.stack}</span>
-        </div>
+      <h2>States</h2>
+      {show && (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {(Object.keys(data) as (keyof typeof data)[])
+              .filter((key) => !!data[key])
+              .map((key) => {
+                return <DebugItem data={data[key]} key={key} name={key} />;
+              })}
+            {/** @ts-ignore */}
+            {data?.updatePercentageTotal && (
+              <>
+                <span>
+                  {/** @ts-ignore */}
+                  calc updatePercentageTotal: {Math.ceil(data.updatePercentageTotal * _UPD_BAR_PER)}
+                </span>
+              </>
+            )}
+          </div>
+          {err && (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <h2>Error</h2>
+              {/** @ts-ignore */}
+              <span>name: {err?.name}</span>
+              {/** @ts-ignore */}
+              <span>msg: {err?.message}</span>
+              {/** @ts-ignore */}
+              <span>stack: {err?.stack}</span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

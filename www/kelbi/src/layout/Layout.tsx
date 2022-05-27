@@ -34,8 +34,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </div>
-      <DevTool />
-
+      {/* <DevTool /> */}
       <Background />
       <LauncherButtonGroup />
     </>

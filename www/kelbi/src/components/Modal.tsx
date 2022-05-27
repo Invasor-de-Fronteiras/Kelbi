@@ -14,12 +14,14 @@ export function Modal() {
         width: '100%',
         height: '100%',
         background: imgTransparent,
-      }}>
+      }}
+    >
       <div
         className=''
         style={{
           opacity: 1,
-        }}>
+        }}
+      >
         <h4 className='text-center'>
           Olá username, Queremos lhe desejar boa sorte e boas-vindas, que você não desista do jogo
           antes do G Rank!
