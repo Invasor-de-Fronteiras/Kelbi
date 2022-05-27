@@ -8,7 +8,7 @@ import { useGetCharacters } from '../hooks/useGetCharacters';
 import { startGame } from '../utils/launcher';
 
 export function SelectCharacter() {
-  const { mutate: handleCreateNewChar } = useCreateCharacter();
+  const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
   const [localLoadingMessage, setLoadingMessage] = useState<string | null>(null);
 
   const { characters, isNewAccount, newAccountUID, loading: charLoading } = useGetCharacters();
@@ -74,11 +74,19 @@ export function SelectCharacter() {
         ))}
       </div>
       <div className='flex flex-col items-center'>
-        <Button onClick={handleStartGame} disabled={!selectedCharId}>
+        <Button onClick={handleStartGame} disabled={!selectedCharId || newCharInLoading}>
           Entrar
         </Button>
-        <Button onClick={handleCreateNewChar}>Novo personagem</Button>
-        <Button onClick={handleChangeAccount}>Trocar de conta</Button>
+        <Button
+          onClick={handleCreateNewChar}
+          loadingMessage='Criando novo personagem...'
+          isLoading={newCharInLoading}
+        >
+          Novo personagem
+        </Button>
+        <Button onClick={handleChangeAccount} disabled={newCharInLoading}>
+          Trocar de conta
+        </Button>
         <AutoLoginCheckbox />
       </div>
     </div>

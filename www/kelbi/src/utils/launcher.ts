@@ -187,7 +187,10 @@ function parseCharLastLogin(lastLogin: string): Date {
 }
 
 export const isNeAccountChar = (char: Character) => {
-  return char.name === '??????' && char.weapon === Weapon.Unknown;
+  return (
+    (char.name === '??????' || char.name.toUpperCase() === 'HUNTER APPLICATION POSSIBLE') &&
+    char.weapon === Weapon.Unknown
+  );
 };
 
 export function startGame(charId: string) {
@@ -196,45 +199,46 @@ export function startGame(charId: string) {
   window.external.exitLauncher();
 }
 
-export function createNewCharacter(): Promise<Character> {
-  return new Promise((resolve, reject) => {
-    const hasNewChar = (): boolean => {
-      const lastAuth = window.external.getLastAuthResult();
+export function createNewCharacter(
+  onSuccess: (char: Character) => unknown,
+  onError: (error: Error) => unknown,
+): void {
+  const hasNewChar = (): boolean => {
+    const lastAuth = window.external.getLastAuthResult();
 
-      if (lastAuth === LastAuthResult.InLoading) {
-        return false;
-      }
-
-      const chars = getCharacters();
-      const newChar = findByEnd(chars, isNeAccountChar);
-
-      if (!newChar) {
-        return false;
-      }
-
-      resolve(newChar);
-      return true;
-    };
-
-    try {
-      // checking if the user has a new char that was not used before
-      if (hasNewChar()) {
-        return;
-      }
-
-      const userId = window.external.getUserId();
-      const password = window.external.getPassword();
-
-      //creating new char
-      window.external.loginCog(userId + '+', password, password);
-
-      const interval = setInterval(() => {
-        if (hasNewChar()) {
-          clearInterval(interval);
-        }
-      }, 100);
-    } catch (error) {
-      reject(error);
+    if (lastAuth === LastAuthResult.InLoading) {
+      return false;
     }
-  });
+
+    const chars = getCharacters();
+    const newChar = findByEnd(chars, isNeAccountChar);
+
+    if (!newChar) {
+      return false;
+    }
+
+    onSuccess(newChar);
+    return true;
+  };
+
+  try {
+    // checking if the user has a new char that was not used before
+    if (hasNewChar()) {
+      return;
+    }
+
+    const userId = window.external.getUserId();
+    const password = window.external.getPassword();
+
+    //creating new char
+    window.external.loginCog(userId + '+', password, password);
+
+    const interval = setInterval(() => {
+      if (hasNewChar()) {
+        clearInterval(interval);
+      }
+    }, 100);
+  } catch (error) {
+    onError(error);
+  }
 }
