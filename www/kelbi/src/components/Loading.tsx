@@ -10,14 +10,14 @@ export function Loading() {
     () =>
       randomArr([
         {
-          img: Palamute,
+          src: Palamute,
           width: '100',
           height: '100',
           alt: 'Palamute',
           href: 'https://www.youtube.com/watch?v=0Uk-gytGg94',
         },
         {
-          img: Palico,
+          src: Palico,
           width: '100%',
           height: '100%',
         },
@@ -32,10 +32,11 @@ export function Loading() {
         position: 'absolute',
         bottom: 0,
         right: 0,
+        display: 'flex',
       }}
       onClick={() => (data.href ? openBrowser(data.href) : null)}
     >
-      <img id='img-bg' src={data.img} height={data.height} width={data.width} />
+      <img id='img-bg' {...data} />
     </div>
   );
 }
