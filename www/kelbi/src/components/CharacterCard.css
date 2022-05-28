@@ -1,0 +1,21 @@
+.character-card:hover {
+  cursor: pointer;
+}
+
+.character-card {
+  opacity: 0.8;
+  margin-bottom: 10px;
+  width: 200px;
+  padding: 10px;
+}
+
+.character-card .char-weapon {
+  text-transform: uppercase;
+  font-size: .9em;
+}
+
+.character-card .char-name {
+  font-size: 1.5em;
+  font-weight: bold;
+  text-transform: uppercase;
+}

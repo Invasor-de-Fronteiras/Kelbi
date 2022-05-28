@@ -1,14 +1,22 @@
 {
     "cSpell.words": [
         "Andoryuuta",
+        "banbaro",
         "Bowgun",
+        "curta",
         "dframe",
         "Erupe",
+        "Formik",
+        "Greatsword",
         "Gunlance",
         "Invasores",
+        "Longsword",
         "Mezeporta",
         "mhfpacket",
+        "muito",
         "NIKU",
+        "palamute",
+        "palico",
         "Parone",
         "Pugi",
         "Ravi",
@@ -16,5 +24,6 @@
         "serverlist",
         "Solenataris",
         "Tonfa"
-    ]
+    ],
+    "liveServer.settings.port": 5501
 }
