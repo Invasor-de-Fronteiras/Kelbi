@@ -21,6 +21,7 @@ import (
 type Session struct {
 	sync.Mutex
 	logger        *zap.Logger
+	hasLoggerName bool
 	server        *Server
 	rawConn       net.Conn
 	cryptConn     *network.CryptConn
@@ -54,11 +55,12 @@ type Session struct {
 // NewSession creates a new Session type.
 func NewSession(server *Server, conn net.Conn) *Session {
 	s := &Session{
-		logger:      server.logger.Named(conn.RemoteAddr().String()),
-		server:      server,
-		rawConn:     conn,
-		cryptConn:   network.NewCryptConn(conn),
-		sendPackets: make(chan []byte, 20),
+		logger:        server.logger.Named(conn.RemoteAddr().String()),
+		server:        server,
+		rawConn:       conn,
+		hasLoggerName: false,
+		cryptConn:     network.NewCryptConn(conn),
+		sendPackets:   make(chan []byte, 20),
 		clientContext: &clientctx.ClientContext{
 			StrConv: &stringsupport.StringConverter{
 				Encoding: japanese.ShiftJIS,
@@ -88,6 +90,13 @@ func (s *Session) QueueSend(data []byte) {
 		fmt.Printf("Sent Data:\n%s\n", hex.Dump(data))
 	}
 	s.sendPackets <- data
+}
+
+func (s *Session) SetLoggerName(name string) {
+	if !s.hasLoggerName {
+		s.hasLoggerName = true
+		s.logger = s.logger.Named(name)
+	}
 }
 
 // QueueSendNonBlocking queues a packet (raw []byte) to be sent, dropping the packet entirely if the queue is full.

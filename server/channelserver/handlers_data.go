@@ -96,8 +96,8 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	characterName := s.clientContext.StrConv.MustDecode(bfutil.UpToNull(decompressedData[88:100]))
+	s.SetLoggerName(characterName)
 
-	s.logger = s.logger.Named(characterName)
 	_, err = s.server.db.Exec("UPDATE characters SET name=$1 WHERE id=$2", characterName, s.charID)
 	if err != nil {
 		s.logger.Fatal("Failed to update character name in db", zap.Error(err))
