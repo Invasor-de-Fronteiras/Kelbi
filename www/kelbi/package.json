@@ -63,6 +63,7 @@
     "classnames": "^2.3.1",
     "formik": "^2.2.9",
     "postcss-color-rgba-fallback": "^4.0.0",
-    "react-icons": "^4.3.1"
+    "react-icons": "^4.3.1",
+    "yup": "^0.32.11"
   }
 }

@@ -20,11 +20,5 @@ services:
       - 8080:8080
 
 volumes:
-  erupe-server:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: .
   erupe-db-data:
   
