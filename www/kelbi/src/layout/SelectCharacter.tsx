@@ -6,6 +6,7 @@ import { CharacterCard } from '../components/CharacterCard';
 import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 import { openDiscord, startGame } from '../utils/launcher';
+import { playLoginSong, randomSong } from '../utils/songs';
 
 export function SelectCharacter() {
   const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
@@ -18,6 +19,7 @@ export function SelectCharacter() {
   const loadingMessage = localLoadingMessage ?? 'Buscando seus dados...';
 
   const handleStartGame = () => {
+    playLoginSong();
     setLoadingMessage('Abrindo o jogo...');
     startGame(selectedCharId ?? newAccountUID);
   };
@@ -78,7 +80,10 @@ export function SelectCharacter() {
             key={char.uid}
             tabIndex={index}
             isSelected={char.uid === selectedCharId}
-            onSelect={() => setSelectedCharId((id) => (id === char.uid ? null : char.uid))}
+            onSelect={() => {
+              randomSong();
+              setSelectedCharId((id) => (id === char.uid ? null : char.uid));
+            }}
           />
         ))}
       </div>

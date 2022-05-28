@@ -33,7 +33,8 @@ export function SignInForm() {
   const formik = useFormik({
     initialValues,
     validationSchema,
-    validateOnMount: validationSchema.isValidSync(initialValues),
+    validateOnMount: true,
+    isInitialValid: validationSchema.isValidSync(initialValues),
     onSubmit: (data) => mutate(data),
   });
 

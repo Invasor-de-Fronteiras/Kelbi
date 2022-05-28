@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 import { ErrorMessage, useField } from 'formik';
 import React, { ComponentProps } from 'react';
+import { playDigitSong } from '../utils/songs';
 
 interface FieldInputProps extends ComponentProps<'input'> {
   name: string;
@@ -24,6 +25,10 @@ export function FieldInput({ name, isRequired, label, ...props }: FieldInputProp
         {...props}
         required={isRequired}
         {...field}
+        onChange={(e) => {
+          field.onChange(e);
+          playDigitSong();
+        }}
       />
       <ErrorMessage name={name} render={(err) => <span className='error-message'>{err}</span>} />
     </div>
