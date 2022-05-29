@@ -7,7 +7,7 @@ import (
 
 	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/network/mhfpacket"
-	timeServerFix "github.com/Solenataris/Erupe/server/channelserver/timeserver"
+	//timeServerFix "github.com/Solenataris/Erupe/server/channelserver/timeserver"
 )
 
 func handleMsgMhfRegisterEvent(s *Session, p mhfpacket.MHFPacket) {
@@ -147,31 +147,31 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		loginBoostStatus = []loginBoost{
 			{
 				WeekReq:    1,    // weeks needed
-				WeekCount:  0,    // weeks passed
+				WeekCount:  1,    // weeks passed
 				Available:  true, // available
 				Expiration: 0,    //uint32(t.Add(120 * time.Minute).Unix()), // uncomment to enable permanently
 			},
 			{
 				WeekReq:    2,
-				WeekCount:  0,
+				WeekCount:  2,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    3,
-				WeekCount:  0,
+				WeekCount:  3,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    4,
-				WeekCount:  0,
+				WeekCount:  4,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    5,
-				WeekCount:  0,
+				WeekCount:  5,
 				Available:  true,
 				Expiration: 0,
 			},
@@ -186,7 +186,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		if loginBoostStatus[d].WeekReq == CurrentWeek || loginBoostStatus[d].WeekCount != 0 {
 			loginBoostStatus[d].WeekCount = CurrentWeek
 		}
-		if !loginBoostStatus[d].Available && loginBoostStatus[d].WeekCount >= loginBoostStatus[d].WeekReq && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
+		if !loginBoostStatus[d].Available && loginBoostStatus[d].WeekCount == loginBoostStatus[d].WeekReq && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
 			loginBoostStatus[d].Expiration = 1
 		}
 		if !insert {
@@ -244,151 +244,6 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
-func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
-	var t = timeServerFix.Tstatic_midnight()
-	var event int = s.server.erupeConfig.DevModeOptions.Event
-
-	year, month, day := t.Date()
-	midnight := time.Date(year, month, day, 0, 0, 0, 0, t.Location())
-	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
-	// Diva Defense with Prayer, Interception and Song weeks
-	// Mezeporta Festival with simply 'available' being a weekend thing
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(0x1d5fda5c) // Unk (1d5fda5c, 0b5397df)
-
-	if event == 1 {
-		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
-	} else {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
-	}
-
-	if event == 2 {
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-	} else {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-	}
-
-	if event == 3 {
-		resp.WriteUint32(uint32(midnight.Add((24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
-		resp.WriteUint32(uint32(midnight.Add((24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
-	} else {
-		resp.WriteUint32(uint32(midnight.Add((-24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
-		resp.WriteUint32(uint32(midnight.Add((-24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
-	}
-
-	resp.WriteUint16(0x19) // Unk 00011001
-	resp.WriteUint16(0x2d) // Unk 00101101
-	resp.WriteUint16(0x02) // Unk 00000010
-	resp.WriteUint16(0x02) // Unk 00000010
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-}
-
-/*
-func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
-	resp := byteframe.NewByteFrame()
-
-	resp.WriteUint32(0x1d5fda5c)                  // Unk (1d5fda5c, 0b5397df)
-	resp.WriteUint32(uint32(ScheduleEvent(s, 1))) // Week 1 Timestamp, Festi start?
-	resp.WriteUint32(uint32(ScheduleEvent(s, 2))) // Diva Defense Interception 1
-	resp.WriteUint32(uint32(ScheduleEvent(s, 3))) // Week 2 Timestamp
-	resp.WriteUint32(uint32(ScheduleEvent(s, 4))) // Diva Defense Interception 2
-	resp.WriteUint32(uint32(ScheduleEvent(s, 5))) // Week 3 Timestamp
-	resp.WriteUint32(uint32(ScheduleEvent(s, 6))) // Diva Defense Greeting Song 3
-	resp.WriteUint16(0x19)                        // Unk 00011001
-	resp.WriteUint16(0x2d)                        // Unk 00101101
-	resp.WriteUint16(0x02)                        // Unk 00000010
-	resp.WriteUint16(0x02)                        // Unk 00000010
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-}
-
-var timedb int64
-var countEvent int = 1
-var BlockSchedulEvent bool
-var t_Next_SchedulEvent = Time_Current_Adjusted()
-var t_curr_SchedulEvent = Time_Current_Adjusted().Unix()
-
-func ScheduleEvent(s *Session, fixWeek int) uint32 {
-	if !BlockSchedulEvent {
-		if s.server.erupeConfig.DevModeOptions.ServerName != "" { // IF (SERVERNAME == NAME)
-			err := s.server.db.QueryRow("SELECT event_id FROM servers WHERE server_name=$1", s.server.erupeConfig.DevModeOptions.ServerName).Scan(&countEvent)
-			if err != nil {
-				panic(err)
-			}
-			s.server.db.QueryRow("SELECT date_expiration FROM servers server_name=$1", s.server.erupeConfig.DevModeOptions.ServerName).Scan(&timedb)
-			if t_curr_SchedulEvent >= timedb {
-				countEvent += 1
-				if countEvent == 7 {
-					countEvent = 1
-				}
-				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
-				_, err := s.server.db.Exec("UPDATE servers SET event_id=$1, event_expiration=$2 WHERE server_name=$3", countEvent, t_Add_Next_SchedulEvent, s.server.erupeConfig.DevModeOptions.ServerName)
-				if err == nil {
-					s.server.db.QueryRow("SELECT event_id FROM servers WHERE id=$1").Scan(&countEvent)
-				}
-			}
-			BlockSchedulEvent = fixWeek == countEvent
-		} else { // ELSE (SERVERNAME == NULL)
-			err := s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
-			if err != nil {
-				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
-				s.server.db.Exec("INSERT INTO event_week (id, event_id, date_expiration) VALUES (1, $1, $2)", countEvent, t_Add_Next_SchedulEvent)
-				s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
-			}
-			s.server.db.QueryRow("SELECT date_expiration FROM event_week WHERE id=1").Scan(&timedb)
-			if t_curr_SchedulEvent >= timedb {
-				countEvent += 1
-				if countEvent == 7 {
-					countEvent = 1
-				}
-				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
-				_, err := s.server.db.Exec("UPDATE event_week SET event_id=$1, date_expiration=$2 WHERE id=1", countEvent, t_Add_Next_SchedulEvent)
-				if err == nil {
-					s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
-				}
-			}
-			BlockSchedulEvent = fixWeek == countEvent
-		}
-	}
-	if fixWeek == countEvent {
-		return uint32(Time_Current_Midnight().Add(7 * 24 * time.Hour).Unix())
-	} else {
-		return uint32(Time_Current_Midnight().Add(-24 * 21 * time.Hour).Unix())
-	}
-}
-*/
-
-func handleMsgMhfGetUdInfo(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdInfo)
-	// Message that appears on the Diva Defense NPC and triggers the green exclamation mark
-	udInfos := []struct {
-		Text      string
-		StartTime time.Time
-		EndTime   time.Time
-	}{
-		/*{
-			Text:      " ~C17【Erupe】 is dead event!\n\n■Features\n~C18 Dont bother walking around!\n~C17 Take down your DB by doing \n~C17 nearly anything!",
-			StartTime: Time_static().Add(time.Duration(-5) * time.Minute), // Event started 5 minutes ago,
-			EndTime:   Time_static().Add(time.Duration(24) * time.Hour),   // Event ends in 5 minutes,
-		}, */
-	}
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint8(uint8(len(udInfos)))
-	for _, udInfo := range udInfos {
-		resp.WriteBytes(fixedSizeShiftJIS(udInfo.Text, 1024))
-		resp.WriteUint32(uint32(udInfo.StartTime.Unix()))
-		resp.WriteUint32(uint32(udInfo.EndTime.Unix()))
-	}
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-}
-
 func handleMsgMhfGetBoostTime(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetBoostTime)
 
@@ -419,4 +274,7 @@ func handleMsgMhfPostBoostTimeLimit(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfGetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfSetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetRestrictionEvent(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfSetRestrictionEvent)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}

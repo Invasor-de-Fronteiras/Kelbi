@@ -1,10 +1,8 @@
 package channelserver
 
 import (
-	"fmt"
-
-	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"github.com/Andoryuuta/byteframe"
 	"go.uber.org/zap"
 )
 
@@ -16,8 +14,10 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 
 	stage, ok := s.server.stages[pkt.StageID]
 	if !ok {
-		char := fmt.Sprintf("(%s: %d)", s.Name, s.charID)
-		s.logger.Fatal("Can't enumerate clients for stage that doesn't exist! "+char, zap.String("stageID", pkt.StageID))
+		s.logger.Error("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
+		s.server.stagesLock.RUnlock()
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	// Unlock the stages map.
@@ -63,7 +63,7 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfListMember)
+	pkt := p.(*mhfpacket.MsgMhfOprMember)
 	// TODO: add targetid(uint32) to charid(uint32)'s database under new field
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

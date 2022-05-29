@@ -75,6 +75,63 @@ type Server struct {
 
 	name   string
 	enable bool
+
+	raviente *Raviente
+}
+
+type Raviente struct {
+	sync.Mutex
+
+	register *RavienteRegister
+	state    *RavienteState
+	support  *RavienteSupport
+}
+
+type RavienteRegister struct {
+	nextTime     uint32
+	startTime    uint32
+	postTime     uint32
+	killedTime   uint32
+	ravienteType uint32
+	maxPlayers   uint32
+	carveQuest   uint32
+	register     []uint32
+}
+
+type RavienteState struct {
+	damageMultiplier uint32
+	stateData        []uint32
+}
+
+type RavienteSupport struct {
+	supportData []uint32
+}
+
+// Set up the Raviente variables for the server
+func NewRaviente() *Raviente {
+	ravienteRegister := &RavienteRegister{
+		nextTime:     0,
+		startTime:    0,
+		killedTime:   0,
+		postTime:     0,
+		ravienteType: 0,
+		maxPlayers:   0,
+		carveQuest:   0,
+	}
+	ravienteState := &RavienteState{
+		damageMultiplier: 1,
+	}
+	ravienteSupport := &RavienteSupport{}
+	ravienteRegister.register = []uint32{0, 0, 0, 0, 0}
+	ravienteState.stateData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	ravienteSupport.supportData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+	raviente := &Raviente{
+		register: ravienteRegister,
+		state:    ravienteState,
+		support:  ravienteSupport,
+	}
+	return raviente
 }
 
 // NewServer creates a new Server type.
@@ -92,19 +149,41 @@ func NewServer(config *Config) *Server {
 		discordBot:      config.DiscordBot,
 		name:            config.Name,
 		enable:          config.Enable,
+		raviente:        NewRaviente(),
 	}
 
-	s.stages[MezeportaStageId] = NewStage(MezeportaStageId)
-	s.stages[GuildHallLv1StageId] = NewStage(GuildHallLv1StageId)
-	s.stages[GuildHallLv2StageId] = NewStage(GuildHallLv2StageId)
-	s.stages[GuildHallLv3StageId] = NewStage(GuildHallLv3StageId)
-	s.stages[PugiFarmStageId] = NewStage(PugiFarmStageId)
-	s.stages[RastaBarStageId] = NewStage(RastaBarStageId)
-	s.stages[CarvaneStageId] = NewStage(CarvaneStageId)
-	s.stages[GookFarmStageId] = NewStage(GookFarmStageId)
-	s.stages[DivaFountainStageId] = NewStage(DivaFountainStageId)
-	s.stages[DivaHallStageId] = NewStage(DivaHallStageId)
-	s.stages[MezFesStageId] = NewStage(MezFesStageId)
+	// Mezeporta
+	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
+
+	// Guild Hall LV1
+	s.stages["sl1Ns202p0a0u0"] = NewStage("sl1Ns202p0a0u0")
+
+	// Guild Hall LV2
+	s.stages["sl1Ns203p0a0u0"] = NewStage("sl1Ns203p0a0u0")
+
+	// Guild Hall LV3
+	s.stages["sl1Ns204p0a0u0"] = NewStage("sl1Ns204p0a0u0")
+
+	// Pugi Farm
+	s.stages["sl1Ns205p0a0u0"] = NewStage("sl1Ns205p0a0u0")
+
+	// Rasta bar stage
+	s.stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
+
+	// Carvane
+	s.stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
+
+	// Gook Farm
+	s.stages["sl1Ns265p0a0u0"] = NewStage("sl1Ns265p0a0u0")
+
+	// Diva fountain / prayer fountain.
+	s.stages["sl2Ns379p0a0u0"] = NewStage("sl2Ns379p0a0u0")
+
+	// Diva Hall
+	s.stages["sl1Ns445p0a0u0"] = NewStage("sl1Ns445p0a0u0")
+
+	// MezFes
+	s.stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
 
 	return s
 }
@@ -120,6 +199,7 @@ func (s *Server) Start(port int) error {
 	go s.acceptClients()
 	go s.manageSessions()
 
+	// Start the discord bot for chat integration.
 	if s.erupeConfig.Discord.Enabled {
 		s.discordBot.Session.AddHandler(s.onDiscordMessage)
 	}

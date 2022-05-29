@@ -97,6 +97,13 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		if pkt.MessageType == 1 {
 			session := s.server.semaphore["hs_l0u3B51J9k3"]
 			(*session).BroadcastMHF(resp, s)
+		} else {
+			s.Lock()
+			haveStage := s.stage != nil
+			if haveStage {
+				s.stage.BroadcastMHF(resp, s)
+			}
+			s.Unlock()
 		}
 	case BroadcastTypeTargeted:
 		for _, targetID := range (*msgBinTargeted).TargetCharIDs {
@@ -131,115 +138,125 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		// Discord integration
 		s.server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
 
-		// RAVI COMMANDS
+		// RAVI COMMANDS V2
+		if strings.HasPrefix(chatMessage.Message, "!ravi") {
+			if checkRaviSemaphore(s) {
+				s.server.raviente.Lock()
+				if !strings.HasPrefix(chatMessage.Message, "!ravi ") {
+					SendMessageToUser(s, "No Raviente command specified!")
+				} else {
+					if strings.HasPrefix(chatMessage.Message, "!ravi start") {
+						if s.server.raviente.register.startTime == 0 {
+							s.server.raviente.register.startTime = s.server.raviente.register.postTime
+							SendMessageToUser(s, "The Great Slaying will begin in a moment")
+							s.notifyall()
+						} else {
+							SendMessageToUser(s, "The Great Slaying has already begun!")
+						}
+					} else if strings.HasPrefix(chatMessage.Message, "!ravi sm") || strings.HasPrefix(chatMessage.Message, "!ravi setmultiplier") {
+						var num uint8
+						n, numerr := fmt.Sscanf(chatMessage.Message, "!ravi sm %d", &num)
+						if numerr != nil || n != 1 {
+							SendMessageToUser(s, "Error in command. Format: !ravi sm n")
+						} else if s.server.raviente.state.damageMultiplier == 1 {
+							if num > 32 {
+								SendMessageToUser(s, "Raviente multiplier too high, defaulting to 32x")
+								s.server.raviente.state.damageMultiplier = 32
+							} else {
+								SendMessageToUser(s, fmt.Sprintf("Raviente multiplier set to %dx", num))
+								s.server.raviente.state.damageMultiplier = uint32(num)
+							}
+						} else {
+							SendMessageToUser(s, fmt.Sprintf("Raviente multiplier is already set to %dx!", s.server.raviente.state.damageMultiplier))
+						}
+					} else if strings.HasPrefix(chatMessage.Message, "!ravi cm") || strings.HasPrefix(chatMessage.Message, "!ravi checkmultiplier") {
+						SendMessageToUser(s, fmt.Sprintf("Raviente multiplier is currently %dx", s.server.raviente.state.damageMultiplier))
+					} else if strings.HasPrefix(chatMessage.Message, "!ravi sr") || strings.HasPrefix(chatMessage.Message, "!ravi sendres") {
+						if s.server.raviente.state.stateData[28] > 0 {
+							SendMessageToUser(s, "Sending resurrection support!")
+							s.server.raviente.state.stateData[28] = 0
+						} else {
+							SendMessageToUser(s, "Resurrection support has not been requested!")
+						}
+					} else if strings.HasPrefix(chatMessage.Message, "!ravi ss") || strings.HasPrefix(chatMessage.Message, "!ravi sendsed") {
+						SendMessageToUser(s, "Sending sedation support if requested!")
+						// Total BerRavi HP
+						HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
+						s.server.raviente.support.supportData[1] = HP
+					} else if strings.HasPrefix(chatMessage.Message, "!ravi rs") || strings.HasPrefix(chatMessage.Message, "!ravi reqsed") {
+						SendMessageToUser(s, "Requesting sedation support!")
+						// Total BerRavi HP
+						HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
+						s.server.raviente.support.supportData[1] = HP + 12
+					} else {
+						SendMessageToUser(s, "Raviente command not recognised!")
+					}
+				}
+			} else {
+				SendMessageToUser(s, "No one has joined the Great Slaying!")
+			}
+			s.server.raviente.Unlock()
+		}
+		// END RAVI COMMANDS V2
+
+		// RAVI COMMANDS V1
 		if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
 			s.server.semaphoreLock.Lock()
 			getSemaphore := s.server.semaphore["hs_l0u3B51J9k3"]
 			s.server.semaphoreLock.Unlock()
 			if _, exists := getSemaphore.reservedClientSlots[s.charID]; exists {
 				if strings.HasPrefix(chatMessage.Message, "!ravistart") {
-					row := s.server.db.QueryRow("SELECT raviposttime, ravistarted FROM raviregister WHERE refid = 12")
-					var raviPosted, raviStarted uint32
-					err := row.Scan(&raviPosted, &raviStarted)
-					if err != nil {
-						panic(err)
-						return
-					}
-					if raviStarted == 0 {
-						SendMessageToUser(s, fmt.Sprintf("Raviente will start in less than 10 seconds"))
-						s.server.db.Exec("UPDATE raviregister SET ravistarted = $1", raviPosted)
+					if s.server.raviente.register.startTime == 0 {
+						SendMessageToUser(s, "Raviente will start in less than 10 seconds")
+						s.server.raviente.register.startTime = s.server.raviente.register.postTime
 					} else {
-						SendMessageToUser(s, fmt.Sprintf("Raviente has already started"))
+						SendMessageToUser(s, "Raviente has already started")
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bressend") {
-					row := s.server.db.QueryRow("SELECT unknown20 FROM ravistate WHERE refid = 29")
-					var berserkRes uint32
-					err := row.Scan(&berserkRes)
-					if err != nil {
-						panic(err)
-						return
-					}
-					if berserkRes > 0 {
-						SendMessageToUser(s, fmt.Sprintf("Sending ressurection support"))
-						s.server.db.Exec("UPDATE ravistate SET unknown20 = $1", 0)
+					if s.server.raviente.state.stateData[28] > 0 {
+						SendMessageToUser(s, "Sending ressurection support")
+						s.server.raviente.state.stateData[28] = 0
 					} else {
-						SendMessageToUser(s, fmt.Sprintf("Ressurection support has not been requested"))
+						SendMessageToUser(s, "Ressurection support has not been requested")
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bsedsend") {
-					hprow := s.server.db.QueryRow("SELECT phase1hp, phase2hp, phase3hp, phase4hp, phase5hp FROM ravistate WHERE refid = 29")
-					var phase1HP, phase2HP, phase3HP, phase4HP, phase5HP uint32
-					hperr := hprow.Scan(&phase1HP, &phase2HP, &phase3HP, &phase4HP, &phase5HP)
-					if hperr != nil {
-						panic(hperr)
-						return
-					}
-					row := s.server.db.QueryRow("SELECT support2 FROM ravisupport WHERE refid = 25")
-					var berserkTranq uint32
-					err := row.Scan(&berserkTranq)
-					if err != nil {
-						panic(err)
-						return
-					}
-					SendMessageToUser(s, fmt.Sprintf("Sending sedation support if requested"))
-					s.server.db.Exec("UPDATE ravisupport SET support2 = $1", (phase1HP + phase2HP + phase3HP + phase4HP + phase5HP))
+					SendMessageToUser(s, "Sending sedation support if requested")
+					// Total BerRavi HP
+					HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
+					s.server.raviente.support.supportData[1] = HP
 				}
 				if strings.HasPrefix(chatMessage.Message, "!bsedreq") {
-					hprow := s.server.db.QueryRow("SELECT phase1hp, phase2hp, phase3hp, phase4hp, phase5hp FROM ravistate WHERE refid = 29")
-					var phase1HP, phase2HP, phase3HP, phase4HP, phase5HP uint32
-					hperr := hprow.Scan(&phase1HP, &phase2HP, &phase3HP, &phase4HP, &phase5HP)
-					if hperr != nil {
-						panic(hperr)
-						return
-					}
-					row := s.server.db.QueryRow("SELECT support2 FROM ravisupport WHERE refid = 25")
-					var berserkTranq uint32
-					err := row.Scan(&berserkTranq)
-					if err != nil {
-						panic(err)
-						return
-					}
-					SendMessageToUser(s, fmt.Sprintf("Requesting sedation support"))
-					s.server.db.Exec("UPDATE ravisupport SET support2 = $1", ((phase1HP + phase2HP + phase3HP + phase4HP + phase5HP) + 12))
+					SendMessageToUser(s, "Requesting sedation support")
+					// Total BerRavi HP
+					HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
+					s.server.raviente.support.supportData[1] = HP + 12
 				}
 				if strings.HasPrefix(chatMessage.Message, "!setmultiplier ") {
 					var num uint8
 					n, numerr := fmt.Sscanf(chatMessage.Message, "!setmultiplier %d", &num)
-					row := s.server.db.QueryRow("SELECT damagemultiplier FROM ravistate WHERE refid = 29")
-					var damageMultiplier uint32
-					err := row.Scan(&damageMultiplier)
-					if err != nil {
-						panic(err)
-						return
-					}
 					if numerr != nil || n != 1 {
-						SendMessageToUser(s, fmt.Sprintf("Please use the format !setmultiplier x"))
-					} else if damageMultiplier == 1 {
+						SendMessageToUser(s, "Please use the format !setmultiplier x")
+					} else if s.server.raviente.state.damageMultiplier == 1 {
 						if num > 20 {
-							SendMessageToUser(s, fmt.Sprintf("Max multiplier for Ravi is 20, setting to this value"))
-							s.server.db.Exec("UPDATE ravistate SET damagemultiplier = $1", 20)
+							SendMessageToUser(s, "Max multiplier for Ravi is 20, setting to this value")
+							s.server.raviente.state.damageMultiplier = 20
 						} else {
 							SendMessageToUser(s, fmt.Sprintf("Setting Ravi damage multiplier to %d", num))
-							s.server.db.Exec("UPDATE ravistate SET damagemultiplier = $1", num)
+							s.server.raviente.state.damageMultiplier = uint32(num)
 						}
 					} else {
-						SendMessageToUser(s, fmt.Sprintf("Multiplier can only be set once, please restart Ravi to set again"))
+						SendMessageToUser(s, "Multiplier can only be set once, please restart Ravi to set again")
 					}
 				}
 				if strings.HasPrefix(chatMessage.Message, "!checkmultiplier") {
-					var damageMultiplier uint32
-					row := s.server.db.QueryRow("SELECT damagemultiplier FROM ravistate WHERE refid = 29").Scan(&damageMultiplier)
-					if row != nil {
-						return
-					}
-					SendMessageToUser(s, fmt.Sprintf("Ravi's current damage multiplier is %d", damageMultiplier))
+					SendMessageToUser(s, fmt.Sprintf("Ravi's current damage multiplier is %d", s.server.raviente.state.damageMultiplier))
 				}
 			}
 		}
-		// END OF RAVI COMMANDS
+		// END RAVI COMMANDS V1
 
-		// WARNING: Not delete this code, its have a lot of usefull player information
 		// if strings.HasPrefix(chatMessage.Message, "!tele ") {
 		// 	var x, y int16
 		// 	n, err := fmt.Sscanf(chatMessage.Message, "!tele %d %d", &x, &y)

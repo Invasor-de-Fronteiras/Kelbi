@@ -2,7 +2,6 @@ package mhfpacket
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/common/bfutil"
@@ -28,7 +27,6 @@ func (m *MsgSysCreateAcquireSemaphore) Parse(bf *byteframe.ByteFrame, ctx *clien
 	m.AckHandle = bf.ReadUint32()
 	m.Unk0 = bf.ReadUint16()
 	m.PlayerCount = bf.ReadUint8()
-	fmt.Printf("PLAYER COUNT :: %d", m.PlayerCount)
 	SemaphoreIDLength := bf.ReadUint8()
 	m.SemaphoreID = string(bfutil.UpToNull(bf.ReadBytes(uint(SemaphoreIDLength))))
 	return nil

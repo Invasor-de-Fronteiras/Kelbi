@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-
-	"fmt"
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
+  "fmt"
 	"time"
 
 	"github.com/Andoryuuta/byteframe"
@@ -84,11 +83,11 @@ func updateRights(s *Session) {
 			},
 			{
 				ID:        2,
-				Timestamp: 0x5FEA1781,
+				Timestamp: 0xFFFFFFFF,
 			},
 			{
 				ID:        3,
-				Timestamp: 0x5FEA1781,
+				Timestamp: 0xFFFFFFFF,
 			},
 		},
 		UnkSize: 0,
@@ -133,8 +132,6 @@ func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
-	s.logger.Info("LOGIN", zap.Uint32("charID", s.charID))
-
 	pkt := p.(*mhfpacket.MsgSysLogin)
 	name := ""
 
@@ -155,8 +152,6 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.server.db.QueryRow("SELECT name FROM characters WHERE id = $1", pkt.CharID0).Scan(&name)
 	s.Lock()
 	s.Name = name
-	s.SetLoggerName(name)
-
 	s.charID = pkt.CharID0
 	s.rights = rights
 	s.Unlock()
@@ -183,8 +178,6 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func logoutPlayer(s *Session) {
-	s.logger.Info("Logout")
-
 	if s.stage == nil {
 		return
 	}
@@ -197,6 +190,9 @@ func logoutPlayer(s *Session) {
 	}
 	s.stage.RUnlock()
 
+  delete(s.server.sessions, s.rawConn)
+  s.rawConn.Close()
+
 	if s.server.erupeConfig.DevModeOptions.ServerName != "" {
 		_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_name=$2", uint32(len(s.server.sessions)), s.server.erupeConfig.DevModeOptions.ServerName)
 		if err != nil {
@@ -204,26 +200,22 @@ func logoutPlayer(s *Session) {
 		}
 	}
 
+	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
-
-	if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
-		if _, ok := s.server.semaphore["hs_l0u3B51J9k3"].reservedClientSlots[s.charID]; ok {
-			removeSessionFromSemaphore(s)
-		}
-	}
 
 	var timePlayed int
 	err := s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
 
 	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.sessionStart)) + timePlayed
 
+	multiplier := 1
 	var rpGained int
 
-	if s.rights == 0x08091e4e || s.rights == 0x08091e0e { // N Course
-		rpGained = timePlayed / 900
+	if s.rights > 0x40000000 { // N Course
+		rpGained = timePlayed / 900 * multiplier
 		timePlayed = timePlayed % 900
 	} else {
-		rpGained = timePlayed / 1800
+		rpGained = timePlayed / 1800 * multiplier
 		timePlayed = timePlayed % 1800
 	}
 
@@ -262,8 +254,8 @@ func handleMsgSysTime(s *Session, p mhfpacket.MHFPacket) {
 		Timestamp:     uint32(Time_Current_Adjusted().Unix()), // JP timezone
 	}
 	s.QueueSendMHF(resp)
-
-	s.notifyticker()
+	// Send raviente updates
+	// s.notifyticker()
 }
 
 func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
@@ -301,16 +293,15 @@ func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLockGlobalSema)
 
 	bf := byteframe.NewByteFrame()
-	// Unk
-	// 0x00 when no ID sent
-	// 0x02 when ID sent
 	if pkt.ServerChannelIDLength == 1 {
 		bf.WriteBytes([]byte{0x00, 0x00, 0x00, 0x01, 0x00})
 	} else {
-		bf.WriteUint8(0x02)
+		bf.WriteUint8(0x02) // Unk
 		bf.WriteUint8(0x00) // Unk
-		bf.WriteUint16(uint16(pkt.ServerChannelIDLength))
-		bf.WriteBytes([]byte(pkt.ServerChannelIDString))
+		bf.WriteUint16(uint16(pkt.ServerChannelIDLength+1))
+		bf.WriteNullTerminatedBytes([]byte(pkt.ServerChannelIDString))
+		// Normally you would lock the guild semaphore here by passing this
+		// to the EntranceServer, but that feature sucks.
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -381,26 +372,6 @@ func handleMsgMhfEnumeratePrice(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint8(0)
-	resp.WriteUint8(0)  // Some string length following this field.
-	resp.WriteUint16(0) // Entry type 1 count
-	resp.WriteUint8(0)  // Entry type 2 count
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-
-	// Update the client's rights as well:
-	updateRights(s)
-}
-
 func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateOrder)
 	stubEnumerateNoResults(s, pkt.AckHandle)
@@ -409,8 +380,6 @@ func handleMsgMhfEnumerateOrder(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateUnionItem)
@@ -581,127 +550,127 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfEnumerateGuacot(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
-	var data bool
-	err := s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&data)
-	if err == nil {
-		tempresp := byteframe.NewByteFrame()
-		count := uint16(0)
-		var gook0 []byte
-		var gook1 []byte
-		var gook2 []byte
-		var gook3 []byte
-		var gook4 []byte
-		var gook5 []byte
-		var gook0status bool
-		var gook1status bool
-		var gook2status bool
-		var gook3status bool
-		var gook4status bool
-		var gook5status bool
-		_ = s.server.db.QueryRow("SELECT gook0 FROM gook WHERE id = $1", s.charID).Scan(&gook0)
-		_ = s.server.db.QueryRow("SELECT gook1 FROM gook WHERE id = $1", s.charID).Scan(&gook1)
-		_ = s.server.db.QueryRow("SELECT gook2 FROM gook WHERE id = $1", s.charID).Scan(&gook2)
-		_ = s.server.db.QueryRow("SELECT gook3 FROM gook WHERE id = $1", s.charID).Scan(&gook3)
-		_ = s.server.db.QueryRow("SELECT gook4 FROM gook WHERE id = $1", s.charID).Scan(&gook4)
-		_ = s.server.db.QueryRow("SELECT gook5 FROM gook WHERE id = $1", s.charID).Scan(&gook5)
-		_ = s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&gook0status)
-		_ = s.server.db.QueryRow("SELECT gook1status FROM gook WHERE id = $1", s.charID).Scan(&gook1status)
-		_ = s.server.db.QueryRow("SELECT gook2status FROM gook WHERE id = $1", s.charID).Scan(&gook2status)
-		_ = s.server.db.QueryRow("SELECT gook3status FROM gook WHERE id = $1", s.charID).Scan(&gook3status)
-		_ = s.server.db.QueryRow("SELECT gook4status FROM gook WHERE id = $1", s.charID).Scan(&gook4status)
-		_ = s.server.db.QueryRow("SELECT gook5status FROM gook WHERE id = $1", s.charID).Scan(&gook5status)
-		if gook0status == true {
-			count++
-			tempresp.WriteBytes(gook0)
-		}
-		if gook1status == true {
-			count++
-			tempresp.WriteBytes(gook1)
-		}
-		if gook2status == true {
-			count++
-			tempresp.WriteBytes(gook2)
-		}
-		if gook3status == true {
-			count++
-			tempresp.WriteBytes(gook3)
-		}
-		if gook4status == true {
-			count++
-			tempresp.WriteBytes(gook4)
-		}
-		if gook5status == true {
-			count++
-			tempresp.WriteBytes(gook5)
-		}
-		if count == uint16(0) {
-			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-		} else {
-			resp := byteframe.NewByteFrame()
-			resp.WriteUint16(count)
-			resp.WriteBytes(tempresp.Data())
-			doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-		}
-	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-	}
+    pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
+    var data bool
+    err :=  s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1",s.charID).Scan(&data)
+    if err ==nil {
+        tempresp := byteframe.NewByteFrame()
+        count := uint16(0)
+        var gook0 []byte
+        var gook1 []byte
+        var gook2 []byte
+        var gook3 []byte
+        var gook4 []byte
+        var gook5 []byte
+        var gook0status bool
+        var gook1status bool
+        var gook2status bool
+        var gook3status bool
+        var gook4status bool
+        var gook5status bool
+        _ =  s.server.db.QueryRow("SELECT gook0 FROM gook WHERE id = $1",s.charID).Scan(&gook0)
+        _ =  s.server.db.QueryRow("SELECT gook1 FROM gook WHERE id = $1",s.charID).Scan(&gook1)
+        _ =  s.server.db.QueryRow("SELECT gook2 FROM gook WHERE id = $1",s.charID).Scan(&gook2)
+        _ =  s.server.db.QueryRow("SELECT gook3 FROM gook WHERE id = $1",s.charID).Scan(&gook3)
+        _ =  s.server.db.QueryRow("SELECT gook4 FROM gook WHERE id = $1",s.charID).Scan(&gook4)
+        _ =  s.server.db.QueryRow("SELECT gook5 FROM gook WHERE id = $1",s.charID).Scan(&gook5)
+        _ =  s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1",s.charID).Scan(&gook0status)
+        _ =  s.server.db.QueryRow("SELECT gook1status FROM gook WHERE id = $1",s.charID).Scan(&gook1status)
+        _ =  s.server.db.QueryRow("SELECT gook2status FROM gook WHERE id = $1",s.charID).Scan(&gook2status)
+        _ =  s.server.db.QueryRow("SELECT gook3status FROM gook WHERE id = $1",s.charID).Scan(&gook3status)
+        _ =  s.server.db.QueryRow("SELECT gook4status FROM gook WHERE id = $1",s.charID).Scan(&gook4status)
+        _ =  s.server.db.QueryRow("SELECT gook5status FROM gook WHERE id = $1",s.charID).Scan(&gook5status)
+        if gook0status == true {
+            count++
+            tempresp.WriteBytes(gook0)
+        }
+        if gook1status == true {
+            count++
+            tempresp.WriteBytes(gook1)
+        }
+        if gook2status == true {
+            count++
+            tempresp.WriteBytes(gook2)
+        }
+        if gook3status == true {
+            count++
+            tempresp.WriteBytes(gook3)
+        }
+        if gook4status == true {
+            count++
+            tempresp.WriteBytes(gook4)
+        }
+        if gook5status == true {
+            count++
+            tempresp.WriteBytes(gook5)
+        }
+        if count == uint16(0) {
+            doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+        } else {
+            resp:= byteframe.NewByteFrame()
+            resp.WriteUint16(count)
+            resp.WriteBytes(tempresp.Data())
+            doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+        }
+    } else {
+        doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+    }
 }
 
 func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
-	count := int(pkt.EntryCount)
-	fmt.Printf("handleMsgMhfUpdateGuacot:%d\n", count)
-	if count == 0 {
-		_, err := s.server.db.Exec("INSERT INTO gook(id,gook0status,gook1status,gook2status,gook3status,gook4status,gook5status) VALUES($1,bool(false),bool(false),bool(false),bool(false),bool(false),bool(false))", s.charID)
-		if err != nil {
-			fmt.Printf("INSERT INTO gook failure\n")
-		}
-	} else {
-		for i := 0; i < int(pkt.EntryCount); i++ {
-			gookindex := int(pkt.Entries[i].Unk0)
-			buf := pkt.GuacotUpdateEntryToBytes(pkt.Entries[i])
-			//fmt.Printf("gookindex:%d\n", gookindex)
-			switch gookindex {
-			case 0:
-				s.server.db.Exec("UPDATE gook SET gook0 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 1:
-				s.server.db.Exec("UPDATE gook SET gook1 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 2:
-				s.server.db.Exec("UPDATE gook SET gook2 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 3:
-				s.server.db.Exec("UPDATE gook SET gook3 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 4:
-				s.server.db.Exec("UPDATE gook SET gook4 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			}
-		}
-	}
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+    pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
+    count := int(pkt.EntryCount)
+    fmt.Printf("handleMsgMhfUpdateGuacot:%d\n", count)
+    if count == 0 {
+        _,err := s.server.db.Exec("INSERT INTO gook(id,gook0status,gook1status,gook2status,gook3status,gook4status,gook5status) VALUES($1,bool(false),bool(false),bool(false),bool(false),bool(false),bool(false))", s.charID)
+        if err!=nil {
+            fmt.Printf("INSERT INTO gook failure\n")
+        }
+    } else {
+        for i := 0; i < int(pkt.EntryCount); i++ {
+            gookindex := int(pkt.Entries[i].Unk0)
+            buf := pkt.GuacotUpdateEntryToBytes(pkt.Entries[i])
+            //fmt.Printf("gookindex:%d\n", gookindex)
+            switch gookindex {
+            case 0:
+                s.server.db.Exec("UPDATE gook SET gook0 = $1 WHERE id = $2", buf, s.charID)
+                if pkt.Entries[i].Unk1 != uint16(0) {
+                    s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(true), s.charID)
+                } else {
+                    s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(false), s.charID)
+                }
+            case 1:
+                s.server.db.Exec("UPDATE gook SET gook1 = $1 WHERE id = $2", buf, s.charID)
+                if pkt.Entries[i].Unk1 != uint16(0) {
+                    s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(true), s.charID)
+                } else {
+                    s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(false), s.charID)
+                }
+            case 2:
+                s.server.db.Exec("UPDATE gook SET gook2 = $1 WHERE id = $2", buf, s.charID)
+                if pkt.Entries[i].Unk1 != uint16(0) {
+                    s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(true), s.charID)
+                } else {
+                    s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(false), s.charID)
+                }
+            case 3:
+                s.server.db.Exec("UPDATE gook SET gook3 = $1 WHERE id = $2", buf, s.charID)
+                if pkt.Entries[i].Unk1 != uint16(0) {
+                    s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(true), s.charID)
+                } else {
+                    s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(false), s.charID)
+                }
+            case 4:
+                s.server.db.Exec("UPDATE gook SET gook4 = $1 WHERE id = $2", buf,s.charID)
+                if pkt.Entries[i].Unk1 != uint16(0) {
+                    s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(true), s.charID)
+                } else {
+                    s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(false), s.charID)
+                }
+                }
+            }
+    }
+    doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfInfoScenarioCounter(s *Session, p mhfpacket.MHFPacket) {
@@ -991,9 +960,9 @@ func handleMsgMhfReadBeatLevel(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfUpdateBeatLevel(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfUpdateBeatLevel)
+    pkt := p.(*mhfpacket.MsgMhfUpdateBeatLevel)
 
-	doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+    doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfReadBeatLevelAllRanking(s *Session, p mhfpacket.MHFPacket) {}
@@ -1217,9 +1186,9 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfGetUdShopCoin(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdShopCoin)
-	data, _ := hex.DecodeString("0000000000000001")
-	doAckBufSucceed(s, pkt.AckHandle, data)
+    pkt := p.(*mhfpacket.MsgMhfGetUdShopCoin)
+    data, _ := hex.DecodeString("0000000000000001")
+    doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
 func handleMsgMhfUseUdShopCoin(s *Session, p mhfpacket.MHFPacket) {}
@@ -1273,4 +1242,102 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUseTrendWeaponLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUseTrendWeaponLog)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
+
+func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(0)
+	resp.WriteUint32(0)
+	resp.WriteUint32(0)
+	resp.WriteUint32(0)
+	resp.WriteUint32(0)
+	resp.WriteUint8(0)
+	resp.WriteUint8(0)  // Some string length following this field.
+	resp.WriteUint16(0) // Entry type 1 count
+	resp.WriteUint8(0)  // Entry type 2 count
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+
+	// Update the client's rights as well:
+	updateRights(s)
+}
+
+func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {}
+
+func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
+	var event int = s.server.erupeConfig.DevModeOptions.Event
+	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
+	// Diva Defense with Prayer, Interception and Song weeks
+	// Mezeporta Festival with simply 'available' being a weekend thing
+
+	midnight := Time_Current_Midnight()
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(0x0b5397df) // Unk (1d5fda5c, 0b5397df)
+
+	if event == 1 {
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix()))
+	} else if event == 2 {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+	} else if event == 3 {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+	} else {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+	}
+
+	resp.WriteUint16(0x0019) // Unk 00000000 00011001
+	resp.WriteUint16(0x002d) // Unk 00000000 00101101
+	resp.WriteUint16(0x0002) // Unk 00000000 00000010
+	resp.WriteUint16(0x0002) // Unk 00000000 00000010
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+func handleMsgMhfGetUdInfo(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdInfo)
+	// Message that appears on the Diva Defense NPC and triggers the green exclamation mark
+	udInfos := []struct {
+		Text      string
+		StartTime time.Time
+		EndTime   time.Time
+	}{
+		/*{
+			Text:      " ~C17【Erupe】 is dead event!\n\n■Features\n~C18 Dont bother walking around!\n~C17 Take down your DB by doing \n~C17 nearly anything!",
+			StartTime: Time_static().Add(time.Duration(-5) * time.Minute), // Event started 5 minutes ago,
+			EndTime:   Time_static().Add(time.Duration(24) * time.Hour),   // Event ends in 5 minutes,
+		}, */
+	}
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint8(uint8(len(udInfos)))
+	for _, udInfo := range udInfos {
+		resp.WriteBytes(fixedSizeShiftJIS(udInfo.Text, 1024))
+		resp.WriteUint32(uint32(udInfo.StartTime.Unix()))
+		resp.WriteUint32(uint32(udInfo.EndTime.Unix()))
+	}
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
