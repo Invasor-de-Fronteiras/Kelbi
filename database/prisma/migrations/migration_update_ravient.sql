@@ -1,1 +1,0 @@
-ALTER TABLE public.mail ADD COLUMN locked bool NOT NULL DEFAULT false;

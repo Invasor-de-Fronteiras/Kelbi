@@ -175,7 +175,7 @@ model guild_applications {
 model guild_characters {
   id               Int         @id @default(autoincrement())
   guild_id         Int?
-  character_id     Int?     @unique(map: "guild_character_unique_index")
+  character_id     Int?        @unique(map: "guild_character_unique_index")
   joined_at        DateTime?   @default(now()) @db.Timestamp(6)
   avoid_leadership Boolean     @default(false)
   order_index      Int         @default(1)
@@ -258,6 +258,7 @@ model mail {
   deleted                                  Boolean    @default(false)
   characters_charactersTomail_recipient_id characters @relation("charactersTomail_recipient_id", fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   characters_charactersTomail_sender_id    characters @relation("charactersTomail_sender_id", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  locked                                   Boolean    @default(false)
 
   @@index([recipient_id, deleted, created_at, id], map: "mail_recipient_deleted_created_id_index")
 }
@@ -265,7 +266,7 @@ model mail {
 model normal_shop_items {
   shoptype           Int?
   shopid             Int?
-  itemhash           Int  @id @unique
+  itemhash           Int     @id @unique
   itemid             Int?
   points             Int?
   tradequantity      Int?
@@ -277,6 +278,7 @@ model normal_shop_items {
   boughtquantity     Int?
   roadfloorsrequired Int?
   weeklyfataliskills Int?
+  enable_weeks       String? @db.VarChar(8)
 }
 
 model questlists {
@@ -384,6 +386,7 @@ model servers {
 model shop_item_state {
   char_id      Int?
   itemhash     Int
+  week         Int?
   usedquantity Int?
   characters   characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
