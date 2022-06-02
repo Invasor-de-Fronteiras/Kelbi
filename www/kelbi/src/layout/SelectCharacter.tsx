@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import BarbaryWalking from '../assets/loading/banbaro-walking.gif';
 import { Button } from '../components/Button';
@@ -14,6 +14,12 @@ export function SelectCharacter() {
 
   const { characters, isNewAccount, newAccountUID, loading: charLoading } = useGetCharacters();
   const [selectedCharId, setSelectedCharId] = useState('');
+
+  useEffect(() => {
+    if (characters[0]) {
+      setSelectedCharId(characters[0].uid);
+    }
+  }, [characters]);
 
   const loading = localLoadingMessage !== null || charLoading;
   const loadingMessage = localLoadingMessage ?? 'Buscando seus dados...';
@@ -88,6 +94,7 @@ export function SelectCharacter() {
         ))}
       </div>
       <div className='flex flex-col items-center'>
+        <h3 style={{}}>Selecione seu personagem</h3>
         <Button onClick={handleStartGame} disabled={!selectedCharId || newCharInLoading}>
           Entrar
         </Button>

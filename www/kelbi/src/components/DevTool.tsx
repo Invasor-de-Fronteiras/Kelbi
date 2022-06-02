@@ -78,6 +78,7 @@ export function DevTool() {
         <h1>Dev Tool</h1>
         <BiShow style={{ marginLeft: 10 }} size={25} onClick={() => setShow(!show)} />
       </div>
+      <span>{navigator.language}</span>
       <h2>States</h2>
       {show && (
         <>
