@@ -119,9 +119,9 @@ func generateRandomNumber(start int, end int, count int) []int {
 }
 
 type loginBoost struct {
-	WeekReq, WeekCount uint8
-	Available          bool
-	Expiration         uint32
+	WeekReq, WeekCount, LastWeek uint8
+	Available                    bool
+	Expiration                   uint32
 }
 
 func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
@@ -129,13 +129,13 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 	var loginBoostStatus []loginBoost
 	insert := false
-	boostState, err := s.server.db.Query("SELECT week_req, week_count, available, end_time FROM login_boost_state WHERE char_id=$1 ORDER BY week_req ASC", s.charID)
+	boostState, err := s.server.db.Query("SELECT week_req, week_count, available, end_time, last_week FROM login_boost_state WHERE char_id=$1 ORDER BY week_req ASC", s.charID)
 	if err != nil {
 		panic(err)
 	}
 	for boostState.Next() {
 		var boost loginBoost
-		err = boostState.Scan(&boost.WeekReq, &boost.WeekCount, &boost.Available, &boost.Expiration)
+		err = boostState.Scan(&boost.WeekReq, &boost.WeekCount, &boost.Available, &boost.Expiration, &boost.LastWeek)
 		if err != nil {
 			panic(err)
 		}
@@ -150,47 +150,59 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 				WeekCount:  1,    // weeks passed
 				Available:  true, // available
 				Expiration: 0,    //uint32(t.Add(120 * time.Minute).Unix()), // uncomment to enable permanently
+				LastWeek:   0,
 			},
 			{
 				WeekReq:    2,
 				WeekCount:  2,
 				Available:  true,
 				Expiration: 0,
+				LastWeek:   0,
 			},
 			{
 				WeekReq:    3,
 				WeekCount:  3,
 				Available:  true,
 				Expiration: 0,
+				LastWeek:   0,
 			},
 			{
 				WeekReq:    4,
 				WeekCount:  4,
 				Available:  true,
 				Expiration: 0,
+				LastWeek:   0,
 			},
 			{
 				WeekReq:    5,
 				WeekCount:  5,
 				Available:  true,
 				Expiration: 0,
+				LastWeek:   0,
 			},
 		}
 	}
 	resp := byteframe.NewByteFrame()
 	CurrentWeek := Time_Current_Week_uint8()
+
+	s.logger.Info(fmt.Sprintf("Current Week: %d", CurrentWeek))
 	for d := range loginBoostStatus {
-		if CurrentWeek == 1 && loginBoostStatus[d].WeekCount <= 5 {
-			loginBoostStatus[d].WeekCount = 0
+		if loginBoostStatus[d].LastWeek != CurrentWeek &&
+			loginBoostStatus[d].WeekCount != loginBoostStatus[d].WeekReq {
+			if (loginBoostStatus[d].LastWeek == 5 && CurrentWeek == 1) || (loginBoostStatus[d].LastWeek+1 == CurrentWeek) {
+				loginBoostStatus[d].WeekCount += 1
+			} else {
+				loginBoostStatus[d].WeekCount = 0
+			}
 		}
-		if loginBoostStatus[d].WeekReq == CurrentWeek || loginBoostStatus[d].WeekCount != 0 {
-			loginBoostStatus[d].WeekCount = CurrentWeek
-		}
-		if !loginBoostStatus[d].Available && loginBoostStatus[d].WeekCount == loginBoostStatus[d].WeekReq && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
-			loginBoostStatus[d].Expiration = 1
+
+		loginBoostStatus[d].LastWeek = CurrentWeek
+		if !loginBoostStatus[d].Available && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
+			loginBoostStatus[d].Expiration = 0
+			loginBoostStatus[d].Available = true
 		}
 		if !insert {
-			_, err := s.server.db.Exec(`UPDATE login_boost_state SET week_count=$1, end_time=$2 WHERE char_id=$3 AND week_req=$4`, loginBoostStatus[d].WeekCount, loginBoostStatus[d].Expiration, s.charID, loginBoostStatus[d].WeekReq)
+			_, err := s.server.db.Exec(`UPDATE login_boost_state SET week_count=$1, end_time=$2, available=$3, last_week=$4 WHERE char_id=$5 AND week_req=$6`, loginBoostStatus[d].WeekCount, loginBoostStatus[d].Expiration, loginBoostStatus[d].Available, loginBoostStatus[d].LastWeek, s.charID, loginBoostStatus[d].WeekReq)
 			if err != nil {
 				panic(err)
 			}
@@ -198,13 +210,18 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 	}
 	for _, v := range loginBoostStatus {
 		if insert {
-			_, err := s.server.db.Exec(`INSERT INTO login_boost_state (char_id, week_req, week_count, available, end_time) VALUES ($1,$2,$3,$4,$5)`, s.charID, v.WeekReq, v.WeekCount, v.Available, v.Expiration)
+			_, err := s.server.db.Exec(`INSERT INTO login_boost_state (char_id, week_req, week_count, available, last_week, end_time) VALUES ($1,$2,$3,$4,$5, $6)`, s.charID, v.WeekReq, v.WeekCount, v.Available, v.LastWeek, v.Expiration)
 			if err != nil {
 				panic(err)
 			}
 		}
+
+		available := uint8(0)
+		if v.WeekCount == v.WeekReq {
+			available = 1
+		}
 		resp.WriteUint8(v.WeekReq)
-		resp.WriteUint8(v.WeekCount)
+		resp.WriteUint8(available)
 		resp.WriteBool(v.Available)
 		resp.WriteUint32(v.Expiration)
 	}
@@ -237,7 +254,7 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 		t = t.Add(240 * time.Minute)
 		resp.WriteUint32(uint32(t.Unix()))
 	}
-	_, err := s.server.db.Exec(`UPDATE login_boost_state SET available='false', end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
+	_, err := s.server.db.Exec(`UPDATE login_boost_state SET available='false', week_count=0, end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
 	if err != nil {
 		panic(err)
 	}
