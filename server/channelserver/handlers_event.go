@@ -183,9 +183,9 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 	resp := byteframe.NewByteFrame()
-	CurrentWeek := Time_Current_Week_uint8()
+	_, week := time.Now().ISOWeek()
+	CurrentWeek := uint8((week % 5) + 1)
 
-	s.logger.Info(fmt.Sprintf("Current Week: %d", CurrentWeek))
 	for d := range loginBoostStatus {
 		if loginBoostStatus[d].LastWeek != CurrentWeek &&
 			loginBoostStatus[d].WeekCount != loginBoostStatus[d].WeekReq {
@@ -197,9 +197,10 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		loginBoostStatus[d].LastWeek = CurrentWeek
-		if !loginBoostStatus[d].Available && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
+
+		if loginBoostStatus[d].Expiration > 0 && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
 			loginBoostStatus[d].Expiration = 0
-			loginBoostStatus[d].Available = true
+			loginBoostStatus[d].WeekCount = 0
 		}
 		if !insert {
 			_, err := s.server.db.Exec(`UPDATE login_boost_state SET week_count=$1, end_time=$2, available=$3, last_week=$4 WHERE char_id=$5 AND week_req=$6`, loginBoostStatus[d].WeekCount, loginBoostStatus[d].Expiration, loginBoostStatus[d].Available, loginBoostStatus[d].LastWeek, s.charID, loginBoostStatus[d].WeekReq)
@@ -216,13 +217,9 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 
-		available := uint8(0)
-		if v.WeekCount == v.WeekReq {
-			available = 1
-		}
 		resp.WriteUint8(v.WeekReq)
-		resp.WriteUint8(available)
-		resp.WriteBool(v.Available)
+		resp.WriteBool(v.WeekCount == v.WeekReq)
+		resp.WriteUint8(v.WeekCount)
 		resp.WriteUint32(v.Expiration)
 	}
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -254,7 +251,7 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 		t = t.Add(240 * time.Minute)
 		resp.WriteUint32(uint32(t.Unix()))
 	}
-	_, err := s.server.db.Exec(`UPDATE login_boost_state SET available='false', week_count=0, end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
+	_, err := s.server.db.Exec(`UPDATE login_boost_state SET end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
 	if err != nil {
 		panic(err)
 	}
