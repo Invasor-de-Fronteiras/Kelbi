@@ -1,31 +1,30 @@
-FROM golang:1.15.7-alpine3.13
+FROM golang:1.16-alpine as build
 
-ENV GO111MODULE=on
+WORKDIR /app
 
-WORKDIR /app/erupe
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
 
-COPY go.mod .
-COPY go.sum .
+COPY . .
 
-RUN go mod download
+RUN go build -o main main.go
 
-# RUN mkdir www
-# RUN mkdir savedata
-# RUN mkdir bin
+# stage 2: copy only the application binary file and necessary files to the alpine container
+FROM alpine:3.12
+RUN apk --update add ca-certificates
 
-# COPY . .
+WORKDIR /app
 
-# # COPY bin .
-# COPY common .
-# COPY config .
-# COPY Gifts .
-# COPY migrations .
-# COPY network .
-# # COPY savedata .
-# COPY server .
-# # COPY www .
+COPY --from=build /app/main .
 
-# COPY config.json .
-# COPY main.go .
+EXPOSE 80
+EXPOSE 53312
+EXPOSE 54001
+EXPOSE 54002
+EXPOSE 54003
+EXPOSE 54004
+EXPOSE 53310
 
-CMD [ "go", "run", "." ]
+# run the service on container startup.
+CMD ["/app/main"]
