@@ -2,9 +2,11 @@ version: "3.9"
 
 services:
   server:
-    image: erupe_server:1.0.1
+    image: ghcr.io/invasor-de-fronteiras/kelbi:release
     volumes:
-      - erupe-server:/app/erupe
+      - ./config.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
     ports:
       - "80:80"
       - "53312:53312"
@@ -16,16 +18,5 @@ services:
     networks: 
       - backend
 
-
 networks:
   backend:
-
-volumes:
-  erupe-server:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: .
-  erupe-db-data:
-  
