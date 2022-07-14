@@ -188,7 +188,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 	for d := range loginBoostStatus {
 		if loginBoostStatus[d].LastWeek != CurrentWeek &&
-			loginBoostStatus[d].WeekCount != loginBoostStatus[d].WeekReq {
+			loginBoostStatus[d].WeekCount < loginBoostStatus[d].WeekReq {
 			if (loginBoostStatus[d].LastWeek == 5 && CurrentWeek == 1) || (loginBoostStatus[d].LastWeek+1 == CurrentWeek) {
 				loginBoostStatus[d].WeekCount += 1
 			} else {
@@ -218,7 +218,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		resp.WriteUint8(v.WeekReq)
-		resp.WriteBool(v.WeekCount == v.WeekReq)
+		resp.WriteBool(v.WeekCount >= v.WeekReq)
 		resp.WriteUint8(v.WeekCount)
 		resp.WriteUint32(v.Expiration)
 	}

@@ -304,12 +304,10 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveScenarioData)
-
 	_, err := s.server.db.Exec("UPDATE characters SET scenariodata = $1 WHERE characters.id = $2", pkt.RawDataPayload, int(s.charID))
 	if err != nil {
 		s.logger.Fatal("Failed to update scenario data in db", zap.Error(err))
 	}
-
 	// Do this ack manually because it uses a non-(0|1) error code
 	s.QueueSendMHF(&mhfpacket.MsgSysAck{
 		AckHandle:        pkt.AckHandle,
