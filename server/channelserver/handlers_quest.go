@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Solenataris/Erupe/network/mhfpacket"
 	"github.com/Andoryuuta/byteframe"
+	"github.com/Solenataris/Erupe/network/mhfpacket"
 )
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -31,6 +31,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			}
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		} else {
+			s.logger.Info(fmt.Sprintf("Started quest %s", pkt.Filename))
+
 			// Get quest file.
 			data, err := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 			if err != nil {
@@ -43,14 +45,19 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadFavoriteQuest)
-	// TODO(Andoryuuta): Save data from MsgMhfSaveFavoriteQuest and resend it here.
-	// Fist: Using a no favourites placeholder to avoid an in game error message
-	// being sent every time you use a counter when it fails to load
-	doAckBufSucceed(s, pkt.AckHandle, []byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	var data []byte
+	err := s.server.db.QueryRow("SELECT quest_data FROM favourite_quest WHERE char_id = $1",s.charID).Scan(&data)
+    if err == nil {
+		doAckBufSucceed(s, pkt.AckHandle, data)
+	} else {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	}
 }
 
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
+	s.server.db.Exec("INSERT INTO favourite_quest(char_id) VALUES($1)", s.charID)
+	s.server.db.Exec("UPDATE favourite_quest SET quest_data = $1 WHERE char_id = $2", pkt.Data, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

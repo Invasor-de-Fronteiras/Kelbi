@@ -174,6 +174,15 @@ func removeSessionFromStage(s *Session) {
 	delete(s.stage.clients, s)
 	delete(s.stage.reservedClientSlots, s.charID)
 
+	// Remove client from all reservations
+	// s.server.Lock()
+	// for _, stage := range s.server.stages {
+	// 	if _, exists := stage.reservedClientSlots[s.charID]; exists {
+	// 		delete(stage.reservedClientSlots, s.charID)
+	// 	}
+	// }
+	// s.server.Unlock()
+
 	// Delete old stage objects owned by the client.
 	s.logger.Info("Sending MsgSysDeleteObject to old stage clients")
 	for objID, stageObject := range s.stage.objects {
