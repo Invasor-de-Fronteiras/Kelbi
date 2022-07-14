@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -372,6 +373,11 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 
 	if commandName == "!debug" && s.isDiscordAdmin(ds, m) {
 		ds.ChannelMessageSend(m.ChannelID, debug(s))
+		return
+	}
+
+	if commandName == "!kill" && s.isDiscordAdmin(ds, m) {
+		os.Exit(1)
 		return
 	}
 
