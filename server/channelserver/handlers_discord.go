@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -64,6 +65,13 @@ type ListPlayer struct {
 	WeaponEmoji string
 	QuestEmoji  string
 	StageName   string
+}
+
+type CharInfo struct {
+	CharID    uint32
+	CharName  string
+	StageId   string
+	StageName string
 }
 
 func (p *ListPlayer) toString(length int) string {
@@ -154,7 +162,7 @@ func debug(s *Server) string {
 	list := ""
 
 	for _, stage := range s.stages {
-		if !stage.isQuest() && len(stage.objects) == 0 {
+		if !stage.isQuest() && len(stage.clients) == 0 {
 			continue
 		}
 
@@ -182,12 +190,6 @@ func debug(s *Server) string {
 					list += fmt.Sprintf("        '-> %s\n", char.Name)
 				}
 			}
-		}
-
-		list += "    '-> objects: \n"
-		for _, obj := range stage.objects {
-			objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
-			list += fmt.Sprintf("        '-> ObjectId: %d - %s\n", obj.id, objInfo)
 		}
 	}
 
@@ -239,8 +241,7 @@ func cleanStr(str string) string {
 }
 
 func getCharInfo(server *Server, charName string) string {
-	var s *Stage
-	var c *Session
+	infos := []CharInfo{}
 
 	for _, stage := range server.stages {
 		for client := range stage.clients {
@@ -250,27 +251,69 @@ func getCharInfo(server *Server, charName string) string {
 			}
 
 			if cleanStr(client.Name) == cleanStr(charName) {
-				s = stage
-				c = client
+				infos = append(infos, CharInfo{
+					CharID:    client.charID,
+					CharName:  client.Name,
+					StageId:   stage.id,
+					StageName: stage.GetName(),
+				})
 			}
-
 		}
 	}
 
-	if s == nil {
+	if len(infos) == 0 {
 		return "Character not found"
 	}
 
-	objInfo := ""
+	result := ""
+	for _, info := range infos {
+		objInfo := ""
 
-	obj := server.FindStageObjectByChar(c.charID)
-	// server.logger.Info("Found object: %+v", zap.Object("obj", obj))
+		obj := server.FindStageObjectByChar(info.CharID)
 
-	if obj != nil {
-		objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+		if obj != nil {
+			objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+		}
+
+		result += fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s\n\n", info.CharName, info.StageName, info.StageId, objInfo)
 	}
 
-	return fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s", c.Name, s.GetName(), s.id, objInfo)
+	return result
+}
+
+func disconnectChar(server *Server, charName string) string {
+	infos := []CharInfo{}
+
+	for _, stage := range server.stages {
+		for client := range stage.clients {
+
+			if client.Name == "" {
+				continue
+			}
+
+			if cleanStr(client.Name) == cleanStr(charName) {
+				infos = append(infos, CharInfo{
+					CharID:    client.charID,
+					CharName:  client.Name,
+					StageId:   stage.id,
+					StageName: stage.GetName(),
+				})
+
+				logoutPlayer(client)
+			}
+		}
+	}
+
+	if len(infos) == 0 {
+		return "Character not found"
+	}
+
+	result := ""
+	for _, info := range infos {
+		result += fmt.Sprintf("%s Disconnected from stage: %s (%s)\n", info.CharName, info.StageName, info.StageId)
+	}
+
+	return result
 }
 
 func (s *Server) isDiscordAdmin(ds *discordgo.Session, m *discordgo.MessageCreate) bool {
@@ -306,7 +349,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
-	if commandName == "-char" {
+	if commandName == "!char" {
 		if len(args) < 2 {
 			ds.ChannelMessageSend(m.ChannelID, "Usage: !char <char name>")
 			return
@@ -317,8 +360,24 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
+	if commandName == "!disconnect" && s.isDiscordAdmin(ds, m) {
+		if len(args) < 2 {
+			ds.ChannelMessageSend(m.ChannelID, "Usage: !disconnect <char name>")
+			return
+		}
+
+		charName := strings.Join(args[1:], " ")
+		ds.ChannelMessageSend(m.ChannelID, disconnectChar(s, charName))
+		return
+	}
+
 	if commandName == "!debug" && s.isDiscordAdmin(ds, m) {
 		ds.ChannelMessageSend(m.ChannelID, debug(s))
+		return
+	}
+
+	if commandName == "!kill" && s.isDiscordAdmin(ds, m) {
+		os.Exit(1)
 		return
 	}
 

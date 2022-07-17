@@ -9,9 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/common/bfutil"
@@ -52,8 +52,12 @@ type Guild struct {
 	RankRP         uint32         `db:"rank_rp"`
 	EventRP        uint32         `db:"event_rp"`
 	Comment        string         `db:"comment"`
+	PugiName1      string         `db:"pugi_name_1"`
+	PugiName2      string         `db:"pugi_name_2"`
+	PugiName3      string         `db:"pugi_name_3"`
 	FestivalColour FestivalColour `db:"festival_colour"`
 	Rank           uint16         `db:"rank"`
+	AllianceID     uint32         `db:"alliance_id"`
 	Icon           *GuildIcon     `db:"icon"`
 
 	GuildLeader
@@ -109,23 +113,39 @@ const guildInfoSelectQuery = `
 SELECT
 	g.id,
 	g.name,
-	g.rank_rp,
-	g.event_rp,
-	g.main_motto,
-	g.sub_motto,
+	rank_rp,
+	event_rp,
+	main_motto,
+	sub_motto,
 	created_at,
 	leader_id,
 	lc.name as leader_name,
 	comment,
+	pugi_name_1,
+	pugi_name_2,
+	pugi_name_3,
 	festival_colour,
 	CASE
-		WHEN g.rank_rp <= 48 THEN g.rank_rp/24
-		WHEN g.rank_rp <= 288 THEN g.rank_rp/48+1
-		WHEN g.rank_rp <= 504 THEN g.rank_rp/72+3
-		WHEN g.rank_rp <= 1080 THEN (g.rank_rp-24)/96+5
-		WHEN g.rank_rp < 1200 THEN 16
+		WHEN rank_rp <= 48 THEN rank_rp/24
+		WHEN rank_rp <= 288 THEN rank_rp/48+1
+		WHEN rank_rp <= 504 THEN rank_rp/72+3
+		WHEN rank_rp <= 1080 THEN (rank_rp-24)/96+5
+		WHEN rank_rp < 1200 THEN 16
 		ELSE 17
 	END rank,
+	CASE WHEN (
+		SELECT id FROM guild_alliances ga WHERE
+	 	ga.parent_id = g.id OR
+	 	ga.sub1_id = g.id OR
+	 	ga.sub2_id = g.id
+	) IS NULL THEN 0
+	ELSE (
+		SELECT id FROM guild_alliances ga WHERE
+	 	ga.parent_id = g.id OR
+	 	ga.sub1_id = g.id OR
+	 	ga.sub2_id = g.id
+	)
+	END alliance_id,
 	icon,
 	(
 		SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id
@@ -137,8 +157,8 @@ SELECT
 
 func (guild *Guild) Save(s *Session) error {
 	_, err := s.server.db.Exec(`
-		UPDATE guilds SET main_motto=$1, sub_motto=$6, comment=$3, festival_colour=$4, icon=$5 WHERE id=$2
-	`, guild.MainMotto, guild.ID, guild.Comment, guild.FestivalColour, guild.Icon, guild.SubMotto)
+		UPDATE guilds SET main_motto=$2, sub_motto=$3, comment=$4, pugi_name_1=$5, pugi_name_2=$6, pugi_name_3=$7, festival_colour=$8, icon=$9 WHERE id=$1
+	`, guild.ID, guild.MainMotto, guild.SubMotto, guild.Comment, guild.PugiName1, guild.PugiName2, guild.PugiName3, guild.FestivalColour, guild.Icon)
 
 	if err != nil {
 		s.logger.Error("failed to update guild data", zap.Error(err), zap.Uint32("guildID", guild.ID))
@@ -611,127 +631,146 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	switch pkt.Action {
-		case mhfpacket.OPERATE_GUILD_DISBAND:
-			if guild.LeaderCharID != s.charID {
-				s.logger.Warn(fmt.Sprintf("character '%d' is attempting to manage guild '%d' without permission", s.charID, guild.ID))
-				return
-			}
-
-			err = guild.Disband(s)
-			response := 0x01
-
-			if err != nil {
-				// All successful acks return 0x01, assuming 0x00 is failure
-				response = 0x00
-			}
-
-			bf.WriteUint32(uint32(response))
-		case mhfpacket.OPERATE_GUILD_APPLY:
-			err = guild.CreateApplication(s, s.charID, GuildApplicationTypeApplied, nil)
-
-			if err != nil {
-				// All successful acks return 0x01, assuming 0x00 is failure
-				bf.WriteUint32(0x00)
-			} else {
-				bf.WriteUint32(guild.LeaderCharID)
-			}
-		case mhfpacket.OPERATE_GUILD_LEAVE:
-			var err error
-
-			if characterGuildInfo.IsApplicant {
-				err = guild.RejectApplication(s, s.charID)
-			} else {
-				err = guild.RemoveCharacter(s, s.charID)
-			}
-
-			response := 0x01
-			if err != nil {
-				// All successful acks return 0x01, assuming 0x00 is failure
-				response = 0x00
-			}
-
-			bf.WriteUint32(uint32(response))
-		case mhfpacket.OPERATE_GUILD_DONATE_RANK:
-			handleDonateRP(s, pkt, bf, guild, false)
-		case mhfpacket.OPERATE_GUILD_SET_APPLICATION_DENY:
-			// TODO: close applications for guild
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+	case mhfpacket.OPERATE_GUILD_DISBAND:
+		if guild.LeaderCharID != s.charID {
+			s.logger.Warn(fmt.Sprintf("character '%d' is attempting to manage guild '%d' without permission", s.charID, guild.ID))
 			return
-		case mhfpacket.OPERATE_GUILD_SET_APPLICATION_ALLOW:
-			// TODO: open applications for guild
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
-			handleAvoidLeadershipUpdate(s, pkt, true)
-		case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE:
-			handleAvoidLeadershipUpdate(s, pkt, false)
-		case mhfpacket.OPERATE_GUILD_UPDATE_COMMENT:
-			pbf := byteframe.NewByteFrameFromBytes(pkt.UnkData)
+		}
 
-			if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				return
-			}
+		err = guild.Disband(s)
+		response := 0x01
 
-			commentLength := pbf.ReadUint8()
-			_ = pbf.ReadUint32()
+		if err != nil {
+			// All successful acks return 0x01, assuming 0x00 is failure
+			response = 0x00
+		}
 
-			guild.Comment, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(pbf.ReadBytes(uint(commentLength))))
+		bf.WriteUint32(uint32(response))
+	case mhfpacket.OPERATE_GUILD_APPLY:
+		err = guild.CreateApplication(s, s.charID, GuildApplicationTypeApplied, nil)
 
-			if err != nil {
-				s.logger.Warn("failed to convert guild comment to UTF8", zap.Error(err))
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				break
-			}
-
-			err = guild.Save(s)
-
-			if err != nil {
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				return
-			}
-
+		if err != nil {
+			// All successful acks return 0x01, assuming 0x00 is failure
 			bf.WriteUint32(0x00)
-		case mhfpacket.OPERATE_GUILD_UPDATE_MOTTO:
-			if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				return
-			}
+		} else {
+			bf.WriteUint32(guild.LeaderCharID)
+		}
+	case mhfpacket.OPERATE_GUILD_LEAVE:
+		var err error
 
-			guild.SubMotto = pkt.UnkData[3]
-			guild.MainMotto = pkt.UnkData[4]
+		if characterGuildInfo.IsApplicant {
+			err = guild.RejectApplication(s, s.charID)
+		} else {
+			err = guild.RemoveCharacter(s, s.charID)
+		}
 
-			err := guild.Save(s)
+		response := 0x01
+		if err != nil {
+			// All successful acks return 0x01, assuming 0x00 is failure
+			response = 0x00
+		}
 
-			if err != nil {
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				return
-			}
-		case mhfpacket.OPERATE_GUILD_RENAME_PUGI_1:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		bf.WriteUint32(uint32(response))
+	case mhfpacket.OPERATE_GUILD_DONATE_RANK:
+		handleDonateRP(s, pkt, bf, guild, false)
+	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_DENY:
+		// TODO: close applications for guild
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_ALLOW:
+		// TODO: open applications for guild
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
+		handleAvoidLeadershipUpdate(s, pkt, true)
+	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE:
+		handleAvoidLeadershipUpdate(s, pkt, false)
+	case mhfpacket.OPERATE_GUILD_UPDATE_COMMENT:
+		pbf := byteframe.NewByteFrameFromBytes(pkt.UnkData)
+
+		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
-		case mhfpacket.OPERATE_GUILD_RENAME_PUGI_2:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		}
+
+		commentLength := pbf.ReadUint8()
+		_ = pbf.ReadUint32()
+
+		guild.Comment, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(pbf.ReadBytes(uint(commentLength))))
+
+		if err != nil {
+			s.logger.Warn("failed to convert guild comment to UTF8", zap.Error(err))
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			break
+		}
+
+		err = guild.Save(s)
+
+		if err != nil {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
-		case mhfpacket.OPERATE_GUILD_RENAME_PUGI_3:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		}
+
+		bf.WriteUint32(0x00)
+	case mhfpacket.OPERATE_GUILD_UPDATE_MOTTO:
+		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
-		case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_1:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		}
+
+		guild.SubMotto = pkt.UnkData[3]
+		guild.MainMotto = pkt.UnkData[4]
+
+		err := guild.Save(s)
+
+		if err != nil {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			return
-		case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_2:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_3:
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		case mhfpacket.OPERATE_GUILD_DONATE_EVENT:
-			handleDonateRP(s, pkt, bf, guild, true)
-		default:
-			panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
+		}
+	case mhfpacket.OPERATE_GUILD_RENAME_PUGI_1:
+		handleRenamePugi(s, pkt.UnkData, guild, 1)
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_RENAME_PUGI_2:
+		handleRenamePugi(s, pkt.UnkData, guild, 2)
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_RENAME_PUGI_3:
+		handleRenamePugi(s, pkt.UnkData, guild, 3)
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_1:
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_2:
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_3:
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
+	case mhfpacket.OPERATE_GUILD_DONATE_EVENT:
+		handleDonateRP(s, pkt, bf, guild, true)
+	default:
+		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
+}
+
+func handleRenamePugi(s *Session, data []byte, guild *Guild, num int) {
+	bf := byteframe.NewByteFrameFromBytes(data)
+	_ = bf.ReadUint8()  // len
+	_ = bf.ReadUint32() // unk
+	name, _ := stringsupport.ConvertSJISBytesToString(bf.ReadNullTerminatedBytes())
+	switch num {
+	case 1:
+		guild.PugiName1 = name
+	case 2:
+		guild.PugiName2 = name
+	default:
+		guild.PugiName3 = name
+	}
+	guild.Save(s)
 }
 
 func handleDonateRP(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, bf *byteframe.ByteFrame, guild *Guild, isEvent bool) error {
@@ -852,18 +891,9 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	if err == nil && guild != nil {
-		guildName, err1 := stringsupport.ConvertUTF8ToShiftJIS(guild.Name)
-		if err1 != nil {
-			s.server.logger.Info("ERROR GUILD NAME !")
-		}
-
-		guildComment, err2 := stringsupport.ConvertUTF8ToShiftJIS(guild.Comment)
-		if err2 != nil {
-			s.server.logger.Info("ERROR GUILD COMMENT !")
-		}
-
+		guildName, _ := stringsupport.ConvertUTF8ToShiftJIS(guild.Name)
+		guildComment, _ := stringsupport.ConvertUTF8ToShiftJIS(guild.Comment)
 		characterGuildData, err := GetCharacterGuildData(s, s.charID)
-
 		characterJoinedAt := uint32(0xFFFFFFFF)
 
 		if characterGuildData != nil && characterGuildData.JoinedAt != nil {
@@ -914,14 +944,30 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(guild.RankRP)
 		bf.WriteNullTerminatedBytes(leaderName)
 		bf.WriteBytes([]byte{0x00, 0x00, 0x00, 0x00}) // Unk
-		bf.WriteBool(false) // isReturnGuild
-		bf.WriteBytes([]byte{0x01, 0x02, 0x02}) // Unk
+		bf.WriteBool(false)                           // isReturnGuild
+		bf.WriteBytes([]byte{0x01, 0x02, 0x02})       // Unk
 		bf.WriteUint32(guild.EventRP)
 
-		// Pugi's names, probably expected as null until you have them with levels? Null gives them a default japanese name
-		for i := 0; i < 3; i++ {
-			bf.WriteUint8(0x1) // Name Length - 1 minimum due to null byte
-			bf.WriteUint8(0x0) // Name string
+		if guild.PugiName1 == "" {
+			bf.WriteUint16(0x0100)
+		} else {
+			bf.WriteUint8(uint8(len(guild.PugiName1) + 1))
+			pugiName := s.clientContext.StrConv.MustEncode(guild.PugiName1)
+			bf.WriteNullTerminatedBytes(pugiName)
+		}
+		if guild.PugiName2 == "" {
+			bf.WriteUint16(0x0100)
+		} else {
+			bf.WriteUint8(uint8(len(guild.PugiName2) + 1))
+			pugiName := s.clientContext.StrConv.MustEncode(guild.PugiName2)
+			bf.WriteNullTerminatedBytes(pugiName)
+		}
+		if guild.PugiName3 == "" {
+			bf.WriteUint16(0x0100)
+		} else {
+			bf.WriteUint8(uint8(len(guild.PugiName3) + 1))
+			pugiName := s.clientContext.StrConv.MustEncode(guild.PugiName3)
+			bf.WriteNullTerminatedBytes(pugiName)
 		}
 
 		// probably guild pugi properties, should be status, stamina and luck outfits
@@ -936,7 +982,80 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			0x00, 0x00, 0xD6, 0xD8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		})
 
-		bf.WriteUint32(0x00) // Alliance ID
+		if guild.AllianceID > 0 {
+			alliance, err := GetAllianceData(s, guild.AllianceID)
+			if err != nil {
+				bf.WriteUint32(0) // Error, no alliance
+			} else {
+				allianceName, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Name)
+				allianceParentName, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentGuild.Name)
+				allianceParentOwner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentGuild.LeaderName)
+				allianceSub1Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild1.Name)
+				allianceSub1Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild1.LeaderName)
+				allianceSub2Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild2.Name)
+				allianceSub2Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild2.LeaderName)
+				bf.WriteUint32(alliance.ID)
+				bf.WriteUint32(uint32(alliance.CreatedAt.Unix()))
+				bf.WriteUint16(uint16(alliance.TotalMembers))
+				bf.WriteUint16(0) // Unk0
+				bf.WriteUint16(uint16(len(allianceName)))
+				bf.WriteBytes(allianceName)
+				if alliance.SubGuild1ID > 0 {
+					if alliance.SubGuild2ID > 0 {
+						bf.WriteUint8(3)
+					} else {
+						bf.WriteUint8(2)
+					}
+				} else {
+					bf.WriteUint8(1)
+				}
+				bf.WriteUint32(alliance.ParentGuildID)
+				bf.WriteUint32(0) // Unk1
+				if alliance.ParentGuildID == guild.ID {
+					bf.WriteUint16(1)
+				} else {
+					bf.WriteUint16(0)
+				}
+				bf.WriteUint16(alliance.ParentGuild.Rank)
+				bf.WriteUint16(alliance.ParentGuild.MemberCount)
+				bf.WriteUint16(uint16(len(allianceParentName)))
+				bf.WriteBytes(allianceParentName)
+				bf.WriteUint16(uint16(len(allianceParentOwner)))
+				bf.WriteBytes(allianceParentOwner)
+				if alliance.SubGuild1ID > 0 {
+					bf.WriteUint32(alliance.SubGuild1ID)
+					bf.WriteUint32(0) // Unk1
+					if alliance.SubGuild1ID == guild.ID {
+						bf.WriteUint16(1)
+					} else {
+						bf.WriteUint16(0)
+					}
+					bf.WriteUint16(alliance.SubGuild1.Rank)
+					bf.WriteUint16(alliance.SubGuild1.MemberCount)
+					bf.WriteUint16(uint16(len(allianceSub1Name)))
+					bf.WriteBytes(allianceSub1Name)
+					bf.WriteUint16(uint16(len(allianceSub1Owner)))
+					bf.WriteBytes(allianceSub1Owner)
+				}
+				if alliance.SubGuild2ID > 0 {
+					bf.WriteUint32(alliance.SubGuild2ID)
+					bf.WriteUint32(0) // Unk1
+					if alliance.SubGuild2ID == guild.ID {
+						bf.WriteUint16(1)
+					} else {
+						bf.WriteUint16(0)
+					}
+					bf.WriteUint16(alliance.SubGuild2.Rank)
+					bf.WriteUint16(alliance.SubGuild2.MemberCount)
+					bf.WriteUint16(uint16(len(allianceSub2Name)))
+					bf.WriteBytes(allianceSub2Name)
+					bf.WriteUint16(uint16(len(allianceSub2Owner)))
+					bf.WriteBytes(allianceSub2Owner)
+				}
+			}
+		} else {
+			bf.WriteUint32(0) // No alliance
+		}
 
 		applicants, err := GetGuildMembers(s, guild.ID, true)
 
@@ -954,16 +1073,30 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			applicantName := s.clientContext.StrConv.MustEncode(applicant.Name)
 			bf.WriteUint32(applicant.CharID)
 			bf.WriteUint32(0x05)
-			bf.WriteUint32(0x00320000)
-			bf.WriteUint8(uint8(len(applicantName) + 1))
+			bf.WriteUint16(0x0032)
+			bf.WriteUint8(0x00)
+			bf.WriteUint16(uint16(len(applicantName) + 1))
 			bf.WriteNullTerminatedBytes(applicantName)
 		}
 
-		// Unk bool? if true +3 bytes after this
-		bf.WriteUint8(0x00)
+		bf.WriteUint16(0x0000)
+
+		/*
+			alliance application format
+			uint16 numapplicants (above)
+
+			uint32 guild id
+			uint32 guild leader id (for mail)
+			uint32 unk (always null in pcap)
+			uint16 unk (always 0001 in pcap)
+			uint16 len guild name
+			string nullterm guild name
+			uint16 len guild leader name
+			string nullterm guild leader name
+		*/
 
 		if guild.Icon != nil {
-			bf.WriteUint16(uint16(len(guild.Icon.Parts)))
+			bf.WriteUint8(uint8(len(guild.Icon.Parts)))
 
 			for _, p := range guild.Icon.Parts {
 				bf.WriteUint16(p.Index)
@@ -978,7 +1111,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint16(p.PosY)
 			}
 		} else {
-			bf.WriteUint16(0x00)
+			bf.WriteUint8(0x00)
 		}
 
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -1001,120 +1134,120 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 
 	switch pkt.Type {
-		case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
-			bf.ReadBytes(8)
-			searchTermLength := bf.ReadUint16()
-			bf.ReadBytes(1)
-			searchTerm := bf.ReadBytes(uint(searchTermLength))
-			var searchTermSafe string
-			searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
-			if err != nil {
-				panic(err)
+	case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
+		bf.ReadBytes(8)
+		searchTermLength := bf.ReadUint16()
+		bf.ReadBytes(1)
+		searchTerm := bf.ReadBytes(uint(searchTermLength))
+		var searchTermSafe string
+		searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
+		if err != nil {
+			panic(err)
+		}
+		guilds, err = FindGuildsByName(s, searchTermSafe)
+	case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
+		bf.ReadBytes(8)
+		searchTermLength := bf.ReadUint16()
+		bf.ReadBytes(1)
+		searchTerm := bf.ReadBytes(uint(searchTermLength))
+		var searchTermSafe string
+		searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
+		if err != nil {
+			panic(err)
+		}
+		rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE lc.name ILIKE $1`, guildInfoSelectQuery), searchTermSafe)
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by leader name", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-			guilds, err = FindGuildsByName(s, searchTermSafe)
-		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
-			bf.ReadBytes(8)
-			searchTermLength := bf.ReadUint16()
-			bf.ReadBytes(1)
-			searchTerm := bf.ReadBytes(uint(searchTermLength))
-			var searchTermSafe string
-			searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
-			if err != nil {
-				panic(err)
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_ID:
+		bf.ReadBytes(3)
+		ID := bf.ReadUint32()
+		rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE leader_id = $1`, guildInfoSelectQuery), ID)
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by leader ID", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE lc.name ILIKE $1`, guildInfoSelectQuery), searchTermSafe)
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by leader name", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_MEMBERS:
+		sorting := bf.ReadUint16()
+		if sorting == 1 {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count DESC`, guildInfoSelectQuery))
+		} else {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count ASC`, guildInfoSelectQuery))
+		}
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by member count", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_ID:
-			bf.ReadBytes(3)
-			ID := bf.ReadUint32()
-			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE leader_id = $1`, guildInfoSelectQuery), ID)
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by leader ID", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_REGISTRATION:
+		sorting := bf.ReadUint16()
+		if sorting == 1 {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id DESC`, guildInfoSelectQuery))
+		} else {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id ASC`, guildInfoSelectQuery))
+		}
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by registration date", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_MEMBERS:
-			sorting := bf.ReadUint16()
-			if sorting == 1 {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count DESC`, guildInfoSelectQuery))
-			} else {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count ASC`, guildInfoSelectQuery))
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_RANK:
+		sorting := bf.ReadUint16()
+		if sorting == 1 {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rank_rp DESC`, guildInfoSelectQuery))
+		} else {
+			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rank_rp ASC`, guildInfoSelectQuery))
+		}
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by rank", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by member count", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_MOTTO:
+		bf.ReadBytes(3)
+		mainMotto := bf.ReadUint16()
+		subMotto := bf.ReadUint16()
+		rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE main_motto = $1 AND sub_motto = $2`, guildInfoSelectQuery), mainMotto, subMotto)
+		if err != nil {
+			s.logger.Error("Failed to retrieve guild by motto", zap.Error(err))
+		} else {
+			for rows.Next() {
+				guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+				guilds = append(guilds, guild)
 			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_REGISTRATION:
-			sorting := bf.ReadUint16()
-			if sorting == 1 {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id DESC`, guildInfoSelectQuery))
-			} else {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id ASC`, guildInfoSelectQuery))
-			}
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by registration date", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_RANK:
-			sorting := bf.ReadUint16()
-			if sorting == 1 {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rank_rp DESC`, guildInfoSelectQuery))
-			} else {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rank_rp ASC`, guildInfoSelectQuery))
-			}
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by rank", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_MOTTO:
-			bf.ReadBytes(3)
-			mainMotto := bf.ReadUint16()
-			subMotto := bf.ReadUint16()
-			rows, err = s.server.db.Queryx(fmt.Sprintf(`%s WHERE main_motto = $1 AND sub_motto = $2`, guildInfoSelectQuery), mainMotto, subMotto)
-			if err != nil {
-				s.logger.Error("Failed to retrieve guild by motto", zap.Error(err))
-			} else {
-				for rows.Next() {
-					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
-					guilds = append(guilds, guild)
-				}
-			}
-		case mhfpacket.ENUMERATE_GUILD_TYPE_RECRUITING:
-			//
-		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ALLIANCE_NAME:
-			//
-		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_LEADER_NAME:
-			//
-		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_LEADER_ID:
-			//
-		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ORDER_MEMBERS:
-			//
-		case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ORDER_REGISTRATION:
-			//
-		default:
-			panic(fmt.Sprintf("no handler for guild search type '%d'", pkt.Type))
+		}
+	case mhfpacket.ENUMERATE_GUILD_TYPE_RECRUITING:
+		//
+	case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ALLIANCE_NAME:
+		//
+	case mhfpacket.ENUMERATE_ALLIANCE_TYPE_LEADER_NAME:
+		//
+	case mhfpacket.ENUMERATE_ALLIANCE_TYPE_LEADER_ID:
+		//
+	case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ORDER_MEMBERS:
+		//
+	case mhfpacket.ENUMERATE_ALLIANCE_TYPE_ORDER_REGISTRATION:
+		//
+	default:
+		panic(fmt.Sprintf("no handler for guild search type '%d'", pkt.Type))
 	}
 
 	if err != nil || guilds == nil {
@@ -1133,13 +1266,13 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(guild.ID)
 		bf.WriteUint32(guild.LeaderCharID)
 		bf.WriteUint16(guild.MemberCount)
-		bf.WriteUint8(0x00)  // Unk
-		bf.WriteUint8(0x00)  // Unk
+		bf.WriteUint8(0x00) // Unk
+		bf.WriteUint8(0x00) // Unk
 		bf.WriteUint16(guild.Rank)
 		bf.WriteUint32(uint32(guild.CreatedAt.Unix()))
-		bf.WriteUint8(uint8(len(guildName)+1))
+		bf.WriteUint8(uint8(len(guildName) + 1))
 		bf.WriteNullTerminatedBytes(guildName)
-		bf.WriteUint8(uint8(len(leaderName)+1))
+		bf.WriteUint8(uint8(len(leaderName) + 1))
 		bf.WriteNullTerminatedBytes(leaderName)
 		bf.WriteUint8(0x01) // Unk
 	}
@@ -1336,8 +1469,8 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(0x00)
 			bf.WriteUint16(0x00)
 			for i := 0; i < amount; i++ {
-				bf.WriteUint32(binary.BigEndian.Uint32(boxContents[i*4:i*4+4]))
-				if i + 1 != amount {
+				bf.WriteUint32(binary.BigEndian.Uint32(boxContents[i*4 : i*4+4]))
+				if i+1 != amount {
 					bf.WriteUint64(0x00)
 				}
 			}
@@ -1346,7 +1479,7 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-type Item struct{
+type Item struct {
 	ItemId uint16
 	Amount uint16
 }
@@ -1364,8 +1497,8 @@ func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 		amount := len(boxContents) / 4
 		oldItems = make([]Item, amount)
 		for i := 0; i < amount; i++ {
-			oldItems[i].ItemId = binary.BigEndian.Uint16(boxContents[i*4:i*4+2])
-			oldItems[i].Amount = binary.BigEndian.Uint16(boxContents[i*4+2:i*4+4])
+			oldItems[i].ItemId = binary.BigEndian.Uint16(boxContents[i*4 : i*4+2])
+			oldItems[i].Amount = binary.BigEndian.Uint16(boxContents[i*4+2 : i*4+4])
 		}
 	}
 
@@ -1391,9 +1524,9 @@ func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	// Delete empty item stacks
 	for i := len(newItems) - 1; i >= 0; i-- {
 		if int(newItems[i].Amount) == 0 {
-			copy(newItems[i:], newItems[i + 1:])
-			newItems[len(newItems) - 1] = make([]Item, 1)[0]
-			newItems = newItems[:len(newItems) - 1]
+			copy(newItems[i:], newItems[i+1:])
+			newItems[len(newItems)-1] = make([]Item, 1)[0]
+			newItems = newItems[:len(newItems)-1]
 		}
 	}
 
@@ -1515,7 +1648,15 @@ func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	// uint32 expiration timestamp
 
 	// encourage food
-	data := []byte{0x00, 0x01, 0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0xC4, 0x00, 0x00, 0x00, 0x03, 0x5F, 0xFC, 0x0B, 0x51}
+	data := []byte{0x00, 0x00}
+	// data := []byte{0x00, 0x01, 0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0xC4, 0x00, 0x00, 0x00, 0x03, 0x5F, 0xFC, 0x0B, 0x51}
+	// data := []byte{0x00, 0x06,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0xc4, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFC, 0x0B, 0x51,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0x9c, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFC, 0x0B, 0x52,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0x07, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFC, 0x0B, 0x51,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x01, 0x8b, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFD, 0x0B, 0x51,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x02, 0x54, 0x00, 0x00, 0x00, 0x03, 0xFF, 0xFC, 0x0B, 0x51,
+	// 	0x0F, 0x51, 0x97, 0xFF, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x00, 0x03, 0xF3, 0xFC, 0x0B, 0x51}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 	//data := []byte{0x00, 0x01, 0x1C, 0x72, 0x54, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x5F, 0xF8, 0x2F, 0xE1}
 	//doAckBufSucceed(s, pkt.AckHandle, data)
@@ -1575,11 +1716,12 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	for msgs.Next() {
 		noMsgs = false
 		postCount++
+		var titleConv, bodyConv string
 
 		postData := &MessageBoardPost{}
 		err = msgs.StructScan(&postData)
 		if err != nil {
-			s.logger.Error("Failed to read guild message board post")
+			s.logger.Fatal("Failed to get guild messages from db", zap.Error(err))
 		}
 
 		bf.WriteUint32(postData.Type)
@@ -1590,7 +1732,8 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		for i := 0; i < len(likedBySlice); i++ {
 			j, _ := strconv.ParseInt(likedBySlice[i], 10, 64)
 			if int(j) == int(s.charID) {
-				liked = true; break
+				liked = true
+				break
 			}
 		}
 		if likedBySlice[0] == "" {
@@ -1598,12 +1741,15 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			bf.WriteUint32(uint32(len(likedBySlice)))
 		}
+
+		titleConv, _ = stringsupport.ConvertUTF8ToSJIS(postData.Title)
+		bodyConv, _ = stringsupport.ConvertUTF8ToSJIS(postData.Body)
 		bf.WriteBool(liked)
 		bf.WriteUint32(postData.StampID)
-		bf.WriteUint32(uint32(len(postData.Title)))
-		bf.WriteBytes([]byte(postData.Title))
-		bf.WriteUint32(uint32(len(postData.Body)))
-		bf.WriteBytes([]byte(postData.Body))
+		bf.WriteUint32(uint32(len(titleConv)))
+		bf.WriteBytes([]byte(titleConv))
+		bf.WriteUint32(uint32(len(bodyConv)))
+		bf.WriteBytes([]byte(bodyConv))
 	}
 	if noMsgs {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -1620,9 +1766,10 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrameFromBytes(pkt.Request)
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	if guild == nil {
-		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
+	var titleConv, bodyConv string
 	switch pkt.MessageOp {
 	case 0: // Create message
 		postType := bf.ReadUint32() // 0 = message, 1 = news
@@ -1631,7 +1778,9 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		bodyLength := bf.ReadUint32()
 		title := bf.ReadBytes(uint(titleLength))
 		body := bf.ReadBytes(uint(bodyLength))
-		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, int(stampId), int(postType), string(title), string(body))
+		titleConv, _ = stringsupport.ConvertSJISBytesToString(title)
+		bodyConv, _ = stringsupport.ConvertSJISBytesToString(body)
+		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, int(stampId), int(postType), titleConv, bodyConv)
 		if err != nil {
 			s.logger.Fatal("Failed to add new guild message to db", zap.Error(err))
 		}
@@ -1654,7 +1803,9 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		bodyLength := bf.ReadUint32()
 		title := bf.ReadBytes(uint(titleLength))
 		body := bf.ReadBytes(uint(bodyLength))
-		_, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE post_type = $3 AND (EXTRACT(epoch FROM created_at)::int) = $4 AND guild_id = $5", string(title), string(body), int(postType), int(timestamp), guild.ID)
+		titleConv, _ = stringsupport.ConvertSJISBytesToString(title)
+		bodyConv, _ = stringsupport.ConvertSJISBytesToString(body)
+		_, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE post_type = $3 AND (EXTRACT(epoch FROM created_at)::int) = $4 AND guild_id = $5", titleConv, bodyConv, int(postType), int(timestamp), guild.ID)
 		if err != nil {
 			s.logger.Fatal("Failed to update guild message in db", zap.Error(err))
 		}
@@ -1689,8 +1840,8 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 				likedBySlice := strings.Split(likedBy, ",")
 				for i, e := range likedBySlice {
 					if e == strconv.Itoa(int(s.charID)) {
-						likedBySlice[i] = likedBySlice[len(likedBySlice) - 1]
-    				likedBySlice = likedBySlice[:len(likedBySlice) - 1]
+						likedBySlice[i] = likedBySlice[len(likedBySlice)-1]
+						likedBySlice = likedBySlice[:len(likedBySlice)-1]
 					}
 				}
 				likedBy = strings.Join(likedBySlice, ",")
@@ -1763,9 +1914,3 @@ func handleMsgMhfEnumerateInvGuild(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfCreateJoint(s *Session, p mhfpacket.MHFPacket) { }
-
-func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) { }
-
-func handleMsgMhfInfoJoint(s *Session, p mhfpacket.MHFPacket) {}

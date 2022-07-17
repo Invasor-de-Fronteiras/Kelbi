@@ -170,7 +170,7 @@ func NewServer(config *Config) *Server {
 	// Rasta bar stage
 	s.stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
 
-	// Carvane
+	// Pallone Carvan
 	s.stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
 
 	// Gook Farm
@@ -200,7 +200,7 @@ func (s *Server) Start(port int) error {
 	go s.manageSessions()
 
 	// Start the discord bot for chat integration.
-	if s.erupeConfig.Discord.Enabled {
+	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		s.discordBot.Session.AddHandler(s.onDiscordMessage)
 	}
 
@@ -309,8 +309,8 @@ func (s *Server) BroadcastChatMessage(message string) {
 }
 
 func (s *Server) DiscordChannelSend(charName string, content string) {
-	if s.erupeConfig.Discord.Enabled {
-		message := fmt.Sprintf("%s: %s", charName, content)
+	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
+		message := fmt.Sprintf("**%s**: %s", charName, content)
 		s.discordBot.RealtimeChannelSend(message)
 	}
 }
