@@ -310,7 +310,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
-		message := fmt.Sprintf("**%s** : %s", charName, content)
+		message := fmt.Sprintf("**%s**: %s", charName, content)
 		s.discordBot.RealtimeChannelSend(message)
 	}
 }
