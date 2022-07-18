@@ -373,6 +373,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 	}
 
 	if commandName == "!kill" && s.isDiscordAdmin(ds, m) {
+		ds.ChannelMessageSend(m.ChannelID, "Dizimando aldeia em 3..2..1")
 		os.Exit(1)
 		return
 	}
