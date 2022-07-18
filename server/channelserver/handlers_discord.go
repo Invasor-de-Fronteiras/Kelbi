@@ -72,6 +72,7 @@ type CharInfo struct {
 	CharName  string
 	StageId   string
 	StageName string
+	IP        string
 }
 
 func (p *ListPlayer) toString(length int) string {
@@ -254,6 +255,7 @@ func getCharInfo(server *Server, charName string) string {
 				infos = append(infos, CharInfo{
 					CharID:    client.charID,
 					CharName:  client.Name,
+					IP:        client.rawConn.RemoteAddr().String(),
 					StageId:   stage.id,
 					StageName: stage.GetName(),
 				})
@@ -269,13 +271,7 @@ func getCharInfo(server *Server, charName string) string {
 	for _, info := range infos {
 		objInfo := ""
 
-		obj := server.FindStageObjectByChar(info.CharID)
-
-		if obj != nil {
-			objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
-		}
-
-		result += fmt.Sprintf("Character: %s\nStage: %s\nStageId: %s\n%s\n\n", info.CharName, info.StageName, info.StageId, objInfo)
+		result += fmt.Sprintf("Character: %s\nIp: %s\nStage: %s\nStageId: %s\n%s\n\n", info.CharName, info.IP, info.StageName, info.StageId, objInfo)
 	}
 
 	return result
