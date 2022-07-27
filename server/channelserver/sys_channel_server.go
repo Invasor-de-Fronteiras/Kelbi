@@ -25,7 +25,7 @@ const (
 	GuildHallLv3StageId StageIdType = "sl1Ns204p0a0u0"
 	PugiFarmStageId     StageIdType = "sl1Ns205p0a0u0"
 	RastaBarStageId     StageIdType = "sl1Ns211p0a0u0"
-	CarvaneStageId      StageIdType = "sl1Ns260p0a0u0"
+	CaravanStageId      StageIdType = "sl1Ns260p0a0u0"
 	GookFarmStageId     StageIdType = "sl1Ns265p0a0u0"
 	DivaFountainStageId StageIdType = "sl2Ns379p0a0u0"
 	DivaHallStageId     StageIdType = "sl1Ns445p0a0u0"

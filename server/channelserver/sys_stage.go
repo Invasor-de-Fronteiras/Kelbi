@@ -113,8 +113,8 @@ func (s *Stage) GetName() string {
 		return "Pugi Farm"
 	case RastaBarStageId:
 		return "Rasta Bar"
-	case CarvaneStageId:
-		return "Carvane"
+	case CaravanStageId:
+		return "Caravan"
 	case GookFarmStageId:
 		return "Gook Farm"
 	case DivaFountainStageId:
