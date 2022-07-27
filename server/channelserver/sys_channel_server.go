@@ -5,11 +5,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/config"
-	"github.com/Solenataris/Erupe/network/binpacket"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Solenataris/Erupe/server/discordbot"
+	ps "erupe-ce/common/pascalstring"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/config"
+	"erupe-ce/network/binpacket"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/server/discordbot"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -33,6 +34,7 @@ const (
 
 // Config struct allows configuring the server.
 type Config struct {
+	ID          uint16
 	Logger      *zap.Logger
 	DB          *sqlx.DB
 	DiscordBot  *discordbot.DiscordBot
@@ -50,6 +52,8 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
+	Channels       []*Server
+	ID             uint16
 	logger         *zap.Logger
 	db             *sqlx.DB
 	erupeConfig    *config.Config
@@ -67,8 +71,9 @@ type Server struct {
 	userBinaryParts     map[userBinaryPartID][]byte
 
 	// Semaphore
-	semaphoreLock sync.RWMutex
-	semaphore     map[string]*Semaphore
+	semaphoreLock  sync.RWMutex
+	semaphore      map[string]*Semaphore
+	semaphoreIndex uint32
 
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
@@ -88,6 +93,7 @@ type Raviente struct {
 }
 
 type RavienteRegister struct {
+	semaphoreID  uint32
 	nextTime     uint32
 	startTime    uint32
 	postTime     uint32
@@ -99,11 +105,13 @@ type RavienteRegister struct {
 }
 
 type RavienteState struct {
+	semaphoreID      uint32
 	damageMultiplier uint32
 	stateData        []uint32
 }
 
 type RavienteSupport struct {
+	semaphoreID uint32
 	supportData []uint32
 }
 
@@ -137,6 +145,7 @@ func NewRaviente() *Raviente {
 // NewServer creates a new Server type.
 func NewServer(config *Config) *Server {
 	s := &Server{
+		ID:              config.ID,
 		logger:          config.Logger,
 		db:              config.DB,
 		erupeConfig:     config.ErupeConfig,
@@ -146,6 +155,7 @@ func NewServer(config *Config) *Server {
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
+		semaphoreIndex:  0,
 		discordBot:      config.DiscordBot,
 		name:            config.Name,
 		enable:          config.Enable,
@@ -272,7 +282,7 @@ func (s *Server) manageSessions() {
 func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	// Broadcast the data.
 	for _, session := range s.sessions {
-		if session == ignoredSession {
+		if session == ignoredSession || !session.binariesDone {
 			continue
 		}
 
@@ -285,6 +295,20 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
 		session.QueueSendNonBlocking(bf.Data())
+	}
+}
+
+func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
+	for _, c := range s.Channels {
+		for _, session := range c.sessions {
+			if session == ignoredSession || !session.binariesDone {
+				continue
+			}
+			bf := byteframe.NewByteFrame()
+			bf.WriteUint16(uint16(pkt.Opcode()))
+			pkt.Build(bf, session.clientContext)
+			session.QueueSendNonBlocking(bf.Data())
+		}
 	}
 }
 
@@ -308,6 +332,38 @@ func (s *Server) BroadcastChatMessage(message string) {
 	}, nil)
 }
 
+func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type uint8) {
+	bf := byteframe.NewByteFrame()
+	bf.SetLE()
+	bf.WriteUint16(0) // Unk
+	bf.WriteUint16(0x43) // Data len
+	bf.WriteUint16(3) // Unk len
+	var text string
+	switch _type {
+	case 2:
+		text = "<Great Slaying: Berserk> is being held!"
+	case 4:
+		text = "<Great Slaying: Extreme> is being held!"
+	case 5:
+		text = "<Great Slaying: Berserk Practice> is being held!"
+	default:
+		s.logger.Error("Unk raviente type", zap.Uint8("_type", _type))
+	}
+	ps.Uint16(bf, text, false)
+	bf.WriteBytes([]byte{0x5F, 0x53, 0x00})
+	bf.WriteUint32(ip) // IP address
+	bf.WriteUint16(port) // Port
+	bf.WriteUint16(0) // Unk
+	bf.WriteNullTerminatedBytes(stage)
+	bf.WriteBytes(make([]byte, 17))
+	s.WorldcastMHF(&mhfpacket.MsgSysCastedBinary{
+		CharID: 0x00000000,
+		BroadcastType: BroadcastTypeSemaphore,
+		MessageType: BinaryMessageTypeChat,
+		RawDataPayload: bf.Data(),
+	}, nil)
+}
+
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s** : %s", charName, content)
@@ -316,23 +372,24 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 }
 
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
-	s.stagesLock.RLock()
-	defer s.stagesLock.RUnlock()
-	for _, stage := range s.stages {
-		stage.RLock()
-		for client := range stage.clients {
-			if client.charID == charID {
-				stage.RUnlock()
-				return client
+	for _, c := range s.Channels {
+		c.stagesLock.RLock()
+		for _, stage := range c.stages {
+			stage.RLock()
+			for client := range stage.clients {
+				if client.charID == charID {
+					stage.RUnlock()
+					return client
+				}
 			}
+			stage.RUnlock()
 		}
-		stage.RUnlock()
+		c.stagesLock.RUnlock()
 	}
-
 	return nil
 }
 
-func (s *Server) FindStageObjectByChar(charID uint32) *StageObject {
+func (s *Server) FindObjectByChar(charID uint32) *Object {
 	s.stagesLock.RLock()
 	defer s.stagesLock.RUnlock()
 	for _, stage := range s.stages {
@@ -348,4 +405,9 @@ func (s *Server) FindStageObjectByChar(charID uint32) *StageObject {
 	}
 
 	return nil
+}
+
+func (s *Server) NextSemaphoreID() uint32 {
+	s.semaphoreIndex = s.semaphoreIndex + 1
+	return s.semaphoreIndex
 }

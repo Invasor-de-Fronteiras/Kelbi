@@ -1,21 +1,18 @@
 package channelserver
 
 import (
-	"fmt"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/common/stringsupport"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/server/channelserver/compression/deltacomp"
+	"erupe-ce/server/channelserver/compression/nullcomp"
+	"go.uber.org/zap"
+	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
-	"io"
-   	"io/ioutil"
-    "path/filepath"
-
-
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Solenataris/Erupe/server/channelserver/compression/deltacomp"
-	"github.com/Solenataris/Erupe/server/channelserver/compression/nullcomp"
-	"github.com/Andoryuuta/byteframe"
-	"go.uber.org/zap"
+	"path/filepath"
 )
-
 
 // THERE ARE [PARTENER] [MERCENARY] [OTOMO AIRU]
 
@@ -187,7 +184,6 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	resp.WriteBytes(data)
 	resp.WriteUint16(0)
 	resp.WriteUint32(gcp)
-	fmt.Printf("% x", resp.Data())
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
@@ -207,13 +203,11 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadOtomoAirou)
-	// load partnyaa from database
 	var data []byte
 	err := s.server.db.QueryRow("SELECT otomoairou FROM characters WHERE id = $1", s.charID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get partnyaa savedata from db", zap.Error(err))
 	}
-
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
@@ -223,13 +217,33 @@ func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveOtomoAirou)
-	dumpSaveData(s, pkt.RawDataPayload, "_otomoairou")
-
-	_, err := s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	decomp, err := nullcomp.Decompress(pkt.RawDataPayload[1:])
 	if err != nil {
-		s.logger.Fatal("Failed to update partnyaa savedata in db", zap.Error(err))
+		s.logger.Error("Failed to decompress airou", zap.Error(err))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	bf := byteframe.NewByteFrameFromBytes(decomp)
+	cats := bf.ReadUint8()
+	for i := 0; i < int(cats); i++ {
+		dataLen := bf.ReadUint32()
+		catID := bf.ReadUint32()
+		if catID == 0 {
+			var nextID uint32
+			_ = s.server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&nextID)
+			bf.Seek(-4, io.SeekCurrent)
+			bf.WriteUint32(nextID)
+		}
+		_ = bf.ReadBytes(uint(dataLen) - 4)
+	}
+	comp, err := nullcomp.Compress(bf.Data())
+	if err != nil {
+		s.logger.Error("Failed to compress airou", zap.Error(err))
+	} else {
+		comp = append([]byte{0x01}, comp...)
+		s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID)
+	}
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
@@ -241,22 +255,11 @@ func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 		return
 	}
-
-	// Guild's Palico count. It seems we have to put the value on both ¯\_(ツ)_/¯
 	airouList := getGuildAirouList(s)
 	resp.WriteUint16(uint16(len(airouList)))
 	resp.WriteUint16(uint16(len(airouList)))
-	for k, cat := range airouList {
-		// an id of 0 breaks everything pretty badly
-		// erupe does not currently ever assign cats IDs
-		// these presumably need to be added for the fatigue expiration for the final uint32
-		// seems like it should happen in MSG_MHF_LOAD_OTOMO_AIROU requests as the initial creation operation is saving straight into a load
-		// and the client is obviously not aware of global ID availability
-		if cat.CatID == 0 {
-			resp.WriteUint32(uint32(k + 1))
-		} else {
-			resp.WriteUint32(cat.CatID)
-		}
+	for _, cat := range airouList {
+		resp.WriteUint32(cat.CatID)
 		resp.WriteBytes(cat.CatName)
 		resp.WriteUint32(cat.Experience)
 		resp.WriteUint8(cat.Personality)
@@ -278,8 +281,6 @@ type CatDefinition struct {
 	Experience  uint32
 	WeaponType  uint8
 	WeaponID    uint16
-	// there is a unix timestamp at the end of the cat for fatigue status
-	// it's -probably- not pulled from cat saves as that would allow someone other than the owner to actively manipulate a save for another session
 }
 
 func getGuildAirouList(s *Session) []CatDefinition {
@@ -294,8 +295,28 @@ func getGuildAirouList(s *Session) []CatDefinition {
 		return guildCats
 	}
 
+	// Get cats used recently
+	// Retail reset at midday, 12 hours is a midpoint
+	tempBanDuration := 43200 - (1800) // Minus hunt time
+	bannedCats := make(map[uint32]int)
+	var csvTemp string
+	rows, err := s.server.db.Query(`SELECT cats_used
+	FROM guild_hunts gh
+	INNER JOIN characters c
+	ON gh.host_id = c.id
+	WHERE c.id=$1 AND gh.return+$2>$3`, s.charID, tempBanDuration, Time_Current_Adjusted().Unix())
+	if err != nil {
+		s.logger.Warn("Failed to get recently used airous", zap.Error(err))
+	}
+	for rows.Next() {
+		rows.Scan(&csvTemp)
+		for i, j := range stringsupport.CSVElems(csvTemp) {
+			bannedCats[uint32(j)] = i
+		}
+	}
+
 	// ellie's GetGuildMembers didn't seem to pull leader?
-	rows, err := s.server.db.Query(`SELECT c.otomoairou, c.name 
+	rows, err = s.server.db.Query(`SELECT c.otomoairou
 	FROM characters c
 	INNER JOIN guild_characters gc
 	ON gc.character_id = c.id
@@ -309,8 +330,7 @@ func getGuildAirouList(s *Session) []CatDefinition {
 
 	for rows.Next() {
 		var data []byte
-		var charName string
-		err = rows.Scan(&data, &charName)
+		err = rows.Scan(&data)
 		if err != nil {
 			s.logger.Warn("select failure", zap.Error(err))
 			continue
@@ -328,7 +348,8 @@ func getGuildAirouList(s *Session) []CatDefinition {
 			bf := byteframe.NewByteFrameFromBytes(decomp)
 			cats := GetCatDetails(bf)
 			for _, cat := range cats {
-				if cat.CurrentTask == 4 {
+				_, exists := bannedCats[cat.CatID]
+				if cat.CurrentTask == 4 && !exists {
 					guildCats = append(guildCats, cat)
 				}
 			}

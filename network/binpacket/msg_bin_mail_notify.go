@@ -1,9 +1,9 @@
 package binpacket
 
 import (
-	"github.com/Solenataris/Erupe/common/stringsupport"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/stringsupport"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 type MsgBinMailNotify struct {

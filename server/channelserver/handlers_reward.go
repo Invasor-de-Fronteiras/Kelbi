@@ -3,8 +3,8 @@ package channelserver
 import (
 	"encoding/hex"
 
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/common/byteframe"
 )
 
 func handleMsgMhfGetAdditionalBeatReward(s *Session, p mhfpacket.MHFPacket) {

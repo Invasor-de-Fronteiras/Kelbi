@@ -3,11 +3,12 @@ package channelserver
 import (
 	"fmt"
 	"math"
-	"strings"
+	"math/rand"
+	"time"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network/binpacket"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/binpacket"
+	"erupe-ce/network/mhfpacket"
 )
 
 // MSG_SYS_CAST[ED]_BINARY types enum
@@ -50,9 +51,9 @@ func SendMessageToUser(s *Session, message string) {
 
 func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCastBinary)
+	tmp := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 
 	if pkt.BroadcastType == 0x03 && pkt.MessageType == 0x03 && len(pkt.RawDataPayload) == 0x10 {
-		tmp := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
 		if tmp.ReadUint16() == 0x0002 && tmp.ReadUint8() == 0x18 {
 			_ = tmp.ReadBytes(9)
 			tmp.SetLE()
@@ -62,21 +63,47 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// Parse out the real casted binary payload
-	var realPayload []byte
 	var msgBinTargeted *binpacket.MsgBinTargeted
-	if pkt.BroadcastType == BroadcastTypeTargeted {
-		bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
-		msgBinTargeted = &binpacket.MsgBinTargeted{}
-		err := msgBinTargeted.Parse(bf)
+	var authorLen, msgLen uint16
+	var msg []byte
 
+	isDiceCommand := false
+	if pkt.MessageType == BinaryMessageTypeChat {
+		tmp.SetLE()
+		tmp.Seek(int64(0), 0)
+		_ = tmp.ReadUint32()
+		authorLen = tmp.ReadUint16()
+		msgLen = tmp.ReadUint16()
+		msg = tmp.ReadNullTerminatedBytes()
+	}
+
+	// Customise payload
+	realPayload := pkt.RawDataPayload
+	if pkt.BroadcastType == BroadcastTypeTargeted {
+		tmp.SetBE()
+		tmp.Seek(int64(0), 0)
+		msgBinTargeted = &binpacket.MsgBinTargeted{}
+		err := msgBinTargeted.Parse(tmp)
 		if err != nil {
 			s.logger.Warn("Failed to parse targeted cast binary")
 			return
 		}
-
 		realPayload = msgBinTargeted.RawDataPayload
-	} else {
-		realPayload = pkt.RawDataPayload
+	} else if pkt.MessageType == BinaryMessageTypeChat {
+		if msgLen == 6 && string(msg) == "@dice" {
+			isDiceCommand = true
+			roll := byteframe.NewByteFrame()
+			roll.WriteInt16(1) // Unk
+			roll.SetLE()
+			roll.WriteUint16(4) // Unk
+			roll.WriteUint16(authorLen)
+			rand.Seed(time.Now().UnixNano())
+			dice := fmt.Sprintf("%d", rand.Intn(100)+1)
+			roll.WriteUint16(uint16(len(dice)+1))
+			roll.WriteNullTerminatedBytes([]byte(dice))
+			roll.WriteNullTerminatedBytes(tmp.ReadNullTerminatedBytes())
+			realPayload = roll.Data()
+		}
 	}
 
 	// Make the response to forward to the other client(s).
@@ -90,17 +117,20 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	// Send to the proper recipients.
 	switch pkt.BroadcastType {
 	case BroadcastTypeWorld:
-		s.server.BroadcastMHF(resp, s)
+		s.server.WorldcastMHF(resp, s)
 	case BroadcastTypeStage:
-		s.stage.BroadcastMHF(resp, s)
-	case BroadcastTypeRavi:
+		if isDiceCommand {
+			s.stage.BroadcastMHF(resp, nil) // send dice result back to caller
+		} else {
+			s.stage.BroadcastMHF(resp, s)
+		}
+	case BroadcastTypeSemaphore:
 		if pkt.MessageType == 1 {
 			session := s.server.semaphore["hs_l0u3B51J9k3"]
 			(*session).BroadcastMHF(resp, s)
 		} else {
 			s.Lock()
-			haveStage := s.stage != nil
-			if haveStage {
+			if s.stage != nil {
 				s.stage.BroadcastMHF(resp, s)
 			}
 			s.Unlock()
@@ -134,6 +164,20 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		chatMessage.Parse(bf)
 
 		fmt.Printf("Got chat message: %+v\n", chatMessage)
+
+		// Set account rights
+		if strings.HasPrefix(chatMessage.Message, "!rights") {
+			var v uint32
+			n, err := fmt.Sscanf(chatMessage.Message, "!rights %d", &v)
+			if err != nil || n != 1 {
+				sendServerChatMessage(s, "Error in command. Format: !rights n")
+			} else {
+				_, err = s.server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", v, s.charID)
+				if err == nil {
+					sendServerChatMessage(s, fmt.Sprintf("Set rights integer: %d", v))
+				}
+			}
+		}
 
 		// Discord integration
 		if chatMessage.Type == binpacket.ChatTypeLocal || chatMessage.Type == binpacket.ChatTypeParty {

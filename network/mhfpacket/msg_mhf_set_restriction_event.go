@@ -3,9 +3,9 @@ package mhfpacket
 import (
  "errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfSetRestrictionEvent represents the MSG_MHF_SET_RESTRICTION_EVENT
@@ -29,7 +29,11 @@ func (m *MsgMhfSetRestrictionEvent) Parse(bf *byteframe.ByteFrame, ctx *clientct
   m.Unk1 = bf.ReadUint32()
   m.Unk2 = bf.ReadUint32()
   m.Unk3 = bf.ReadUint8()
+<<<<<<< HEAD:network/mhfpacket/msg_mhf_set_restriction_event.go
   return nil
+=======
+	return nil
+>>>>>>> zeru-light/main:Erupe/network/mhfpacket/msg_mhf_set_restriction_event.go
 }
 
 // Build builds a binary packet from the current data.

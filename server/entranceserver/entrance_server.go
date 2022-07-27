@@ -7,8 +7,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Solenataris/Erupe/config"
-	"github.com/Solenataris/Erupe/network"
+	"erupe-ce/config"
+	"erupe-ce/network"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -111,9 +111,9 @@ func (s *Server) handleEntranceServerConnection(conn net.Conn) {
 
 	s.logger.Debug("Got entrance server command:\n", zap.String("raw", hex.Dump(pkt)))
 
-	data := makeSv2Resp(s.erupeConfig.Entrance.Entries, s)
+	data := makeSv2Resp(s.erupeConfig, s)
 	if len(pkt) > 5 {
-		data = append(data, makeUsrResp(pkt)...)
+		data = append(data, makeUsrResp(pkt, s)...)
 	}
 	cc.SendPacket(data)
 	// Close because we only need to send the response once.

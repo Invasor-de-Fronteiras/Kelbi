@@ -1,15 +1,18 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfUpdateInterior represents the MSG_MHF_UPDATE_INTERIOR
-type MsgMhfUpdateInterior struct{}
+type MsgMhfUpdateInterior struct {
+  AckHandle uint32
+  InteriorData []byte
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfUpdateInterior) Opcode() network.PacketID {
@@ -18,7 +21,9 @@ func (m *MsgMhfUpdateInterior) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfUpdateInterior) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+  m.AckHandle = bf.ReadUint32()
+  m.InteriorData = bf.ReadBytes(20)
+  return nil
 }
 
 // Build builds a binary packet from the current data.

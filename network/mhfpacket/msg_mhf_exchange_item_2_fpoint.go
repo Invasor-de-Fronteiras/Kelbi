@@ -3,9 +3,9 @@ package mhfpacket
 import ( 
  "errors" 
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfExchangeItem2Fpoint represents the MSG_MHF_EXCHANGE_ITEM_2_FPOINT

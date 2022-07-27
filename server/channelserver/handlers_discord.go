@@ -177,7 +177,7 @@ func debug(s *Server) string {
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
 		if stage.isQuest() {
-			if stage.hasDeparted {
+			if len(stage.clients) > 0 {
 				hasDeparted = "true"
 			}
 
@@ -208,7 +208,7 @@ func questlist(s *Server) string {
 		}
 
 		hasDeparted := ""
-		if stage.hasDeparted {
+		if len(stage.clients) > 0 {
 			hasDeparted = " - departed"
 		}
 		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.id, len(stage.reservedClientSlots), stage.maxPlayers, hasDeparted, stage.createdAt)
@@ -269,7 +269,8 @@ func getCharInfo(server *Server, charName string) string {
 	for _, info := range infos {
 		objInfo := ""
 
-		obj := server.FindStageObjectByChar(info.CharID)
+	obj := server.FindObjectByChar(c.charID)
+	// server.logger.Info("Found object: %+v", zap.Object("obj", obj))
 
 		if obj != nil {
 			objInfo = fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)

@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/mhfpacket"
 )
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -36,7 +36,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			// Get quest file.
 			data, err := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 			if err != nil {
-				panic(err)
+				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename))
 			}
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		}
@@ -46,8 +46,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadFavoriteQuest)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT quest_data FROM favourite_quest WHERE char_id = $1",s.charID).Scan(&data)
-    if err == nil {
+	err := s.server.db.QueryRow("SELECT savefavoritequest FROM characters WHERE id = $1", s.charID).Scan(&data)
+	if err == nil && len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
@@ -56,8 +56,7 @@ func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
-	s.server.db.Exec("INSERT INTO favourite_quest(char_id) VALUES($1)", s.charID)
-	s.server.db.Exec("UPDATE favourite_quest SET quest_data = $1 WHERE char_id = $2", pkt.Data, s.charID)
+	s.server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -71,8 +70,6 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	}
-	// Update the client's rights as well:
-	updateRights(s)
 }
 
 func handleMsgMhfEnterTournamentQuest(s *Session, p mhfpacket.MHFPacket) {}

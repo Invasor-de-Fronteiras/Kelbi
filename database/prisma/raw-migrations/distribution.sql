@@ -1,4 +1,5 @@
-CREATE TABLE public.distribution
+BEGIN;
+CREATE TABLE IF NOT EXISTS public.distribution
 (
     id serial NOT NULL PRIMARY KEY,
     character_id int,
@@ -16,8 +17,10 @@ CREATE TABLE public.distribution
     data bytea NOT NULL
 );
 
-CREATE TABLE public.distributions_accepted
+CREATE TABLE IF NOT EXISTS public.distributions_accepted
 (
     distribution_id int,
     character_id int
 );
+
+END;

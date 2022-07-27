@@ -3,9 +3,9 @@ package mhfpacket
 import ( 
  "errors" 
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfCaravanMyScore represents the MSG_MHF_CARAVAN_MY_SCORE

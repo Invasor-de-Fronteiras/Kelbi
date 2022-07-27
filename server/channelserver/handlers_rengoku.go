@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/common/byteframe"
 	"go.uber.org/zap"
 )
 
