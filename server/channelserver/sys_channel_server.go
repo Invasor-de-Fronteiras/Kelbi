@@ -366,7 +366,7 @@ func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type u
 
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
-		message := fmt.Sprintf("**%s** : %s", charName, content)
+		message := fmt.Sprintf("**%s**: %s", charName, content)
 		s.discordBot.RealtimeChannelSend(message)
 	}
 }
