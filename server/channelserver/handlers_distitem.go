@@ -1,9 +1,10 @@
 package channelserver
 
 import (
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Solenataris/Erupe/common/stringsupport"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	ps "erupe-ce/common/pascalstring"
+	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -24,7 +25,7 @@ type ItemDist struct {
 }
 
 func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
-  pkt := p.(*mhfpacket.MsgMhfEnumerateDistItem)
+	pkt := p.(*mhfpacket.MsgMhfEnumerateDistItem)
 	bf := byteframe.NewByteFrame()
 
 	distCount := 0
@@ -70,14 +71,13 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(distData.MaxGR)
 			bf.WriteUint32(0) // Unk
 			bf.WriteUint32(0) // Unk
-			eventName, _ := stringsupport.ConvertUTF8ToShiftJIS(distData.EventName)
-			bf.WriteUint16(uint16(len(eventName)+1))
-			bf.WriteNullTerminatedBytes(eventName)
+			ps.Uint16(bf, distData.EventName, true)
 			bf.WriteBytes(make([]byte, 391))
 		}
 		resp := byteframe.NewByteFrame()
 		resp.WriteUint16(uint16(distCount))
 		resp.WriteBytes(bf.Data())
+		resp.WriteUint8(0)
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	}
 }
@@ -85,9 +85,9 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfApplyDistItem)
 
-  if pkt.DistributionID == 0 {
-    doAckBufSucceed(s, pkt.AckHandle, make([]byte, 6))
-  } else {
+	if pkt.DistributionID == 0 {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 6))
+	} else {
 		row := s.server.db.QueryRowx("SELECT data FROM distribution WHERE id = $1", pkt.DistributionID)
 		dist := &ItemDist{}
 		err := row.StructScan(dist)
@@ -98,9 +98,9 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		bf := byteframe.NewByteFrame()
-		bf.WriteUint32(0)
+		bf.WriteUint32(pkt.DistributionID)
 		bf.WriteBytes(dist.Data)
-    doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 
 		_, err = s.server.db.Exec(`
 			INSERT INTO public.distributions_accepted
@@ -109,7 +109,7 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			s.logger.Error("Error updating accepted dist count", zap.Error(err))
 		}
-  }
+	}
 }
 
 func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
@@ -119,19 +119,15 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetDistDescription(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetDistDescription)
-
-	var itemDesc string
-	err := s.server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&itemDesc)
-	
+	var desc string
+	err := s.server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&desc)
 	if err != nil {
 		s.logger.Error("Error parsing item distribution description", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-
 	bf := byteframe.NewByteFrame()
-	description, _ := stringsupport.ConvertUTF8ToShiftJIS(itemDesc)
-	bf.WriteUint16(uint16(len(description)+1))
-	bf.WriteNullTerminatedBytes(description)
+	ps.Uint16(bf, desc, true)
+	ps.Uint16(bf, "", false)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }

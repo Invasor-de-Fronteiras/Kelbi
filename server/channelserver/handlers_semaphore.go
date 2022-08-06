@@ -1,20 +1,27 @@
 package channelserver
 
 import (
+	"erupe-ce/common/byteframe"
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"go.uber.org/zap"
+
+	"erupe-ce/network/mhfpacket"
 )
 
 func removeSessionFromSemaphore(s *Session) {
 	s.server.semaphoreLock.Lock()
 	for _, semaphore := range s.server.semaphore {
+		if _, exists := semaphore.reservedClientSlots[s.charID]; exists {
+			delete(semaphore.reservedClientSlots, s.charID)
+		}
 		if _, exists := semaphore.clients[s]; exists {
 			delete(semaphore.clients, s)
 		}
 	}
-	releaseRaviSemaphore(s)
+
 	s.server.semaphoreLock.Unlock()
 }
 
@@ -23,54 +30,50 @@ func handleMsgSysCreateSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x03, 0x00, 0x0d})
 }
 
+func destructEmptySemaphores(s *Session) {
+	s.server.semaphoreLock.Lock()
+	for id, sema := range s.server.semaphore {
+		if len(sema.reservedClientSlots) == 0 && len(sema.clients) == 0 {
+			s.server.semaphoreLock.Unlock()
+			delete(s.server.semaphore, id)
+			s.server.semaphoreLock.Lock()
+			if strings.HasPrefix(id, "hs_l0u3B5") {
+				releaseRaviSemaphore(s, sema)
+			}
+			s.logger.Debug("Destructed semaphore", zap.String("sema.id_semaphore", id))
+		}
+	}
+	s.server.semaphoreLock.Unlock()
+}
+
+func releaseRaviSemaphore(s *Session, sema *Semaphore) {
+	if !strings.HasSuffix(sema.id_semaphore, "5") {
+		delete(sema.reservedClientSlots, s.charID)
+		delete(sema.clients, s)
+	}
+	if len(sema.reservedClientSlots) == 0 && len(sema.clients) == 0 {
+		s.logger.Debug("Raviente semaphore is empty, resetting")
+		resetRavi(s)
+	}
+}
+
 func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysDeleteSemaphore)
 	sem := pkt.AckHandle
 	if s.server.semaphore != nil {
+		destructEmptySemaphores(s)
 		s.server.semaphoreLock.Lock()
-		for id := range s.server.semaphore {
-			switch sem {
-			case 917533:
-				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k3" {
-					delete(s.server.semaphore["hs_l0u3B51J9k3"].reservedClientSlots, s.charID)
-					delete(s.server.semaphore["hs_l0u3B51J9k3"].clients, s)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k3" {
-					delete(s.server.semaphore["hs_l0u3B5129k3"].reservedClientSlots, s.charID)
-					delete(s.server.semaphore["hs_l0u3B5129k3"].clients, s)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak3" {
-					delete(s.server.semaphore["hs_l0u3B512Ak3"].reservedClientSlots, s.charID)
-					delete(s.server.semaphore["hs_l0u3B512Ak3"].clients, s)
+		for id, sema := range s.server.semaphore {
+			if sema.id == sem {
+				if strings.HasPrefix(id, "hs_l0u3B5") {
+					releaseRaviSemaphore(s, sema)
+					s.server.semaphoreLock.Unlock()
+					return
 				}
-			case 851997:
-				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k4" {
-					delete(s.server.semaphore["hs_l0u3B51J9k4"].reservedClientSlots, s.charID)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k4" {
-					delete(s.server.semaphore["hs_l0u3B5129k4"].reservedClientSlots, s.charID)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak4" {
-					delete(s.server.semaphore["hs_l0u3B512Ak4"].reservedClientSlots, s.charID)
-				}
-			case 786461:
-				if s.server.semaphore[id].id_semaphore == "hs_l0u3B51J9k5" {
-					delete(s.server.semaphore["hs_l0u3B51J9k5"].reservedClientSlots, s.charID)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B5129k5" {
-					delete(s.server.semaphore["hs_l0u3B5129k5"].reservedClientSlots, s.charID)
-				} else if s.server.semaphore[id].id_semaphore == "hs_l0u3B512Ak5" {
-					delete(s.server.semaphore["hs_l0u3B512Ak5"].reservedClientSlots, s.charID)
-				}
-			default:
-				if len(s.server.semaphore[id].reservedClientSlots) != 0 {
-					if s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k3" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k4" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B51J9k5" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k3" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k4" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B5129k5" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak3" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak4" &&
-						s.server.semaphore[id].id_semaphore != "hs_l0u3B512Ak5" {
-						delete(s.server.semaphore[id].reservedClientSlots, s.charID)
-					}
-				}
+				s.server.semaphoreLock.Unlock()
+				delete(s.server.semaphore, id)
+				s.logger.Debug("Destructed semaphore", zap.String("sema.id_semaphore", id))
+				return
 			}
 		}
 		s.server.semaphoreLock.Unlock()
@@ -80,16 +83,22 @@ func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateAcquireSemaphore)
 	SemaphoreID := pkt.SemaphoreID
-
-	newSemaphore, gotNewStage := s.server.semaphore[SemaphoreID]
+	newSemaphore, exists := s.server.semaphore[SemaphoreID]
 
 	fmt.Printf("Got reserve stage req, StageID: %v\n\n", SemaphoreID)
-	if !gotNewStage {
+	if !exists {
 		s.server.semaphoreLock.Lock()
-		if strings.HasPrefix(SemaphoreID, "hs_l0u3B51") {
-			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 32)
+		if strings.HasPrefix(SemaphoreID, "hs_l0u3B5") {
+			suffix, _ := strconv.ParseUint(pkt.SemaphoreID[len(pkt.SemaphoreID)-1:], 10, 32)
+			s.server.semaphore[SemaphoreID] = &Semaphore{
+				id_semaphore:        pkt.SemaphoreID,
+				id:                  uint32(suffix),
+				clients:             make(map[*Session]uint32),
+				reservedClientSlots: make(map[uint32]interface{}),
+				maxPlayers:          32,
+			}
 		} else {
-			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 1)
+			s.server.semaphore[SemaphoreID] = NewSemaphore(s.server, SemaphoreID, 1)
 		}
 		newSemaphore = s.server.semaphore[SemaphoreID]
 		s.server.semaphoreLock.Unlock()
@@ -98,52 +107,45 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	newSemaphore.Lock()
 	defer newSemaphore.Unlock()
 	if _, exists := newSemaphore.reservedClientSlots[s.charID]; exists {
-		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x0F, 0x00, 0x1D})
+		bf := byteframe.NewByteFrame()
+		bf.WriteUint32(newSemaphore.id)
+		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 	} else if uint16(len(newSemaphore.reservedClientSlots)) < newSemaphore.maxPlayers {
-		switch SemaphoreID {
-		case "hs_l0u3B51J9k3", "hs_l0u3B5129k3", "hs_l0u3B512Ak3":
-			newSemaphore.reservedClientSlots[s.charID] = nil
-			newSemaphore.clients[s] = s.charID
-			s.Lock()
-			s.semaphore = newSemaphore
-			s.Unlock()
-			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x0E, 0x00, 0x1D})
-		case "hs_l0u3B51J9k4", "hs_l0u3B5129k4", "hs_l0u3B512Ak4":
-			newSemaphore.reservedClientSlots[s.charID] = nil
-			s.Lock()
-			s.semaphore = newSemaphore
-			s.Unlock()
-			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x0D, 0x00, 0x1D})
-		case "hs_l0u3B51J9k5", "hs_l0u3B5129k5", "hs_l0u3B512Ak5":
-			newSemaphore.reservedClientSlots[s.charID] = nil
-			s.Lock()
-			s.semaphore = newSemaphore
-			s.Unlock()
-			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x0C, 0x00, 0x1D})
-		default:
-			newSemaphore.reservedClientSlots[s.charID] = nil
-			s.Lock()
-			s.semaphore = newSemaphore
-			s.Unlock()
-			doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x0F, 0x00, 0x25})
-		}
+		newSemaphore.reservedClientSlots[s.charID] = nil
+		newSemaphore.clients[s] = s.charID
+		s.Lock()
+		s.semaphore = newSemaphore
+		s.Unlock()
+		bf := byteframe.NewByteFrame()
+		bf.WriteUint32(newSemaphore.id)
+		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 	} else {
 		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	}
 }
 
-func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysAcquireSemaphore)
+	if sema, exists := s.server.semaphore[pkt.SemaphoreID]; exists {
+		sema.clients[s] = s.charID
+		bf := byteframe.NewByteFrame()
+		bf.WriteUint32(sema.id)
+		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
+	} else {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+	}
+
+}
 
 func handleMsgSysReleaseSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	//pkt := p.(*mhfpacket.MsgSysReleaseSemaphore)
-	releaseRaviSemaphore(s)
 }
 
 func handleMsgSysCheckSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCheckSemaphore)
 	resp := []byte{0x00, 0x00, 0x00, 0x00}
 	s.server.semaphoreLock.Lock()
-	if _, exists := s.server.semaphore[pkt.StageID]; exists {
+	if _, exists := s.server.semaphore[pkt.SemaphoreID]; exists {
 		resp = []byte{0x00, 0x00, 0x00, 0x01}
 	}
 	s.server.semaphoreLock.Unlock()

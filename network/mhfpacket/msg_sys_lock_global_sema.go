@@ -1,11 +1,11 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgSysLockGlobalSema represents the MSG_SYS_LOCK_GLOBAL_SEMA
@@ -27,8 +27,8 @@ func (m *MsgSysLockGlobalSema) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	m.AckHandle = bf.ReadUint32()
 	m.UserIDLength = bf.ReadUint16()
 	m.ServerChannelIDLength = bf.ReadUint16()
-	m.UserIDString = string(bf.ReadBytes(uint(m.UserIDLength)))
-	m.ServerChannelIDString = string(bf.ReadBytes(uint(m.ServerChannelIDLength)))
+	m.UserIDString = string(bf.ReadNullTerminatedBytes())
+	m.ServerChannelIDString = string(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

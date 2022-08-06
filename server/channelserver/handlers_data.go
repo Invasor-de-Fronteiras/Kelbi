@@ -3,16 +3,19 @@ package channelserver
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"erupe-ce/common/stringsupport"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/common/bfutil"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Solenataris/Erupe/server/channelserver/compression/deltacomp"
-	"github.com/Solenataris/Erupe/server/channelserver/compression/nullcomp"
+	"erupe-ce/common/bfutil"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/server/channelserver/compression/deltacomp"
+	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"go.uber.org/zap"
 )
 
@@ -61,6 +64,14 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Fatal("Failed to character weapon type in db", zap.Error(err))
 	}
 
+	s.myseries.houseTier = decompressedData[129900:129905]     // 0x1FB6C + 5
+	s.myseries.houseData = decompressedData[130561:130756]     // 0x1FE01 + 195
+	s.myseries.bookshelfData = decompressedData[139928:145504] // 0x22298 + 5576
+	// Gallery data also exists at 0x21578, is this the contest submission?
+	s.myseries.galleryData = decompressedData[140064:141812] // 0x22320 + 1748
+	s.myseries.toreData = decompressedData[130228:130468]    // 0x1FCB4 + 240
+	s.myseries.gardenData = decompressedData[142424:142492]  // 0x22C58 + 68
+
 	isMale := uint8(decompressedData[80]) // 0x50
 	if isMale == 1 {
 		_, err = s.server.db.Exec("UPDATE characters SET is_female=true WHERE id=$1", s.charID)
@@ -74,7 +85,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	weaponId := binary.LittleEndian.Uint16(decompressedData[128522:128524]) // 0x1F60A
 	_, err = s.server.db.Exec("UPDATE characters SET weapon_id=$1 WHERE id=$2", weaponId, s.charID)
 	if err != nil {
-		s.logger.Fatal("Failed to character weapon id in db", zap.Error(err))
+		s.logger.Fatal("Failed to update character weapon id in db", zap.Error(err))
 	}
 
 	hrp := binary.LittleEndian.Uint16(decompressedData[130550:130552]) // 0x1FDF6
@@ -280,26 +291,31 @@ func dumpSaveData(s *Session, data []byte, suffix string) {
 
 func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoaddata)
-	overrideFile := filepath.Join(".", "bin", "save_override.bin")
-	var data []byte
-
-	if _, err := os.Stat(overrideFile); err == nil {
-		file, err := os.Open(overrideFile)
-		if err != nil {
-			panic(err)
-		}
-		data, err := ioutil.ReadAll(file)
-		if err != nil {
-			panic(err)
-		}
+	if _, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, "save_override.bin")); err == nil {
+		data, _ := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "save_override.bin"))
 		doAckBufSucceed(s, pkt.AckHandle, data)
+		return
 	}
+
+	var data []byte
 
 	err := s.server.db.QueryRow("SELECT savedata FROM characters WHERE id = $1", s.charID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get savedata from db", zap.Error(err))
 	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
+
+	decompSaveData, err := nullcomp.Decompress(data)
+	if err != nil {
+		s.logger.Error("Failed to decompress savedata", zap.Error(err))
+	}
+	bf := byteframe.NewByteFrameFromBytes(decompSaveData)
+	bf.Seek(88, io.SeekStart)
+	binary1 := bf.ReadNullTerminatedBytes()
+	s.server.userBinaryPartsLock.Lock()
+	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 1}] = append(binary1, []byte{0x00}...)
+	s.server.userBinaryPartsLock.Unlock()
+	s.Name = stringsupport.SJISToUTF8(binary1)
 }
 
 func handleMsgMhfSaveScenarioData(s *Session, p mhfpacket.MHFPacket) {

@@ -1,11 +1,11 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgSysLogin represents the MSG_SYS_LOGIN
@@ -36,8 +36,7 @@ func (m *MsgSysLogin) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContex
 	m.CharID1 = bf.ReadUint32()
 	m.HardcodedZero1 = bf.ReadUint16()
 	m.LoginTokenStringLength = bf.ReadUint16()
-	m.LoginTokenString = string(bf.ReadBytes(17)) // TODO(Andoryuuta): What encoding is this string?
-
+	m.LoginTokenString = string(bf.ReadNullTerminatedBytes())
 	return nil
 }
 

@@ -3,10 +3,10 @@ package mhfpacket
 import (
 	"errors"
 
-	"github.com/Solenataris/Erupe/common/bfutil"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/bfutil"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 type scenarioFileIdentifer struct {

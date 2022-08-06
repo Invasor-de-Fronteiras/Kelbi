@@ -1,5 +1,6 @@
 var __mhf_launcher = {};
 var loginScreen = true;
+var loggingIn = false;
 var doingAuto = false;
 var uids;
 var selectedUid;
@@ -258,14 +259,16 @@ function switchPrompt() {
     let uid = localStorage.getItem('uid');
     if (uid != 'null' && uids.indexOf(uid) >= 0) {
       setUidIndex(uids.indexOf(uid));
-    } else {
-			addLog('Error setting character ID: '+e, 'error');
-			switchPrompt();
-		}
+    }
   }
 }
 
 function doLogin(option) {
+  if (loggingIn) {
+    return;
+  } else {
+    loggingIn = true;
+  }
   let username = document.getElementById('username').value;
   let password = document.getElementById('password').value;
   if (username == '') {
@@ -296,6 +299,7 @@ function checkAuth() {
     setTimeout(checkAuth, 10);
     return;
   } else if (loginResult == 'AUTH_SUCCESS') {
+    loggingIn = false;
     saveAccount();
     addLog('Connected.', 'good');
     if (doingAuto) {
@@ -307,9 +311,22 @@ function checkAuth() {
       switchPrompt();
 		}
   } else {
+    loggingIn = false;
     addLog('Error logging in: '+loginResult+':'+window.external.getSignResult(), 'error');
   }
   document.getElementById('processing').style.display = 'none';
+}
+
+function checkDelete() {
+	let deleteResult = window.external.getLastAuthResult();
+	if (deleteResult == 'DEL_PROGRESS') {
+		setTimeout(checkDelete, 10);
+		return;
+	} else if (deleteResult == 'DEL_SUCCESS') {
+		doLogin(0);
+		switchPrompt();
+		toggleModal(0);
+	}
 }
 
 function launch() {
@@ -331,6 +348,11 @@ function launch() {
   setTimeout(function () {
     window.external.exitLauncher();
   }, 3000);
+}
+
+function deleteCharacter(id) {
+	window.external.deleteCharacter(id);
+	checkDelete();
 }
 
 function autoWarning() {
@@ -411,18 +433,16 @@ function setModalContent(preset, url) {
 					<br>it will be gone forever. \
 				</span> \
 			';
-			modal.querySelector('.dialog .btns').innerHTML = ' \
+			modal.querySelector(".dialog .btns").innerHTML = ' \
 				<ul> \
 					<li> \
-						<div onmouseover="soundSel()" onclick="soundOk(); addLog(\'Not yet implemented.\', \'error\'); toggleModal(0)">Yes</div> \
+						<div onmouseover="soundSel();" onclick="soundOk(); deleteCharacter(\''+selectedUid+'\')">Yes</div> \
 					</li> \
 					<li> \
-						<div onmouseover="soundSel()" onclick="soundOk(); toggleModal(0)">Cancel</div> \
+						<div onmouseover="soundSel();" onclick="soundOk(); toggleModal(0)">Cancel</div> \
 					</li> \
 				</ul> \
 			';
-			// Uses the launcher delete
-			// modal.querySelector(".dialog .btns").innerHTML = "<ul><li><div unselectable=\"on\" onselectstart=\"return false;\" onmouseover=\"soundSel();\" onclick=\"soundOk(); window.external.deleteCharacter('"+selectedUid+"');  toggleModal(0);\" style=\"opacity: 1;\">Yes</div></li><li><div onmouseover=\"soundSel();\" onclick=\"soundOk(); toggleModal(0);\" unselectable=\"on\" onselectstart=\"return false;\" class=\"\">Cancel</div></li></ul>";
 			break;
 		case 'addCharNew':
 			modal.querySelector('.dialog p').innerHTML = ' \
@@ -471,8 +491,26 @@ function doEval() {
 
 function init() {
   document.addEventListener('keypress', function(e) {
-    if (e.key == '~') {
-      document.getElementById('dev').style.display = 'block';
+    switch (e.key) {
+      case '~':
+        document.getElementById('dev').style.display = 'block';
+        break;
+      case 'Enter':
+        if (loginScreen) {
+          doLogin()
+        } else {
+          soundLogin();launch()
+        }
+        break;
+      case ',':
+        if (!loginScreen) {
+          soundOk();charselScrollUp()
+        }
+        break;
+      case '.':
+        if (!loginScreen) {
+          soundOk();charselScrollDown()
+        }
     }
   });
   let unselectable = document.getElementsByClassName('unselectable');

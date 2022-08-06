@@ -3,9 +3,9 @@ package mhfpacket
 import ( 
  "errors" 
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgSysReserve4A represents the MSG_SYS_reserve4A

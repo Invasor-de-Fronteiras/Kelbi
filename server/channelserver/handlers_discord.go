@@ -163,7 +163,7 @@ func debug(s *Server) string {
 	list := ""
 
 	for _, stage := range s.stages {
-		if !stage.isQuest() && len(stage.clients) == 0 {
+		if !stage.isQuest() && len(stage.objects) == 0 {
 			continue
 		}
 
@@ -178,7 +178,7 @@ func debug(s *Server) string {
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
 		if stage.isQuest() {
-			if stage.hasDeparted {
+			if len(stage.clients) > 0 {
 				hasDeparted = "true"
 			}
 
@@ -191,6 +191,12 @@ func debug(s *Server) string {
 					list += fmt.Sprintf("        '-> %s\n", char.Name)
 				}
 			}
+		}
+
+		list += "    '-> objects: \n"
+		for _, obj := range stage.objects {
+			objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
+			list += fmt.Sprintf("        '-> ObjectId: %d - %s\n", obj.id, objInfo)
 		}
 	}
 
@@ -209,7 +215,7 @@ func questlist(s *Server) string {
 		}
 
 		hasDeparted := ""
-		if stage.hasDeparted {
+		if len(stage.clients) > 0 {
 			hasDeparted = " - departed"
 		}
 		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.id, len(stage.reservedClientSlots), stage.maxPlayers, hasDeparted, stage.createdAt)

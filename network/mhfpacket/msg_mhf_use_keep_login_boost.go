@@ -3,9 +3,9 @@ package mhfpacket
 import (
 	"errors"
 
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfUseKeepLoginBoost represents the MSG_MHF_USE_KEEP_LOGIN_BOOST

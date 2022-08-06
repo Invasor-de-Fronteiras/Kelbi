@@ -1,9 +1,9 @@
 package mhfpacket
 
 import (
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfAddKouryouPoint represents the MSG_MHF_ADD_KOURYOU_POINT

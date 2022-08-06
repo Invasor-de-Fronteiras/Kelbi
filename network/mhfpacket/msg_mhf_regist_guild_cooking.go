@@ -1,19 +1,19 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfRegistGuildCooking represents the MSG_MHF_REGIST_GUILD_COOKING
 type MsgMhfRegistGuildCooking struct{
-	AckHandle      uint32
-	Unk0           uint32
-	Unk1           uint16
-	Unk2           uint8
+	AckHandle uint32
+	OverwriteID uint32
+	MealID uint16
+	Success uint8
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -24,9 +24,9 @@ func (m *MsgMhfRegistGuildCooking) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfRegistGuildCooking) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.Unk0 = bf.ReadUint32()
-	m.Unk1 = bf.ReadUint16()
-	m.Unk2 = bf.ReadUint8()
+	m.OverwriteID = bf.ReadUint32()
+	m.MealID = bf.ReadUint16()
+	m.Success = bf.ReadUint8()
 	return nil
 }
 

@@ -1,17 +1,17 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfMercenaryHuntdata represents the MSG_MHF_MERCENARY_HUNTDATA
-type MsgMhfMercenaryHuntdata struct{
-		AckHandle      uint32
-		Unk0       uint8
+type MsgMhfMercenaryHuntdata struct {
+	AckHandle uint32
+	Unk0      uint8
 }
 
 // Opcode returns the ID associated with this packet type.
