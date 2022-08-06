@@ -25,7 +25,6 @@ type Config struct {
 // DevModeOptions holds various debug/temporary options for use while developing Erupe.
 type DevModeOptions struct {
 	ServerName          string // To get specific instance server about (Current Players/Event Week)
-	OpcodeMessages      bool   // Get all message for Opcodes
 	HideLoginNotice     bool   // Hide the Erupe notice on login
 	LoginNotice         string // MHFML string of the login notice displayed
 	CleanDB             bool   // Automatically wipes the DB on server reset.

@@ -85,7 +85,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	weaponId := binary.LittleEndian.Uint16(decompressedData[128522:128524]) // 0x1F60A
 	_, err = s.server.db.Exec("UPDATE characters SET weapon_id=$1 WHERE id=$2", weaponId, s.charID)
 	if err != nil {
-		s.logger.Fatal("Failed to character weapon id in db", zap.Error(err))
+		s.logger.Fatal("Failed to update character weapon id in db", zap.Error(err))
 	}
 
 	hrp := binary.LittleEndian.Uint16(decompressedData[130550:130552]) // 0x1FDF6

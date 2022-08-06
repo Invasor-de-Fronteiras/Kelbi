@@ -89,11 +89,11 @@ func updateRights(s *Session) {
 			},
 			{
 				ID:        2,
-				Timestamp: 0xFFFFFFFF,
+				Timestamp: 0x5FEA1781,
 			},
 			{
 				ID:        3,
-				Timestamp: 0xFFFFFFFF,
+				Timestamp: 0x5FEA1781,
 			},
 		},
 		UnkSize: 0,
@@ -211,14 +211,13 @@ func logoutPlayer(s *Session) {
 
 	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.sessionStart)) + timePlayed
 
-	multiplier := 1
 	var rpGained int
 
 	if s.rights > 0x40000000 { // N Course
 		rpGained = timePlayed / 900
 		timePlayed = timePlayed % 900
 	} else {
-		rpGained = timePlayed / 1800 * multiplier
+		rpGained = timePlayed / 1800
 		timePlayed = timePlayed % 1800
 	}
 
@@ -314,15 +313,16 @@ func handleMsgSysLockGlobalSema(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLockGlobalSema)
 
 	bf := byteframe.NewByteFrame()
+	// Unk
+	// 0x00 when no ID sent
+	// 0x02 when ID sent
 	if pkt.ServerChannelIDLength == 1 {
 		bf.WriteBytes([]byte{0x00, 0x00, 0x00, 0x01, 0x00})
 	} else {
-		bf.WriteUint8(0x02) // Unk
+		bf.WriteUint8(0x02)
 		bf.WriteUint8(0x00) // Unk
-		bf.WriteUint16(uint16(pkt.ServerChannelIDLength + 1))
-		bf.WriteNullTerminatedBytes([]byte(pkt.ServerChannelIDString))
-		// Normally you would lock the guild semaphore here by passing this
-		// to the EntranceServer, but that feature sucks.
+		bf.WriteUint16(uint16(pkt.ServerChannelIDLength))
+		bf.WriteBytes([]byte(pkt.ServerChannelIDString))
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
