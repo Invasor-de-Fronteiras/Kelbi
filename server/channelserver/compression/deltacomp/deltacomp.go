@@ -2,8 +2,8 @@ package deltacomp
 
 import (
 	"bytes"
-	"io"
 	"fmt"
+	"io"
 )
 
 func checkReadUint8(r *bytes.Reader) (uint8, error) {
@@ -76,9 +76,9 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 		differentCount--
 
 		// Grow slice if it's required
-		if(len(baseCopy) < dataOffset){
+		if len(baseCopy) < dataOffset {
 			fmt.Printf("Slice smaller than data offset, growing slice...")
- 			baseCopy = append(baseCopy, make([]byte, (dataOffset + differentCount) - len(baseData))...)
+			baseCopy = append(baseCopy, make([]byte, (dataOffset+differentCount)-len(baseData))...)
 		} else {
 			length := len(baseCopy[dataOffset:])
 			if length < differentCount {
@@ -87,14 +87,12 @@ func ApplyDataDiff(diff []byte, baseData []byte) []byte {
 			}
 		}
 
-
 		// Apply the patch bytes.
 		for i := 0; i < differentCount; i++ {
 			b, err := checkReadUint8(patch)
 			if err != nil {
 				panic("Invalid or misunderstood patch format!")
 			}
-
 
 			baseCopy[dataOffset+i] = b
 		}

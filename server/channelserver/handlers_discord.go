@@ -178,7 +178,7 @@ func debug(s *Server) string {
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
 		if stage.isQuest() {
-			if stage.hasDeparted {
+			if len(stage.clients) > 0 {
 				hasDeparted = "true"
 			}
 
@@ -209,7 +209,7 @@ func questlist(s *Server) string {
 		}
 
 		hasDeparted := ""
-		if stage.hasDeparted {
+		if len(stage.clients) > 0 {
 			hasDeparted = " - departed"
 		}
 		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.id, len(stage.reservedClientSlots), stage.maxPlayers, hasDeparted, stage.createdAt)

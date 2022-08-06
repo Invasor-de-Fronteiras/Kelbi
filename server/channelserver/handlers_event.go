@@ -1,13 +1,13 @@
 package channelserver
 
 import (
-	"fmt"
+	"math"
 	"math/rand"
 	"time"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	//timeServerFix "github.com/Solenataris/Erupe/server/channelserver/timeserver"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/mhfpacket"
+	timeServerFix "erupe-ce/server/channelserver/timeserver"
 )
 
 func handleMsgMhfRegisterEvent(s *Session, p mhfpacket.MHFPacket) {
@@ -53,8 +53,6 @@ func handleMsgMhfEnumerateEvent(s *Session, p mhfpacket.MHFPacket) {
 	stubEnumerateNoResults(s, pkt.AckHandle)
 }
 
-var persistentEventSchedule []activeFeature
-
 type activeFeature struct {
 	StartTime      time.Time
 	ActiveFeatures uint32
@@ -63,24 +61,37 @@ type activeFeature struct {
 
 func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetWeeklySchedule)
-	// ActiveFeatures is a bit field, 0x3FFF is all 14 active features.
-	// Long term it should probably be made persistent and simply cycle a couple daily
-	// Times seem to need to be timeServerFix.midnight which is likely why matching timezone was required originally
-	if len(persistentEventSchedule) == 0 {
-		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.OpcodeMessages {
-			s.logger.Info("\nGenerating active feature...")
-		}
-		persistentEventSchedule = make([]activeFeature, 8)
-		//weapons := generateRandomNumber(1, 14, 8)
-		for x := -1; x < 7; x++ {
-			var feat uint32
-			feat |= 65535
-			persistentEventSchedule[x+1] = activeFeature{
-				StartTime:      Time_Current_Midnight().Add(time.Duration(24*x) * time.Hour),
-				ActiveFeatures: feat,
-				Unk1:           0,
-			}
-			fmt.Println(feat)
+	// TODO: verificar qual está funcionando
+	// <<<<<<< HEAD
+	// 	// ActiveFeatures is a bit field, 0x3FFF is all 14 active features.
+	// 	// Long term it should probably be made persistent and simply cycle a couple daily
+	// 	// Times seem to need to be timeServerFix.midnight which is likely why matching timezone was required originally
+	// 	if len(persistentEventSchedule) == 0 {
+	// 		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.OpcodeMessages {
+	// 			s.logger.Info("\nGenerating active feature...")
+	// 		}
+	// 		persistentEventSchedule = make([]activeFeature, 8)
+	// 		//weapons := generateRandomNumber(1, 14, 8)
+	// 		for x := -1; x < 7; x++ {
+	// 			var feat uint32
+	// 			feat |= 65535
+	// 			persistentEventSchedule[x+1] = activeFeature{
+	// 				StartTime:      Time_Current_Midnight().Add(time.Duration(24*x) * time.Hour),
+	// 				ActiveFeatures: feat,
+	// 				Unk1:           0,
+	// 			}
+	// 			fmt.Println(feat)
+	// =======
+	persistentEventSchedule := make([]activeFeature, 8) // generate day after weekly restart
+	for x := -1; x < 7; x++ {
+		feat := generateActiveWeapons(14) // number of active weapons
+		// TODO: only generate this once per restart (server should be restarted weekly)
+		// then load data from db instead of regenerating
+		persistentEventSchedule[x+1] = activeFeature{
+			StartTime:      Time_Current_Midnight().Add(time.Duration(24*x) * time.Hour),
+			ActiveFeatures: uint32(feat),
+			Unk1:           0,
+			// >>>>>>> 05db1922d5df8b677b20e0389d717fb5a31980d1
 		}
 	}
 
@@ -96,14 +107,23 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
-func generateRandomNumber(start int, end int, count int) []int {
-	if end < start || (end-start) < count {
-		return nil
-	}
+// <<<<<<< HEAD
+// func generateRandomNumber(start int, end int, count int) []int {
+// 	if end < start || (end-start) < count {
+// 		return nil
+// 	}
+// 	nums := make([]int, 0)
+// 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+// 	for len(nums) < count {
+// 		num := r.Intn((end - start)) + start
+// =======
+func generateActiveWeapons(count int) int {
 	nums := make([]int, 0)
+	var result int
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for len(nums) < count {
-		num := r.Intn((end - start)) + start
+		num := r.Intn(14)
+		// >>>>>>> 05db1922d5df8b677b20e0389d717fb5a31980d1
 		exist := false
 		for _, v := range nums {
 			if v == num {
@@ -115,7 +135,15 @@ func generateRandomNumber(start int, end int, count int) []int {
 			nums = append(nums, num)
 		}
 	}
-	return nums
+	// <<<<<<< HEAD
+	// 	return nums
+	// 	=======
+	for _, num := range nums {
+		result += int(math.Pow(2, float64(num)))
+	}
+	return result
+	// >>>>>>> 05db1922d5df8b677b20e0389d717fb5a31980d1
+
 }
 
 type loginBoost struct {
@@ -123,6 +151,12 @@ type loginBoost struct {
 	Available                    bool
 	Expiration                   uint32
 }
+
+// type loginBoost struct {
+// 	WeekReq, WeekCount uint8
+// 	Available          bool
+// 	Expiration         uint32
+// }
 
 func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetKeepLoginBoostStatus)
@@ -216,7 +250,6 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 				panic(err)
 			}
 		}
-
 		resp.WriteUint8(v.WeekReq)
 		resp.WriteBool(v.WeekCount >= v.WeekReq)
 		resp.WriteUint8(v.WeekCount)
@@ -252,9 +285,79 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint32(uint32(t.Unix()))
 	}
 	_, err := s.server.db.Exec(`UPDATE login_boost_state SET end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
+
 	if err != nil {
 		panic(err)
 	}
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
+	var t = timeServerFix.Tstatic_midnight()
+	var event int = s.server.erupeConfig.DevModeOptions.DivaEvent
+
+	year, month, day := t.Date()
+	midnight := time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
+	// Diva Defense with Prayer, Interception and Song weeks
+	// Mezeporta Festival with simply 'available' being a weekend thing
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(0x1d5fda5c) // Unk (1d5fda5c, 0b5397df)
+
+	if event == 1 {
+		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+	} else {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+	}
+
+	if event == 2 {
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+	} else {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+	}
+
+	if event == 3 {
+		resp.WriteUint32(uint32(midnight.Add((24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
+		resp.WriteUint32(uint32(midnight.Add((24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
+	} else {
+		resp.WriteUint32(uint32(midnight.Add((-24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
+		resp.WriteUint32(uint32(midnight.Add((-24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
+	}
+
+	resp.WriteUint16(0x19) // Unk 00011001
+	resp.WriteUint16(0x2d) // Unk 00101101
+	resp.WriteUint16(0x02) // Unk 00000010
+	resp.WriteUint16(0x02) // Unk 00000010
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+func handleMsgMhfGetUdInfo(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdInfo)
+	// Message that appears on the Diva Defense NPC and triggers the green exclamation mark
+	udInfos := []struct {
+		Text      string
+		StartTime time.Time
+		EndTime   time.Time
+	}{
+		/*{
+			Text:      " ~C17【Erupe】 is dead event!\n\n■Features\n~C18 Dont bother walking around!\n~C17 Take down your DB by doing \n~C17 nearly anything!",
+			StartTime: Time_static().Add(time.Duration(-5) * time.Minute), // Event started 5 minutes ago,
+			EndTime:   Time_static().Add(time.Duration(24) * time.Hour),   // Event ends in 5 minutes,
+		}, */
+	}
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint8(uint8(len(udInfos)))
+	for _, udInfo := range udInfos {
+		resp.WriteBytes(fixedSizeShiftJIS(udInfo.Text, 1024))
+		resp.WriteUint32(uint32(udInfo.StartTime.Unix()))
+		resp.WriteUint32(uint32(udInfo.EndTime.Unix()))
+	}
+
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 

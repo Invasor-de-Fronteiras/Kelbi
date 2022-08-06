@@ -1,18 +1,18 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
+	"erupe-ce/common/bfutil"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/common/bfutil"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgSysCheckSemaphore represents the MSG_SYS_CHECK_SEMAPHORE
-type MsgSysCheckSemaphore struct{
-	AckHandle uint32
-	StageID   string
+type MsgSysCheckSemaphore struct {
+	AckHandle   uint32
+	SemaphoreID string
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -23,8 +23,8 @@ func (m *MsgSysCheckSemaphore) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgSysCheckSemaphore) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	stageIDLength := bf.ReadUint8()
-	m.StageID = string(bfutil.UpToNull(bf.ReadBytes(uint(stageIDLength))))
+	semaphoreIDLength := bf.ReadUint8()
+	m.SemaphoreID = string(bfutil.UpToNull(bf.ReadBytes(uint(semaphoreIDLength))))
 	return nil
 }
 

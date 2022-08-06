@@ -6,8 +6,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -60,11 +60,13 @@ func (s *Session) handlePacket(pkt []byte) error {
 		}
 	case "DELETE:100":
 		loginTokenString := string(bf.ReadNullTerminatedBytes())
-		_ = loginTokenString
-		characterID := bf.ReadUint32()
-
-		sugar.Infof("Got delete request for character ID: %v\n", characterID)
-		sugar.Infof("remaining unknown data:\n%s\n", hex.Dump(bf.DataFromCurrent()))
+		characterID := int(bf.ReadUint32())
+		s.server.deleteCharacter(characterID, loginTokenString)
+		sugar.Infof("Deleted character ID: %v\n", characterID)
+		err := s.cryptConn.SendPacket([]byte{0x01}) // DEL_SUCCESS
+		if err != nil {
+			return nil
+		}
 	default:
 		sugar.Infof("Got unknown request type %s, data:\n%s\n", reqType, hex.Dump(bf.DataFromCurrent()))
 	}
@@ -87,12 +89,11 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 
 	newCharaReq := false
 
-	if reqUsername[len(reqUsername) - 1] == 43 { // '+'
-		reqUsername = reqUsername[:len(reqUsername) - 1]
+	if reqUsername[len(reqUsername)-1] == 43 { // '+'
+		reqUsername = reqUsername[:len(reqUsername)-1]
 		newCharaReq = true
 	}
 
-	// TODO(Andoryuuta): remove plaintext password storage if this ever becomes more than a toy project.
 	var (
 		id       int
 		password string
@@ -138,6 +139,13 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 					break
 				}
 			}
+			// TODO: Need to auto delete user tokens after inactivity
+			// exists, err := s.server.checkToken(id)
+			// if err != nil {
+			// 	s.logger.Info("Error checking for live tokens", zap.Error(err))
+			// 	serverRespBytes = makeSignInFailureResp(SIGN_EABORT)
+			// 	break
+			// }
 			serverRespBytes = s.makeSignInResp(id)
 		} else {
 			s.logger.Info("Passwords don't match!")

@@ -1,18 +1,21 @@
 package mhfpacket
 
 import (
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Andoryuuta/byteframe"
+	"errors"
+	"erupe-ce/common/stringsupport"
+
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfEnumerateHouse represents the MSG_MHF_ENUMERATE_HOUSE
 type MsgMhfEnumerateHouse struct {
 	AckHandle uint32
-	Unk0      uint8
-	Unk1      uint32
-	Player    uint8
-	Unk2      uint16
+	CharID    uint32
+	Method    uint8
+	Unk       uint16
+	Name      string
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -23,19 +26,15 @@ func (m *MsgMhfEnumerateHouse) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfEnumerateHouse) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.Unk0 = bf.ReadUint8()
-	m.Unk1 = bf.ReadUint32()
-	m.Player = bf.ReadUint8()
-	m.Unk2 = bf.ReadUint16()
+	m.CharID = bf.ReadUint32()
+	m.Method = bf.ReadUint8()
+	m.Unk = bf.ReadUint16()
+	_ = bf.ReadUint8() // len
+	m.Name = stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 	return nil
 }
 
 // Build builds a binary packet from the current data.
 func (m *MsgMhfEnumerateHouse) Build(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	bf.WriteUint32(m.AckHandle)
-	bf.WriteUint8(m.Unk0)
-	bf.WriteUint32(m.Unk1)
-	bf.WriteUint8(m.Player)
-	bf.WriteUint16(m.Unk2)
-	return nil
+	return errors.New("NOT IMPLEMENTED")
 }

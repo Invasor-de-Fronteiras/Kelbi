@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"erupe-ce/network/mhfpacket"
 	"github.com/jmoiron/sqlx"
-  "go.uber.org/zap"
+	"go.uber.org/zap"
 )
 
 const allianceInfoSelectQuery = `
@@ -27,18 +27,18 @@ FROM guild_alliances ga
 `
 
 type GuildAlliance struct {
-	ID            uint32    `db:"id"`
-	Name          string    `db:"name"`
-	CreatedAt     time.Time `db:"created_at"`
-	TotalMembers  uint16
+	ID           uint32    `db:"id"`
+	Name         string    `db:"name"`
+	CreatedAt    time.Time `db:"created_at"`
+	TotalMembers uint16
 
-	ParentGuildID uint32    `db:"parent_id"`
-	SubGuild1ID   uint32    `db:"sub1_id"`
-	SubGuild2ID   uint32    `db:"sub2_id"`
+	ParentGuildID uint32 `db:"parent_id"`
+	SubGuild1ID   uint32 `db:"sub1_id"`
+	SubGuild2ID   uint32 `db:"sub2_id"`
 
-	ParentGuild   Guild
-	SubGuild1     Guild
-	SubGuild2     Guild
+	ParentGuild Guild
+	SubGuild1   Guild
+	SubGuild2   Guild
 }
 
 func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {

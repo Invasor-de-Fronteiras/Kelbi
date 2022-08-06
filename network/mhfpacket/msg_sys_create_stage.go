@@ -1,10 +1,11 @@
 package mhfpacket
 
 import (
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/common/bfutil"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
+	"errors"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/common/bfutil"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgSysCreateStage represents the MSG_SYS_CREATE_STAGE
@@ -32,5 +33,5 @@ func (m *MsgSysCreateStage) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Client
 
 // Build builds a binary packet from the current data.
 func (m *MsgSysCreateStage) Build(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	panic("Not implemented")
+	return errors.New("NOT IMPLEMENTED")
 }

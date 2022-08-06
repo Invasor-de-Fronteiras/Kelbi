@@ -1,10 +1,10 @@
 package mhfpacket
 
 import (
-	"github.com/Solenataris/Erupe/network/clientctx"
+	"erupe-ce/network/clientctx"
 
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfStateCampaign represents the MSG_MHF_STATE_CAMPAIGN

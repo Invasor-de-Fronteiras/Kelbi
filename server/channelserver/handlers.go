@@ -5,13 +5,15 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
 	"time"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
@@ -133,7 +135,6 @@ func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLogin)
-	name := ""
 
 	rights := uint32(0x0E)
 	// 0e with normal sub 4e when having premium
@@ -149,20 +150,22 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
-	s.server.db.QueryRow("SELECT name FROM characters WHERE id = $1", pkt.CharID0).Scan(&name)
 	s.Lock()
-	s.Name = name
 	s.charID = pkt.CharID0
 	s.rights = rights
+	s.token = pkt.LoginTokenString
 	s.Unlock()
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(Time_Current_Adjusted().Unix())) // Unix timestamp
 
-	if s.server.erupeConfig.DevModeOptions.ServerName != "" {
-		_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_name=$2", uint32(len(s.server.sessions)), s.server.erupeConfig.DevModeOptions.ServerName)
-		if err != nil {
-			panic(err)
-		}
+	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
+	if err != nil {
+		panic(err)
 	}
 
 	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.charID)
@@ -170,7 +173,16 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
+	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
+	if err != nil {
+		panic(err)
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
+
+	updateRights(s)
+
+	s.server.BroadcastMHF(&mhfpacket.MsgSysInsertUser{CharID: s.charID}, s)
 }
 
 func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
@@ -178,37 +190,21 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func logoutPlayer(s *Session) {
-	if s.stage == nil {
-		return
-	}
-
-	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
-		CharID: s.charID,
-	}, s)
-
 	delete(s.server.sessions, s.rawConn)
 	s.rawConn.Close()
 
-	if s.server.erupeConfig.DevModeOptions.ServerName != "" {
-		_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_name=$2", uint32(len(s.server.sessions)), s.server.erupeConfig.DevModeOptions.ServerName)
-		if err != nil {
-			panic(err)
-		}
+	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
+	if err != nil {
+		panic(err)
 	}
 
-	s.server.Lock()
-	for _, stage := range s.server.stages {
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
-			delete(stage.reservedClientSlots, s.charID)
-		}
+	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	if err != nil {
+		panic(err)
 	}
-	s.server.Unlock()
-
-	removeSessionFromSemaphore(s)
-	removeSessionFromStage(s)
 
 	var timePlayed int
-	err := s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
+	_ = s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
 
 	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.sessionStart)) + timePlayed
 
@@ -227,6 +223,26 @@ func logoutPlayer(s *Session) {
 	if err != nil {
 		panic(err)
 	}
+
+	if s.stage == nil {
+		return
+	}
+
+	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
+		CharID: s.charID,
+	}, s)
+
+	s.server.Lock()
+	for _, stage := range s.server.stages {
+		if _, exists := stage.reservedClientSlots[s.charID]; exists {
+			delete(stage.reservedClientSlots, s.charID)
+		}
+	}
+	s.server.Unlock()
+
+	removeSessionFromSemaphore(s)
+	removeSessionFromStage(s)
+	treasureHuntUnregister(s)
 
 	saveData, err := GetCharacterSaveData(s, s.charID)
 	if err != nil {
@@ -258,8 +274,6 @@ func handleMsgSysTime(s *Session, p mhfpacket.MHFPacket) {
 		Timestamp:     uint32(Time_Current_Adjusted().Unix()), // JP timezone
 	}
 	s.QueueSendMHF(resp)
-	// Send raviente updates
-	// s.notifyticker()
 }
 
 func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
@@ -343,7 +357,11 @@ func handleMsgMhfPresentBox(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfServerCommand(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfAnnounce(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfAnnounce(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfAnnounce)
+	s.server.BroadcastRaviente(pkt.IPAddress, pkt.Port, pkt.StageID, pkt.Type)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgMhfSetLoginwindow(s *Session, p mhfpacket.MHFPacket) {}
 
@@ -559,125 +577,55 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {}
 
+func getGookData(s *Session, cid uint32) (uint16, []byte) {
+	var data []byte
+	var count uint16
+	bf := byteframe.NewByteFrame()
+	for i := 0; i < 5; i++ {
+		err := s.server.db.QueryRow(fmt.Sprintf("SELECT gook%d FROM gook WHERE id=$1", i), cid).Scan(&data)
+		if err != nil {
+			s.server.db.Exec("INSERT INTO gook (id) VALUES ($1)", s.charID)
+			return 0, bf.Data()
+		}
+		if err == nil && data != nil {
+			count++
+			if s.charID == cid && count == 1 {
+				gook := byteframe.NewByteFrameFromBytes(data)
+				bf.WriteBytes(gook.ReadBytes(4))
+				d := gook.ReadBytes(2)
+				bf.WriteBytes(d)
+				bf.WriteBytes(d)
+				bf.WriteBytes(gook.DataFromCurrent())
+			} else {
+				bf.WriteBytes(data)
+			}
+		}
+	}
+	return count, bf.Data()
+}
+
 func handleMsgMhfEnumerateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
-	var data bool
-	err := s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&data)
-	if err == nil {
-		tempresp := byteframe.NewByteFrame()
-		count := uint16(0)
-		var gook0 []byte
-		var gook1 []byte
-		var gook2 []byte
-		var gook3 []byte
-		var gook4 []byte
-		var gook5 []byte
-		var gook0status bool
-		var gook1status bool
-		var gook2status bool
-		var gook3status bool
-		var gook4status bool
-		var gook5status bool
-		_ = s.server.db.QueryRow("SELECT gook0 FROM gook WHERE id = $1", s.charID).Scan(&gook0)
-		_ = s.server.db.QueryRow("SELECT gook1 FROM gook WHERE id = $1", s.charID).Scan(&gook1)
-		_ = s.server.db.QueryRow("SELECT gook2 FROM gook WHERE id = $1", s.charID).Scan(&gook2)
-		_ = s.server.db.QueryRow("SELECT gook3 FROM gook WHERE id = $1", s.charID).Scan(&gook3)
-		_ = s.server.db.QueryRow("SELECT gook4 FROM gook WHERE id = $1", s.charID).Scan(&gook4)
-		_ = s.server.db.QueryRow("SELECT gook5 FROM gook WHERE id = $1", s.charID).Scan(&gook5)
-		_ = s.server.db.QueryRow("SELECT gook0status FROM gook WHERE id = $1", s.charID).Scan(&gook0status)
-		_ = s.server.db.QueryRow("SELECT gook1status FROM gook WHERE id = $1", s.charID).Scan(&gook1status)
-		_ = s.server.db.QueryRow("SELECT gook2status FROM gook WHERE id = $1", s.charID).Scan(&gook2status)
-		_ = s.server.db.QueryRow("SELECT gook3status FROM gook WHERE id = $1", s.charID).Scan(&gook3status)
-		_ = s.server.db.QueryRow("SELECT gook4status FROM gook WHERE id = $1", s.charID).Scan(&gook4status)
-		_ = s.server.db.QueryRow("SELECT gook5status FROM gook WHERE id = $1", s.charID).Scan(&gook5status)
-		if gook0status == true {
-			count++
-			tempresp.WriteBytes(gook0)
-		}
-		if gook1status == true {
-			count++
-			tempresp.WriteBytes(gook1)
-		}
-		if gook2status == true {
-			count++
-			tempresp.WriteBytes(gook2)
-		}
-		if gook3status == true {
-			count++
-			tempresp.WriteBytes(gook3)
-		}
-		if gook4status == true {
-			count++
-			tempresp.WriteBytes(gook4)
-		}
-		if gook5status == true {
-			count++
-			tempresp.WriteBytes(gook5)
-		}
-		if count == uint16(0) {
-			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-		} else {
-			resp := byteframe.NewByteFrame()
-			resp.WriteUint16(count)
-			resp.WriteBytes(tempresp.Data())
-			doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-		}
-	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-	}
+	bf := byteframe.NewByteFrame()
+	count, data := getGookData(s, s.charID)
+	bf.WriteUint16(count)
+	bf.WriteBytes(data)
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
-	count := int(pkt.EntryCount)
-	fmt.Printf("handleMsgMhfUpdateGuacot:%d\n", count)
-	if count == 0 {
-		_, err := s.server.db.Exec("INSERT INTO gook(id,gook0status,gook1status,gook2status,gook3status,gook4status,gook5status) VALUES($1,bool(false),bool(false),bool(false),bool(false),bool(false),bool(false))", s.charID)
-		if err != nil {
-			fmt.Printf("INSERT INTO gook failure\n")
-		}
-	} else {
-		for i := 0; i < int(pkt.EntryCount); i++ {
-			gookindex := int(pkt.Entries[i].Unk0)
-			buf := pkt.GuacotUpdateEntryToBytes(pkt.Entries[i])
-			//fmt.Printf("gookindex:%d\n", gookindex)
-			switch gookindex {
-			case 0:
-				s.server.db.Exec("UPDATE gook SET gook0 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook0status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 1:
-				s.server.db.Exec("UPDATE gook SET gook1 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook1status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 2:
-				s.server.db.Exec("UPDATE gook SET gook2 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook2status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 3:
-				s.server.db.Exec("UPDATE gook SET gook3 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook3status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			case 4:
-				s.server.db.Exec("UPDATE gook SET gook4 = $1 WHERE id = $2", buf, s.charID)
-				if pkt.Entries[i].Unk1 != uint16(0) {
-					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(true), s.charID)
-				} else {
-					s.server.db.Exec("UPDATE gook SET gook4status = $1 WHERE id = $2", bool(false), s.charID)
-				}
-			}
+	for _, gook := range pkt.Gooks {
+		if !gook.Exists {
+			s.server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=NULL WHERE id=$1", gook.Index), s.charID)
+		} else {
+			bf := byteframe.NewByteFrame()
+			bf.WriteUint32(gook.Index)
+			bf.WriteUint16(gook.Type)
+			bf.WriteBytes(gook.Data)
+			bf.WriteUint8(gook.NameLen)
+			bf.WriteBytes(gook.Name)
+			s.server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=$1 WHERE id=$2", gook.Index), bf.Data(), s.charID)
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -1737,100 +1685,4 @@ func handleMsgMhfGetTrendWeapon(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateUseTrendWeaponLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateUseTrendWeaponLog)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-}
-
-func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint32(0)
-	resp.WriteUint8(0)
-	resp.WriteUint8(0)  // Some string length following this field.
-	resp.WriteUint16(0) // Entry type 1 count
-	resp.WriteUint8(0)  // Entry type 2 count
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-
-	// Update the client's rights as well:
-	updateRights(s)
-}
-
-func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
-	var event int = s.server.erupeConfig.DevModeOptions.Event
-	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
-	// Diva Defense with Prayer, Interception and Song weeks
-	// Mezeporta Festival with simply 'available' being a weekend thing
-
-	midnight := Time_Current_Midnight()
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(0x0b5397df) // Unk (1d5fda5c, 0b5397df)
-
-	if event == 1 {
-		resp.WriteUint32(uint32(midnight.Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix()))
-	} else if event == 2 {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Unix()))
-		resp.WriteUint32(uint32(midnight.Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
-	} else if event == 3 {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Unix()))
-		resp.WriteUint32(uint32(midnight.Unix()))
-		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-	} else {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-		resp.WriteUint32(uint32(midnight.Unix()))
-	}
-
-	resp.WriteUint16(0x0019) // Unk 00000000 00011001
-	resp.WriteUint16(0x002d) // Unk 00000000 00101101
-	resp.WriteUint16(0x0002) // Unk 00000000 00000010
-	resp.WriteUint16(0x0002) // Unk 00000000 00000010
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-}
-
-func handleMsgMhfGetUdInfo(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfGetUdInfo)
-	// Message that appears on the Diva Defense NPC and triggers the green exclamation mark
-	udInfos := []struct {
-		Text      string
-		StartTime time.Time
-		EndTime   time.Time
-	}{
-		/*{
-			Text:      " ~C17【Erupe】 is dead event!\n\n■Features\n~C18 Dont bother walking around!\n~C17 Take down your DB by doing \n~C17 nearly anything!",
-			StartTime: Time_static().Add(time.Duration(-5) * time.Minute), // Event started 5 minutes ago,
-			EndTime:   Time_static().Add(time.Duration(24) * time.Hour),   // Event ends in 5 minutes,
-		}, */
-	}
-
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint8(uint8(len(udInfos)))
-	for _, udInfo := range udInfos {
-		resp.WriteBytes(fixedSizeShiftJIS(udInfo.Text, 1024))
-		resp.WriteUint32(uint32(udInfo.StartTime.Unix()))
-		resp.WriteUint32(uint32(udInfo.EndTime.Unix()))
-	}
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }

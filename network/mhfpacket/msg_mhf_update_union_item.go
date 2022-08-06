@@ -3,9 +3,9 @@ package mhfpacket
 import (
 	"errors"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfUpdateUnionItem represents the MSG_MHF_UPDATE_UNION_ITEM

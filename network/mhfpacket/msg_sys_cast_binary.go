@@ -3,9 +3,9 @@ package mhfpacket
 import ( 
  "errors" 
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+ 	"erupe-ce/network/clientctx"
+	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgSysCastBinary represents the MSG_SYS_CAST_BINARY

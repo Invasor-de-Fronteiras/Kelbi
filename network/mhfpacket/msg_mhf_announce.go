@@ -1,16 +1,20 @@
 package mhfpacket
 
 import (
- "errors"
+	"errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfAnnounce represents the MSG_MHF_ANNOUNCE
 type MsgMhfAnnounce struct {
-  Unk []byte
+	AckHandle uint32
+	IPAddress uint32
+	Port      uint16
+	StageID   []byte
+	Type      uint8
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -20,8 +24,14 @@ func (m *MsgMhfAnnounce) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfAnnounce) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-  m.Unk = bf.DataFromCurrent()
-  bf.Seek(int64(len(bf.Data()) - 2), 0)
+	m.AckHandle = bf.ReadUint32()
+	m.IPAddress = bf.ReadUint32()
+	m.Port = bf.ReadUint16()
+	_ = bf.ReadUint8()
+	_ = bf.ReadUint16()
+	m.StageID = bf.ReadBytes(32)
+	_ = bf.ReadUint32()
+	m.Type = bf.ReadUint8()
 	return nil
 }
 

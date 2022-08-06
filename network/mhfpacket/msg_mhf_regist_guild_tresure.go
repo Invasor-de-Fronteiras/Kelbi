@@ -1,15 +1,18 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"github.com/Solenataris/Erupe/network/clientctx"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfRegistGuildTresure represents the MSG_MHF_REGIST_GUILD_TRESURE
-type MsgMhfRegistGuildTresure struct{}
+type MsgMhfRegistGuildTresure struct {
+	AckHandle uint32
+	Data      []byte
+}
 
 // Opcode returns the ID associated with this packet type.
 func (m *MsgMhfRegistGuildTresure) Opcode() network.PacketID {
@@ -18,7 +21,10 @@ func (m *MsgMhfRegistGuildTresure) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfRegistGuildTresure) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+	m.AckHandle = bf.ReadUint32()
+	m.Data = bf.ReadBytes(uint(bf.ReadUint16()))
+	_ = bf.ReadUint32()
+	return nil
 }
 
 // Build builds a binary packet from the current data.

@@ -5,11 +5,13 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/config"
-	"github.com/Solenataris/Erupe/network/binpacket"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Solenataris/Erupe/server/discordbot"
+	"erupe-ce/common/byteframe"
+	ps "erupe-ce/common/pascalstring"
+	"erupe-ce/config"
+	"erupe-ce/network/binpacket"
+	"erupe-ce/network/mhfpacket"
+	"erupe-ce/server/discordbot"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -18,21 +20,22 @@ type StageIdType = string
 
 const (
 	// GlobalStage is the stage that is used for all users.
-	MezeportaStageId    StageIdType = "sl1Ns200p0a0u0"
-	GuildHallLv1StageId StageIdType = "sl1Ns202p0a0u0"
-	GuildHallLv2StageId StageIdType = "sl1Ns203p0a0u0"
-	GuildHallLv3StageId StageIdType = "sl1Ns204p0a0u0"
-	PugiFarmStageId     StageIdType = "sl1Ns205p0a0u0"
-	RastaBarStageId     StageIdType = "sl1Ns211p0a0u0"
-	CaravanStageId      StageIdType = "sl1Ns260p0a0u0"
-	GookFarmStageId     StageIdType = "sl1Ns265p0a0u0"
-	DivaFountainStageId StageIdType = "sl2Ns379p0a0u0"
-	DivaHallStageId     StageIdType = "sl1Ns445p0a0u0"
-	MezFesStageId       StageIdType = "sl1Ns462p0a0u0"
+	MezeportaStageId      StageIdType = "sl1Ns200p0a0u0"
+	GuildHallLv1StageId   StageIdType = "sl1Ns202p0a0u0"
+	GuildHallLv2StageId   StageIdType = "sl1Ns203p0a0u0"
+	GuildHallLv3StageId   StageIdType = "sl1Ns204p0a0u0"
+	PugiFarmStageId       StageIdType = "sl1Ns205p0a0u0"
+	RastaBarStageId       StageIdType = "sl1Ns211p0a0u0"
+	PalloneCaravanStageId StageIdType = "sl1Ns260p0a0u0"
+	GookFarmStageId       StageIdType = "sl1Ns265p0a0u0"
+	DivaFountainStageId   StageIdType = "sl2Ns379p0a0u0"
+	DivaHallStageId       StageIdType = "sl1Ns445p0a0u0"
+	MezFesStageId         StageIdType = "sl1Ns462p0a0u0"
 )
 
 // Config struct allows configuring the server.
 type Config struct {
+	ID          uint16
 	Logger      *zap.Logger
 	DB          *sqlx.DB
 	DiscordBot  *discordbot.DiscordBot
@@ -50,6 +53,8 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
+	Channels       []*Server
+	ID             uint16
 	logger         *zap.Logger
 	db             *sqlx.DB
 	erupeConfig    *config.Config
@@ -67,8 +72,9 @@ type Server struct {
 	userBinaryParts     map[userBinaryPartID][]byte
 
 	// Semaphore
-	semaphoreLock sync.RWMutex
-	semaphore     map[string]*Semaphore
+	semaphoreLock  sync.RWMutex
+	semaphore      map[string]*Semaphore
+	semaphoreIndex uint32
 
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
@@ -137,6 +143,7 @@ func NewRaviente() *Raviente {
 // NewServer creates a new Server type.
 func NewServer(config *Config) *Server {
 	s := &Server{
+		ID:              config.ID,
 		logger:          config.Logger,
 		db:              config.DB,
 		erupeConfig:     config.ErupeConfig,
@@ -146,6 +153,7 @@ func NewServer(config *Config) *Server {
 		stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		semaphore:       make(map[string]*Semaphore),
+		semaphoreIndex:  5,
 		discordBot:      config.DiscordBot,
 		name:            config.Name,
 		enable:          config.Enable,
@@ -288,6 +296,23 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 	}
 }
 
+func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, ignoredChannel *Server) {
+	for _, c := range s.Channels {
+		if c == ignoredChannel {
+			continue
+		}
+		for _, session := range c.sessions {
+			if session == ignoredSession {
+				continue
+			}
+			bf := byteframe.NewByteFrame()
+			bf.WriteUint16(uint16(pkt.Opcode()))
+			pkt.Build(bf, session.clientContext)
+			session.QueueSendNonBlocking(bf.Data())
+		}
+	}
+}
+
 // BroadcastChatMessage broadcasts a simple chat message to all the sessions.
 func (s *Server) BroadcastChatMessage(message string) {
 	bf := byteframe.NewByteFrame()
@@ -308,6 +333,37 @@ func (s *Server) BroadcastChatMessage(message string) {
 	}, nil)
 }
 
+func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type uint8) {
+	bf := byteframe.NewByteFrame()
+	bf.SetLE()
+	bf.WriteUint16(0)    // Unk
+	bf.WriteUint16(0x43) // Data len
+	bf.WriteUint16(3)    // Unk len
+	var text string
+	switch _type {
+	case 2:
+		text = "<Great Slaying: Berserk> is being held!"
+	case 4:
+		text = "<Great Slaying: Extreme> is being held!"
+	case 5:
+		text = "<Great Slaying: Berserk Practice> is being held!"
+	default:
+		s.logger.Error("Unk raviente type", zap.Uint8("_type", _type))
+	}
+	ps.Uint16(bf, text, false)
+	bf.WriteBytes([]byte{0x5F, 0x53, 0x00})
+	bf.WriteUint32(ip)   // IP address
+	bf.WriteUint16(port) // Port
+	bf.WriteUint16(0)    // Unk
+	bf.WriteBytes(stage)
+	s.WorldcastMHF(&mhfpacket.MsgSysCastedBinary{
+		CharID:         0x00000000,
+		BroadcastType:  BroadcastTypeServer,
+		MessageType:    BinaryMessageTypeChat,
+		RawDataPayload: bf.Data(),
+	}, nil, s)
+}
+
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s**: %s", charName, content)
@@ -316,23 +372,25 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 }
 
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
-	s.stagesLock.RLock()
-	defer s.stagesLock.RUnlock()
-	for _, stage := range s.stages {
-		stage.RLock()
-		for client := range stage.clients {
-			if client.charID == charID {
-				stage.RUnlock()
-				return client
+	for _, c := range s.Channels {
+		c.stagesLock.RLock()
+		for _, stage := range c.stages {
+			stage.RLock()
+			for client := range stage.clients {
+				if client.charID == charID {
+					stage.RUnlock()
+					c.stagesLock.RUnlock()
+					return client
+				}
 			}
+			stage.RUnlock()
 		}
-		stage.RUnlock()
+		c.stagesLock.RUnlock()
 	}
-
 	return nil
 }
 
-func (s *Server) FindStageObjectByChar(charID uint32) *StageObject {
+func (s *Server) FindObjectByChar(charID uint32) *Object {
 	s.stagesLock.RLock()
 	defer s.stagesLock.RUnlock()
 	for _, stage := range s.stages {
@@ -348,4 +406,20 @@ func (s *Server) FindStageObjectByChar(charID uint32) *StageObject {
 	}
 
 	return nil
+}
+
+func (s *Server) NextSemaphoreID() uint32 {
+	for {
+		exists := false
+		s.semaphoreIndex = s.semaphoreIndex + 1
+		for _, semaphore := range s.semaphore {
+			if semaphore.id == s.semaphoreIndex {
+				exists = true
+			}
+		}
+		if exists == false {
+			break
+		}
+	}
+	return s.semaphoreIndex
 }

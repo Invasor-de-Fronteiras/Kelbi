@@ -3,9 +3,9 @@ package mhfpacket
 import (
 	"fmt"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network"
-	"github.com/Solenataris/Erupe/network/clientctx"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgSysLoadRegister represents the MSG_SYS_LOAD_REGISTER

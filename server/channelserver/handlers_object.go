@@ -3,43 +3,54 @@ package channelserver
 import (
 	"fmt"
 
-	"github.com/Andoryuuta/byteframe"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/mhfpacket"
 )
 
 func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateObject)
 
-	// Lock the stage.
-	s.server.Lock()
+	// Prevent reusing an object index
+	var nextID uint32
+	for {
+		exists := false
+		nextID = s.stage.NextObjectID()
+		for _, object := range s.stage.objects {
+			if object.id == nextID {
+				exists = true
+				break
+			}
+		}
+		if exists == false {
+			break
+		}
+	}
 
-	// Make a new stage object and insert it into the stage.
-	objID := s.stage.GetNewObjectID(s.charID)
-	newObj := &StageObject{
-		id:          objID,
+	s.stage.Lock()
+	newObj := &Object{
+		id:          nextID,
 		ownerCharID: s.charID,
 		x:           pkt.X,
 		y:           pkt.Y,
 		z:           pkt.Z,
 	}
-
 	s.stage.objects[s.charID] = newObj
+	s.stage.Unlock()
 
-	// Unlock the stage.
-	s.server.Unlock()
 	// Response to our requesting client.
 	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(objID) // New local obj handle.
+	resp.WriteUint32(newObj.id) // New local obj handle.
 	doAckSimpleSucceed(s, pkt.AckHandle, resp.Data())
 	// Duplicate the object creation to all sessions in the same stage.
 	dupObjUpdate := &mhfpacket.MsgSysDuplicateObject{
-		ObjID:       objID,
-		X:           pkt.X,
-		Y:           pkt.Y,
-		Z:           pkt.Z,
-		OwnerCharID: s.charID,
+		ObjID:       newObj.id,
+		X:           newObj.x,
+		Y:           newObj.y,
+		Z:           newObj.z,
+		OwnerCharID: newObj.ownerCharID,
 	}
-	s.logger.Info("Duplicate a new characters to others clients")
+
+	s.logger.Info(fmt.Sprintf("Broadcasting new object: %s (%d)", s.Name, newObj.id))
 	s.stage.BroadcastMHF(dupObjUpdate, s)
 }
 
@@ -47,7 +58,8 @@ func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)
-	if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.OpcodeMessages {
+
+	if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.LogInboundMessages {
 		fmt.Printf("[%s - %s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, s.stageID, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
 	}
 	s.stage.Lock()
@@ -66,7 +78,21 @@ func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgSysSetObjectBinary)
+	for _, session := range s.server.sessions {
+		if session.charID == s.charID {
+			s.server.userBinaryPartsLock.Lock()
+			s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 3}] = pkt.RawDataPayload
+			s.server.userBinaryPartsLock.Unlock()
+			msg := &mhfpacket.MsgSysNotifyUserBinary{
+				CharID:     s.charID,
+				BinaryType: 3,
+			}
+			s.server.BroadcastMHF(msg, s)
+		}
+	}
+}
 
 func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {}
 

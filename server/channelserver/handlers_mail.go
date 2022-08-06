@@ -2,11 +2,12 @@ package channelserver
 
 import (
 	"database/sql"
+	"erupe-ce/common/stringsupport"
 	"time"
 
-	"github.com/Solenataris/Erupe/network/binpacket"
-	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Andoryuuta/byteframe"
+	"erupe-ce/common/byteframe"
+	"erupe-ce/network/binpacket"
+	"erupe-ce/network/mhfpacket"
 	"go.uber.org/zap"
 )
 
@@ -145,7 +146,7 @@ func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
 			c.name as sender_name
 		FROM mail m
 			JOIN characters c ON c.id = m.sender_id
-		WHERE recipient_id = $1 AND deleted = false
+		WHERE recipient_id = $1 AND m.deleted = false
 		ORDER BY m.created_at DESC, id DESC
 		LIMIT 32
 	`, charID)
@@ -275,7 +276,7 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 
-	body := s.clientContext.StrConv.MustEncode(mail.Body)
+	body := stringsupport.UTF8ToSJIS(mail.Body)
 	bf.WriteNullTerminatedBytes(body)
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -306,15 +307,12 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 		s.mailList[accIndex] = m.ID
 		s.mailAccIndex++
 
-
 		itemAttached := m.AttachedItemID != 0
-		subject := s.clientContext.StrConv.MustEncode(m.Subject)
-		sender := s.clientContext.StrConv.MustEncode(m.SenderName)
 
 		msg.WriteUint32(m.SenderID)
 		msg.WriteUint32(uint32(m.CreatedAt.Unix()))
 
-		msg.WriteUint8(uint8(accIndex))
+		msg.WriteUint8(accIndex)
 		msg.WriteUint8(uint8(i))
 
 		flags := uint8(0x00)
@@ -330,10 +328,15 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 		// System message, hides ID
 		// flags |= 0x04
 
-		// Mitigate game crash
-		flags |= 0x08
-		if m.AttachedItemReceived {
-			// flags |= 0x08
+		// Workaround until EN mail items are patched
+		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.DisableMailItems {
+			if itemAttached {
+				flags |= 0x08
+			}
+		} else {
+			if m.AttachedItemReceived {
+				flags |= 0x08
+			}
 		}
 
 		if m.IsGuildInvite {
@@ -342,12 +345,10 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 
 		msg.WriteUint8(flags)
 		msg.WriteBool(itemAttached)
-		msg.WriteUint8(uint8(len(subject)+1))
-		msg.WriteUint8(uint8(len(sender)+1))
-		msg.WriteNullTerminatedBytes(subject)
-		msg.WriteNullTerminatedBytes(sender)
-
-		// TODO: The game will crash if it attempts to receive items
+		msg.WriteUint8(16)
+		msg.WriteUint8(21)
+		msg.WriteBytes(stringsupport.PaddedString(m.Subject, 16, true))
+		msg.WriteBytes(stringsupport.PaddedString(m.SenderName, 21, true))
 		if itemAttached {
 			msg.WriteUint16(m.AttachedItemAmount)
 			msg.WriteUint16(m.AttachedItemID)
@@ -361,40 +362,26 @@ func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOprtMail)
 
 	mail, err := GetMailByID(s, s.mailList[pkt.AccIndex])
-
 	if err != nil {
-		doAckSimpleFail(s, pkt.AckHandle, nil)
 		panic(err)
 	}
 
-	switch mhfpacket.OperateMailOperation(pkt.Operation) {
+	switch pkt.Operation {
 	case mhfpacket.OPERATE_MAIL_DELETE:
 		err = mail.MarkDeleted(s)
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, nil)
-			panic(err)
-		}
 	case mhfpacket.OPERATE_MAIL_LOCK:
 		err = mail.MarkLocked(s, true)
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, nil)
-			panic(err)
-		}
 	case mhfpacket.OPERATE_MAIL_UNLOCK:
 		err = mail.MarkLocked(s, false)
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, nil)
-			panic(err)
-		}
 	case mhfpacket.OPERATE_MAIL_ACQUIRE_ITEM:
 		err = mail.MarkAcquired(s)
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, nil)
-			panic(err)
-		}
 	}
 
-	doAckSimpleSucceed(s, pkt.AckHandle, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
