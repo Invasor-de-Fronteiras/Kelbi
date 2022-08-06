@@ -180,8 +180,8 @@ func main() {
 				Logger:      logger.Named("channel-" + fmt.Sprint(count)),
 				ErupeConfig: erupeConfig,
 				DB:          db,
-				Name:        erupeConfig.Entrance.Entries[0].Name,
-				Enable:      erupeConfig.Entrance.Entries[0].Channels[0].MaxPlayers > 0,
+				Name:        ee.Name,
+				Enable:      ce.MaxPlayers > 0,
 				DiscordBot:  discordBot,
 			})
 			if ee.IP == "" {

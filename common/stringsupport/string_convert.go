@@ -87,7 +87,7 @@ func UTF8ToSJIS(x string) []byte {
 	e := japanese.ShiftJIS.NewEncoder()
 	xt, _, err := transform.String(e, x)
 	if err != nil {
-		panic(err)
+		return []byte(x)
 	}
 	return []byte(xt)
 }
@@ -96,7 +96,7 @@ func SJISToUTF8(b []byte) string {
 	d := japanese.ShiftJIS.NewDecoder()
 	result, err := ioutil.ReadAll(transform.NewReader(bytes.NewReader(b), d))
 	if err != nil {
-		panic(err)
+		return string(b)
 	}
 	return string(result)
 }
