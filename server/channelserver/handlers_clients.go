@@ -27,6 +27,10 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 
 	var clients []uint32
 	switch pkt.Get {
+	case 0: // All
+		for _, cid := range stage.clients {
+			clients = append(clients, cid)
+		}
 	case 1: // Not ready
 		for cid, ready := range stage.reservedClientSlots {
 			if !ready {

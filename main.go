@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var erupeConfig *config.Config
+
 // Temporary DB auto clean on startup for quick development & testing.
 func cleanDB(db *sqlx.DB) {
 	_ = db.MustExec("DELETE FROM guild_characters")
@@ -30,6 +33,7 @@ func cleanDB(db *sqlx.DB) {
 }
 
 func main() {
+	var err error
 	zapLogger, _ := zap.NewDevelopment()
 	defer zapLogger.Sync()
 	logger := zapLogger.Named("main")
@@ -37,7 +41,7 @@ func main() {
 	logger.Info("Starting Erupe")
 
 	// Load the configuration.
-	erupeConfig, err := config.LoadConfig()
+	erupeConfig, err = config.LoadConfig()
 
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
@@ -45,6 +49,19 @@ func main() {
 
 	if erupeConfig.Database.Password == "" {
 		preventClose("Database password is blank")
+	}
+
+	if net.ParseIP(erupeConfig.Host) == nil {
+		ips, _ := net.LookupIP(erupeConfig.Host)
+		for _, ip := range ips {
+			if ip != nil {
+				erupeConfig.Host = ip.String()
+				break
+			}
+		}
+		if net.ParseIP(erupeConfig.Host) == nil {
+			preventClose("Invalid host address")
+		}
 	}
 
 	// Discord bot
@@ -167,8 +184,13 @@ func main() {
 				Enable:      erupeConfig.Entrance.Entries[0].Channels[0].MaxPlayers > 0,
 				DiscordBot:  discordBot,
 			})
-
-			err = c.Start(int(ce.Port))
+			if ee.IP == "" {
+				c.IP = erupeConfig.Host
+			} else {
+				c.IP = ee.IP
+			}
+			c.Port = ce.Port
+			err = c.Start()
 			if err != nil {
 				preventClose(fmt.Sprintf("Failed to start channel server: %s", err.Error()))
 			} else {
@@ -214,6 +236,9 @@ func wait() {
 }
 
 func preventClose(text string) {
+	if erupeConfig.DisableSoftCrash {
+		os.Exit(0)
+	}
 	fmt.Println("\nFailed to start Erupe:\n" + text)
 	go wait()
 	fmt.Println("\nPress Enter/Return to exit...")
