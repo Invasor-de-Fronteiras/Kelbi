@@ -109,6 +109,8 @@ func main() {
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to ping database: %s", err.Error()))
 	}
+
+	db.SetMaxOpenConns(50)
 	logger.Info("Connected to database")
 
 	// Clear existing tokens
