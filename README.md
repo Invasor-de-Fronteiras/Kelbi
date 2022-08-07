@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Erupe
 ## WARNING 
 This project is in its infancy and has no reliable active developer, no documentation, and no support.
