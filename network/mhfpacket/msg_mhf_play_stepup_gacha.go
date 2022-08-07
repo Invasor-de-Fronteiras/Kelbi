@@ -1,18 +1,18 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfPlayStepupGacha represents the MSG_MHF_PLAY_STEPUP_GACHA
-type MsgMhfPlayStepupGacha struct{
-	AckHandle uint32
-	GachaHash uint32
-	RollType uint8
+type MsgMhfPlayStepupGacha struct {
+	AckHandle    uint32
+	GachaHash    uint32
+	RollType     uint8
 	CurrencyMode uint8
 }
 

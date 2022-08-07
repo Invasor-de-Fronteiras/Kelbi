@@ -1,15 +1,15 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfSaveMercenary represents the MSG_MHF_SAVE_MERCENARY
-type MsgMhfSaveMercenary struct{
+type MsgMhfSaveMercenary struct {
 	AckHandle      uint32
 	DataSize       uint32
 	RawDataPayload []byte
