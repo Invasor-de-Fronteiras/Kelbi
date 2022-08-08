@@ -17,3 +17,5 @@ savedata/*/
 
 config.json
 .env
+
+logging.txt

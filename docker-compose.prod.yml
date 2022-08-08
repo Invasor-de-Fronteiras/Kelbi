@@ -7,6 +7,7 @@ services:
       - ./config.json:/app/config.json
       - ./bin:/app/bin
       - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
     ports:
       - "80:80"
       - "53312:53312"

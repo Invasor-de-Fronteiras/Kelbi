@@ -15,10 +15,10 @@ import (
 	"erupe-ce/server/entranceserver"
 	"erupe-ce/server/launcherserver"
 	"erupe-ce/server/signserver"
+	"erupe-ce/utils"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"go.uber.org/zap"
 )
 
 var erupeConfig *config.Config
@@ -34,8 +34,7 @@ func cleanDB(db *sqlx.DB) {
 
 func main() {
 	var err error
-	zapLogger, _ := zap.NewDevelopment()
-	defer zapLogger.Sync()
+	zapLogger, _ := utils.NewLogger()
 	logger := zapLogger.Named("main")
 
 	logger.Info("Starting Erupe")
