@@ -75,15 +75,20 @@ model characters {
   skin_hist                                                      Bytes?
   kouryou_point                                                  Int?
   gcp                                                            Int?
-  trophy                                                         Bytes?
   guild_post_checked                                             DateTime             @default(now()) @db.Timestamp(6)
   time_played                                                    Int                  @default(0)
   weapon_id                                                      Int                  @default(0)
+  scenariodata                                                   Bytes?
+  house                                                          Bytes?
+  savefavoritequest                                              Bytes?
+  friends                                                        String               @default("")
+  blocked                                                        String               @default("")
+  deleted                                                        Boolean              @default(false)
   users                                                          users?               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   guild_applications_charactersToguild_applications_actor_id     guild_applications[] @relation("charactersToguild_applications_actor_id")
   guild_applications_charactersToguild_applications_character_id guild_applications[] @relation("charactersToguild_applications_character_id")
   guild_characters                                               guild_characters?
-  login_boost_state                                              login_boost_state[]
+  login_boost_state                                              login_boost_state[]  @ignore
   lucky_box_state                                                lucky_box_state[]    @ignore
   mail_charactersTomail_recipient_id                             mail[]               @relation("charactersTomail_recipient_id")
   mail_charactersTomail_sender_id                                mail[]               @relation("charactersTomail_sender_id")
@@ -110,7 +115,7 @@ model fpoint_items {
 }
 
 model gacha_shop {
-  hash       BigInt
+  hash       Int
   reqgr      Int
   reqhr      Int
   gachaname  String  @db.VarChar(255)
@@ -142,19 +147,12 @@ model gacha_shop_items {
 }
 
 model gook {
-  id          Int      @id @default(autoincrement())
-  gook0       Bytes?
-  gook1       Bytes?
-  gook2       Bytes?
-  gook3       Bytes?
-  gook4       Bytes?
-  gook5       Bytes?
-  gook0status Boolean?
-  gook1status Boolean?
-  gook2status Boolean?
-  gook3status Boolean?
-  gook4status Boolean?
-  gook5status Boolean?
+  id    Int    @id @default(autoincrement())
+  gook0 Bytes?
+  gook1 Bytes?
+  gook2 Bytes?
+  gook3 Bytes?
+  gook4 Bytes?
 }
 
 model guild_applications {
@@ -175,10 +173,11 @@ model guild_applications {
 model guild_characters {
   id               Int         @id @default(autoincrement())
   guild_id         Int?
-  character_id     Int?        @unique(map: "guild_character_unique_index")
+  character_id     Int?     @unique(map: "guild_character_unique_index")
   joined_at        DateTime?   @default(now()) @db.Timestamp(6)
   avoid_leadership Boolean     @default(false)
   order_index      Int         @default(1)
+  recruiter        Boolean     @default(false)
   characters       characters? @relation(fields: [character_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   guilds           guilds?     @relation(fields: [guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -208,6 +207,10 @@ model guilds {
   sub_motto          Int?                 @default(0)
   item_box           Bytes?
   event_rp           Int                  @default(0)
+  pugi_name_1        String?              @default("") @db.VarChar(12)
+  pugi_name_2        String?              @default("") @db.VarChar(12)
+  pugi_name_3        String?              @default("") @db.VarChar(12)
+  recruiting         Boolean              @default(true)
   guild_applications guild_applications[]
   guild_characters   guild_characters[]
 }
@@ -220,16 +223,18 @@ model history {
   reason    String?
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model login_boost_state {
   char_id    Int?
   week_req   Int?        @db.SmallInt
   week_count Int?        @db.SmallInt
   available  Boolean?
   end_time   Int?
-  ID         Int         @id @default(autoincrement())
+  last_week  Int?
   characters characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([char_id, week_req], map: "id_week")
+  @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -256,9 +261,9 @@ model mail {
   is_guild_invite                          Boolean    @default(false)
   created_at                               DateTime   @default(now()) @db.Timestamp(6)
   deleted                                  Boolean    @default(false)
+  locked                                   Boolean    @default(false)
   characters_charactersTomail_recipient_id characters @relation("charactersTomail_recipient_id", fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   characters_charactersTomail_sender_id    characters @relation("charactersTomail_sender_id", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  locked                                   Boolean    @default(false)
 
   @@index([recipient_id, deleted, created_at, id], map: "mail_recipient_deleted_created_id_index")
 }
@@ -266,7 +271,7 @@ model mail {
 model normal_shop_items {
   shoptype           Int?
   shopid             Int?
-  itemhash           Int     @id @unique
+  itemhash           Int     @id
   itemid             Int?
   points             Int?
   tradequantity      Int?
@@ -369,25 +374,25 @@ model ravisupport {
 }
 
 model schema_migrations {
-  version BigInt  @id
+  version Int  @id
   dirty   Boolean
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model servers {
-  server_id        Int     @id @default(autoincrement())
-  server_name      String?
-  season           Int?
-  current_players  Int?
-  event_id         Int?
-  event_expiration Int?
+  server_id       Int
+  season          Int
+  current_players Int
+
+  @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model shop_item_state {
   char_id      Int?
   itemhash     Int
-  week         Int?
   usedquantity Int?
+  week         Int?
   characters   characters? @relation(fields: [char_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([char_id, itemhash], map: "shop_item_state_id_itemhash")
@@ -396,10 +401,10 @@ model shop_item_state {
 
 model sign_sessions {
   id             Int     @id @default(autoincrement())
-  user_id        Int?
-  auth_token_num BigInt?
-  auth_token_str String?
-  users          users?  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_id   Int
+  char_id   Int?
+  token     String @db.VarChar(16)
+  server_id Int?
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -415,13 +420,86 @@ model stepup_state {
 }
 
 model users {
-  id            Int             @id @default(autoincrement())
-  username      String          @unique
-  password      String
-  item_box      Bytes?
-  rights        Int             @default(14)
-  characters    characters[]
-  sign_sessions sign_sessions[]
+  id               Int                @id @default(autoincrement())
+  username         String             @unique
+  password         String
+  rights           Int                @default(846)
+  item_box         Bytes?
+  last_character   Int?               @default(0)
+  characters       characters[]
+}
+
+model distribution {
+  id               Int       @id @default(autoincrement())
+  character_id     Int?
+  type             Int
+  deadline         DateTime? @db.Timestamp(6)
+  event_name       String    @default("GM Gift!")
+  description      String    @default("~C05You received a gift!")
+  times_acceptable Int       @default(1)
+  min_hr           Int       @default(65535)
+  max_hr           Int       @default(65535)
+  min_sr           Int       @default(65535)
+  max_sr           Int       @default(65535)
+  min_gr           Int       @default(65535)
+  max_gr           Int       @default(65535)
+  data             Bytes
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model distributions_accepted {
+  distribution_id Int?
+  character_id    Int?
+
+  @@ignore
+}
+
+model guild_adventures {
+  id           Int    @id @default(autoincrement())
+  guild_id     Int
+  destination  Int
+  charge       Int    @default(0)
+  depart       Int
+  return       Int
+  collected_by String @default("")
+}
+
+model guild_alliances {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(24)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  parent_id  Int
+  sub1_id    Int?
+  sub2_id    Int?
+}
+
+model guild_hunts {
+  id          Int     @id @default(autoincrement())
+  guild_id    Int
+  host_id     Int
+  destination Int
+  level       Int
+  return      Int
+  acquired    Boolean @default(false)
+  claimed     Boolean @default(false)
+  hunters     String  @default("")
+  treasure    String  @default("")
+  hunt_data   Bytes
+  cats_used   String
+}
+
+model guild_meals {
+  id       Int @id @default(autoincrement())
+  guild_id Int
+  meal_id  Int
+  level    Int
+  expires  Int
+}
+
+model user_binaries {
+  id    Int    @id
+  type2 Bytes?
+  type3 Bytes?
 }
 
 enum festival_colour {
