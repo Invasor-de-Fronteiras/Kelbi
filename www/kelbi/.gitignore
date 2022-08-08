@@ -2,3 +2,4 @@ node_modules
 src/**/*.css.d.ts
 dev-build
 tsconfig.tsbuildinfo
+build
