@@ -161,7 +161,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(Time_Current_Adjusted().Unix())) // Unix timestamp
 
-	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.Sessions), s.server.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -193,7 +193,7 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func logoutPlayer(s *Session) {
-	delete(s.server.sessions, s.rawConn)
+	delete(s.server.Sessions, s.rawConn)
 	s.rawConn.Close()
 
 	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
@@ -201,7 +201,7 @@ func logoutPlayer(s *Session) {
 		panic(err)
 	}
 
-	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.sessions), s.server.ID)
+	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.Sessions), s.server.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -235,9 +235,9 @@ func logoutPlayer(s *Session) {
 	}, s)
 
 	s.server.Lock()
-	for _, stage := range s.server.stages {
-		if _, exists := stage.reservedClientSlots[s.charID]; exists {
-			delete(stage.reservedClientSlots, s.charID)
+	for _, stage := range s.server.Stages {
+		if _, exists := stage.ReservedClientSlots[s.charID]; exists {
+			delete(stage.ReservedClientSlots, s.charID)
 		}
 	}
 	s.server.Unlock()
@@ -303,7 +303,7 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRecordLog)
 	// remove a client returning to town from reserved slots to make sure the stage is hidden from board
-	delete(s.stage.reservedClientSlots, s.charID)
+	delete(s.stage.ReservedClientSlots, s.charID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -354,7 +354,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf := byteframe.NewByteFrameFromBytes(pkt.MessageData)
 		CharID := bf.ReadUint32()
 		for _, c := range s.server.Channels {
-			for _, session := range c.sessions {
+			for _, session := range c.Sessions {
 				if session.charID == CharID {
 					count++
 					sessionName := stringsupport.UTF8ToSJIS(session.Name)
@@ -381,7 +381,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf.ReadUint8()  // Unk
 		searchTerm := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 		for _, c := range s.server.Channels {
-			for _, session := range c.sessions {
+			for _, session := range c.Sessions {
 				if count == 100 {
 					break
 				}
@@ -415,12 +415,12 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		stageID := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
 		for _, c := range s.server.Channels {
 			if c.IP == ipString && c.Port == port {
-				for _, stage := range c.stages {
-					if stage.id == stageID {
+				for _, stage := range c.Stages {
+					if stage.Id == stageID {
 						if count == maxResults {
 							break
 						}
-						for session := range stage.clients {
+						for session := range stage.Clients {
 							count++
 							sessionStage := stringsupport.UTF8ToSJIS(session.stageID)
 							sessionName := stringsupport.UTF8ToSJIS(session.Name)
@@ -464,32 +464,32 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			// Unk
 		}
 		for _, c := range s.server.Channels {
-			for _, stage := range c.stages {
+			for _, stage := range c.Stages {
 				if count == maxResults {
 					break
 				}
-				if strings.HasPrefix(stage.id, stagePrefix) {
+				if strings.HasPrefix(stage.Id, stagePrefix) {
 					count++
-					sessionStage := stringsupport.UTF8ToSJIS(stage.id)
+					sessionStage := stringsupport.UTF8ToSJIS(stage.Id)
 					resp.WriteUint32(binary.LittleEndian.Uint32(net.ParseIP(c.IP).To4()))
 					resp.WriteUint16(c.Port)
 
 					// TODO: This is half right, could be trimmed
 					resp.WriteUint16(0)
-					resp.WriteUint16(uint16(len(stage.clients)))
-					resp.WriteUint16(uint16(len(stage.clients)))
-					resp.WriteUint16(stage.maxPlayers)
+					resp.WriteUint16(uint16(len(stage.Clients)))
+					resp.WriteUint16(uint16(len(stage.Clients)))
+					resp.WriteUint16(stage.MaxPlayers)
 					resp.WriteUint16(0)
-					resp.WriteUint16(uint16(len(stage.clients)))
+					resp.WriteUint16(uint16(len(stage.Clients)))
 					//
 
 					resp.WriteUint16(uint16(len(sessionStage) + 1))
 					resp.WriteUint8(1)
-					resp.WriteUint8(uint8(len(stage.rawBinaryData[stageBinaryKey{1, 1}])))
+					resp.WriteUint8(uint8(len(stage.RawBinaryData[stageBinaryKey{1, 1}])))
 					resp.WriteBytes(make([]byte, 16))
 					resp.WriteNullTerminatedBytes(sessionStage)
 					resp.WriteBytes([]byte{0x00})
-					resp.WriteBytes(stage.rawBinaryData[stageBinaryKey{1, 1}])
+					resp.WriteBytes(stage.RawBinaryData[stageBinaryKey{1, 1}])
 				}
 			}
 		}

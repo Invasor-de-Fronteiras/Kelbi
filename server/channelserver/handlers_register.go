@@ -257,14 +257,14 @@ func (s *Session) notifyRavi() {
 	raviNotif.WriteUint16(0x0010) // End it.
 	sema := getRaviSemaphore(s)
 	if sema != "" {
-		for session := range s.server.semaphore[sema].clients {
+		for session := range s.server.Semaphore[sema].clients {
 			session.QueueSend(raviNotif.Data())
 		}
 	}
 }
 
 func getRaviSemaphore(s *Session) string {
-	for _, semaphore := range s.server.semaphore {
+	for _, semaphore := range s.server.Semaphore {
 		if strings.HasPrefix(semaphore.id_semaphore, "hs_l0u3B5") && strings.HasSuffix(semaphore.id_semaphore, "3") {
 			return semaphore.id_semaphore
 		}

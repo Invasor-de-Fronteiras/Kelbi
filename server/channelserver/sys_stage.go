@@ -12,9 +12,11 @@ import (
 // Object holds infomation about a specific object.
 type Object struct {
 	sync.RWMutex
-	id          uint32
-	ownerCharID uint32
-	x, y, z     float32
+	Id          uint32  `json:"id"`
+	OwnerCharID uint32  `json:"ownerCharID"`
+	X           float32 `json:"x"`
+	Y           float32 `json:"y"`
+	Z           float32 `json:"z"`
 }
 
 // stageBinaryKey is a struct used as a map key for identifying a stage binary part.
@@ -28,40 +30,40 @@ type Stage struct {
 	sync.RWMutex
 
 	// Stage ID string
-	id string
+	Id string `json:"id"`
 
 	// Objects
-	objects     map[uint32]*Object
-	objectIndex uint8
+	Objects     map[uint32]*Object `json:"objects"`
+	ObjectIndex uint8              `json:"objectIndex"`
 
 	// Map of session -> charID.
-	// These are clients that are CURRENTLY in the stage
-	clients map[*Session]uint32
+	// These are Clients that are CURRENTLY in the stage
+	Clients map[*Session]uint32 `json:"-"`
 
 	// Map of charID -> bool, key represents whether they are ready
 	// These are clients that aren't in the stage, but have reserved a slot (for quests, etc).
-	reservedClientSlots map[uint32]bool
+	ReservedClientSlots map[uint32]bool `json:"reservedClientSlots"`
 
 	// These are raw binary blobs that the stage owner sets,
 	// other clients expect the server to echo them back in the exact same format.
-	rawBinaryData map[stageBinaryKey][]byte
+	RawBinaryData map[stageBinaryKey][]byte `json:"-"`
 
-	maxPlayers uint16
-	password   string
-	createdAt  string
+	MaxPlayers uint16 `json:"maxPlayers"`
+	Password   string `json:"password"`
+	CreatedAt  string `json:"createdAt"`
 }
 
 // NewStage creates a new stage with intialized values.
 func NewStage(ID string) *Stage {
 	s := &Stage{
-		id:                  ID,
-		clients:             make(map[*Session]uint32),
-		reservedClientSlots: make(map[uint32]bool),
-		objects:             make(map[uint32]*Object),
-		objectIndex:         0,
-		rawBinaryData:       make(map[stageBinaryKey][]byte),
-		maxPlayers:          4,
-		createdAt:           time.Now().Format("01-02-2006 15:04:05"),
+		Id:                  ID,
+		Clients:             make(map[*Session]uint32),
+		ReservedClientSlots: make(map[uint32]bool),
+		Objects:             make(map[uint32]*Object),
+		ObjectIndex:         0,
+		RawBinaryData:       make(map[stageBinaryKey][]byte),
+		MaxPlayers:          4,
+		CreatedAt:           time.Now().Format("01-02-2006 15:04:05"),
 	}
 	return s
 }
@@ -69,7 +71,7 @@ func NewStage(ID string) *Stage {
 // BroadcastMHF queues a MHFPacket to be sent to all sessions in the stage.
 func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	// Broadcast the data.
-	for session := range s.clients {
+	for session := range s.Clients {
 		if session == ignoredSession {
 			continue
 		}
@@ -87,7 +89,7 @@ func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 }
 
 func (s *Stage) isCharInQuestByID(charID uint32) bool {
-	if _, exists := s.reservedClientSlots[charID]; exists {
+	if _, exists := s.ReservedClientSlots[charID]; exists {
 		return exists
 	}
 
@@ -95,11 +97,11 @@ func (s *Stage) isCharInQuestByID(charID uint32) bool {
 }
 
 func (s *Stage) isQuest() bool {
-	return len(s.reservedClientSlots) > 0
+	return len(s.ReservedClientSlots) > 0
 }
 
 func (s *Stage) GetName() string {
-	switch s.id {
+	switch s.Id {
 	case MezeportaStageId:
 		return "Mezeporta"
 	case GuildHallLv1StageId:
@@ -128,15 +130,15 @@ func (s *Stage) GetName() string {
 }
 
 func (s *Stage) NextObjectID() uint32 {
-	s.objectIndex = s.objectIndex + 1
+	s.ObjectIndex = s.ObjectIndex + 1
 	// Objects beyond 127 do not duplicate correctly
 	// Indexes 0 and 127 does not update position correctly
-	if s.objectIndex == 127 {
-		s.objectIndex = 1
+	if s.ObjectIndex == 127 {
+		s.ObjectIndex = 1
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint8(0)
-	bf.WriteUint8(s.objectIndex)
+	bf.WriteUint8(s.ObjectIndex)
 	bf.WriteUint16(0)
 	obj := uint32(bf.Data()[3]) | uint32(bf.Data()[2])<<8 | uint32(bf.Data()[1])<<16 | uint32(bf.Data()[0])<<24
 	return obj

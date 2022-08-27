@@ -13,7 +13,7 @@ import (
 
 func removeSessionFromSemaphore(s *Session) {
 	s.server.semaphoreLock.Lock()
-	for _, semaphore := range s.server.semaphore {
+	for _, semaphore := range s.server.Semaphore {
 		if _, exists := semaphore.reservedClientSlots[s.charID]; exists {
 			delete(semaphore.reservedClientSlots, s.charID)
 		}
@@ -32,10 +32,10 @@ func handleMsgSysCreateSemaphore(s *Session, p mhfpacket.MHFPacket) {
 
 func destructEmptySemaphores(s *Session) {
 	s.server.semaphoreLock.Lock()
-	for id, sema := range s.server.semaphore {
+	for id, sema := range s.server.Semaphore {
 		if len(sema.reservedClientSlots) == 0 && len(sema.clients) == 0 {
 			s.server.semaphoreLock.Unlock()
-			delete(s.server.semaphore, id)
+			delete(s.server.Semaphore, id)
 			s.server.semaphoreLock.Lock()
 			if strings.HasPrefix(id, "hs_l0u3B5") {
 				releaseRaviSemaphore(s, sema)
@@ -60,10 +60,10 @@ func releaseRaviSemaphore(s *Session, sema *Semaphore) {
 func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysDeleteSemaphore)
 	sem := pkt.AckHandle
-	if s.server.semaphore != nil {
+	if s.server.Semaphore != nil {
 		destructEmptySemaphores(s)
 		s.server.semaphoreLock.Lock()
-		for id, sema := range s.server.semaphore {
+		for id, sema := range s.server.Semaphore {
 			if sema.id == sem {
 				if strings.HasPrefix(id, "hs_l0u3B5") {
 					releaseRaviSemaphore(s, sema)
@@ -71,7 +71,7 @@ func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 					return
 				}
 				s.server.semaphoreLock.Unlock()
-				delete(s.server.semaphore, id)
+				delete(s.server.Semaphore, id)
 				s.logger.Debug("Destructed semaphore", zap.String("sema.id_semaphore", id))
 				return
 			}
@@ -83,14 +83,14 @@ func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateAcquireSemaphore)
 	SemaphoreID := pkt.SemaphoreID
-	newSemaphore, exists := s.server.semaphore[SemaphoreID]
+	newSemaphore, exists := s.server.Semaphore[SemaphoreID]
 
 	fmt.Printf("Got reserve stage req, StageID: %v\n\n", SemaphoreID)
 	if !exists {
 		s.server.semaphoreLock.Lock()
 		if strings.HasPrefix(SemaphoreID, "hs_l0u3B5") {
 			suffix, _ := strconv.ParseUint(pkt.SemaphoreID[len(pkt.SemaphoreID)-1:], 10, 32)
-			s.server.semaphore[SemaphoreID] = &Semaphore{
+			s.server.Semaphore[SemaphoreID] = &Semaphore{
 				id_semaphore:        pkt.SemaphoreID,
 				id:                  uint32(suffix),
 				clients:             make(map[*Session]uint32),
@@ -98,9 +98,9 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 				maxPlayers:          32,
 			}
 		} else {
-			s.server.semaphore[SemaphoreID] = NewSemaphore(s.server, SemaphoreID, 1)
+			s.server.Semaphore[SemaphoreID] = NewSemaphore(s.server, SemaphoreID, 1)
 		}
-		newSemaphore = s.server.semaphore[SemaphoreID]
+		newSemaphore = s.server.Semaphore[SemaphoreID]
 		s.server.semaphoreLock.Unlock()
 	}
 
@@ -126,7 +126,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysAcquireSemaphore)
-	if sema, exists := s.server.semaphore[pkt.SemaphoreID]; exists {
+	if sema, exists := s.server.Semaphore[pkt.SemaphoreID]; exists {
 		sema.clients[s] = s.charID
 		bf := byteframe.NewByteFrame()
 		bf.WriteUint32(sema.id)
@@ -145,7 +145,7 @@ func handleMsgSysCheckSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCheckSemaphore)
 	resp := []byte{0x00, 0x00, 0x00, 0x00}
 	s.server.semaphoreLock.Lock()
-	if _, exists := s.server.semaphore[pkt.SemaphoreID]; exists {
+	if _, exists := s.server.Semaphore[pkt.SemaphoreID]; exists {
 		resp = []byte{0x00, 0x00, 0x00, 0x01}
 	}
 	s.server.semaphoreLock.Unlock()

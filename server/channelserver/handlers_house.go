@@ -86,7 +86,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var exists int
 	for _, house := range houses {
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == house.CharID {
 				exists++
 				bf.WriteUint32(house.CharID)
@@ -125,7 +125,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHouse)
 	bf := byteframe.NewByteFrame()
 	if pkt.Destination != 9 && len(pkt.Password) > 0 && pkt.CheckPass {
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID && pkt.Password != session.myseries.password {
 				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 				return
@@ -144,7 +144,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Destination {
 	case 3: // Others house
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID {
 				bf.WriteBytes(session.myseries.houseTier)
 				bf.WriteBytes(session.myseries.houseData)
@@ -153,19 +153,19 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	case 4: // Bookshelf
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID {
 				bf.WriteBytes(session.myseries.bookshelfData)
 			}
 		}
 	case 5: // Gallery
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID {
 				bf.WriteBytes(session.myseries.galleryData)
 			}
 		}
 	case 8: // Tore
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID {
 				bf.WriteBytes(session.myseries.toreData)
 			}
@@ -173,7 +173,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	case 9: // Own house
 		bf.WriteBytes(furniture)
 	case 10: // Garden
-		for _, session := range s.server.sessions {
+		for _, session := range s.server.Sessions {
 			if session.charID == pkt.CharID {
 				bf.WriteBytes(session.myseries.gardenData)
 				c, d := getGookData(s, pkt.CharID)
