@@ -117,8 +117,8 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		isQuest := stage.isQuest()
-		for client := range stage.Clients {
-			char, err := s.getCharacterForUser(int(client.CharID))
+		for client := range stage.clients {
+			char, err := s.getCharacterForUser(int(client.charID))
 			if err == nil {
 				if len(char.Name) > bigNameLen {
 					bigNameLen = len(char.Name)
