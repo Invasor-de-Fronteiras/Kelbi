@@ -11,8 +11,8 @@ import (
 func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysEnumerateClient)
 
-	s.server.stagesLock.RLock()
-	stage, ok := s.server.stages[pkt.StageID]
+	s.Server.stagesLock.RLock()
+	stage, ok := s.Server.Stages[pkt.StageID]
 	if !ok {
 		s.Server.stagesLock.RUnlock()
 		s.logger.Warn("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
