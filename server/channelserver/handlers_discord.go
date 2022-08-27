@@ -50,11 +50,11 @@ func (s *Server) getCharacterForUser(uid int) (*Character, error) {
 
 func CountChars(s *Server) string {
 	count := 0
-	for _, stage := range s.stages {
-		count += len(stage.clients)
+	for _, stage := range s.Stages {
+		count += len(stage.Clients)
 	}
 
-	message := fmt.Sprintf("Server [%s]: %d players;", s.name, count)
+	message := fmt.Sprintf("Server [%s]: %d players;", s.Name, count)
 
 	return message
 }
@@ -104,8 +104,8 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 
 	bigNameLen := 0
 
-	for _, stage := range s.stages {
-		if len(stage.clients) == 0 {
+	for _, stage := range s.Stages {
+		if len(stage.Clients) == 0 {
 			continue
 		}
 
@@ -117,7 +117,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		isQuest := stage.isQuest()
-		for client := range stage.clients {
+		for client := range stage.Clients {
 			char, err := s.getCharacterForUser(int(client.charID))
 			if err == nil {
 				if len(char.Name) > bigNameLen {
@@ -153,7 +153,7 @@ func PlayerList(s *Server) string {
 		count++
 	}
 
-	message := fmt.Sprintf("<:5658sus:969620902385946777> Invasores in Server: [%s ] <:5658sus:969620902385946777> \n========== Total %d ==========\n", s.name, count)
+	message := fmt.Sprintf("<:5658sus:969620902385946777> Invasores in Server: [%s ] <:5658sus:969620902385946777> \n========== Total %d ==========\n", s.Name, count)
 	message += list
 
 	return message
@@ -162,12 +162,12 @@ func PlayerList(s *Server) string {
 func debug(s *Server) string {
 	list := ""
 
-	for _, stage := range s.stages {
-		if !stage.isQuest() && len(stage.objects) == 0 {
+	for _, stage := range s.Stages {
+		if !stage.isQuest() && len(stage.Objects) == 0 {
 			continue
 		}
 
-		list += fmt.Sprintf("    -> Stage: %s StageId: %s\n", stage.GetName(), stage.id)
+		list += fmt.Sprintf("    -> Stage: %s StageId: %s\n", stage.GetName(), stage.Id)
 		isQuest := "false"
 		hasDeparted := "false"
 
@@ -178,14 +178,14 @@ func debug(s *Server) string {
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
 		if stage.isQuest() {
-			if len(stage.clients) > 0 {
+			if len(stage.Clients) > 0 {
 				hasDeparted = "true"
 			}
 
 			list += fmt.Sprintf("    '-> isDeparted: %s\n", hasDeparted)
-			list += fmt.Sprintf("    '-> reserveSlots (%d/%d)\n", len(stage.reservedClientSlots), stage.maxPlayers)
+			list += fmt.Sprintf("    '-> reserveSlots (%d/%d)\n", len(stage.ReservedClientSlots), stage.MaxPlayers)
 
-			for charid, _ := range stage.reservedClientSlots {
+			for charid := range stage.ReservedClientSlots {
 				char, err := s.getCharacterForUser(int(charid))
 				if err == nil {
 					list += fmt.Sprintf("        '-> %s\n", char.Name)
@@ -194,13 +194,13 @@ func debug(s *Server) string {
 		}
 
 		list += "    '-> objects: \n"
-		for _, obj := range stage.objects {
-			objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.x, obj.y, obj.z)
-			list += fmt.Sprintf("        '-> ObjectId: %d - %s\n", obj.id, objInfo)
+		for _, obj := range stage.Objects {
+			objInfo := fmt.Sprintf("X,Y,Z: %f %f %f", obj.X, obj.Y, obj.Z)
+			list += fmt.Sprintf("        '-> ObjectId: %d - %s\n", obj.Id, objInfo)
 		}
 	}
 
-	message := fmt.Sprintf("Objects in Server: [%s ]\n", s.name)
+	message := fmt.Sprintf("Objects in Server: [%s ]\n", s.Name)
 	message += list
 
 	return message
@@ -209,18 +209,18 @@ func debug(s *Server) string {
 func questlist(s *Server) string {
 	list := ""
 
-	for _, stage := range s.stages {
+	for _, stage := range s.Stages {
 		if !stage.isQuest() {
 			continue
 		}
 
 		hasDeparted := ""
-		if len(stage.clients) > 0 {
+		if len(stage.Clients) > 0 {
 			hasDeparted = " - departed"
 		}
-		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.id, len(stage.reservedClientSlots), stage.maxPlayers, hasDeparted, stage.createdAt)
+		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.Id, len(stage.ReservedClientSlots), stage.MaxPlayers, hasDeparted, stage.CreatedAt)
 
-		for charid, _ := range stage.reservedClientSlots {
+		for charid := range stage.ReservedClientSlots {
 			char, err := s.getCharacterForUser(int(charid))
 			if err == nil {
 				list += fmt.Sprintf("        '-> %s\n", char.Name)
@@ -228,15 +228,15 @@ func questlist(s *Server) string {
 		}
 	}
 
-	message := fmt.Sprintf("Quests in Server: [%s ]\n", s.name)
+	message := fmt.Sprintf("Quests in Server: [%s ]\n", s.Name)
 	message += list
 
 	return message
 }
 
 func removeStageById(s *Server, stageId string) string {
-	if s.stages[stageId] != nil {
-		delete(s.stages, stageId)
+	if s.Stages[stageId] != nil {
+		delete(s.Stages, stageId)
 		return "Stage deleted!"
 	}
 
@@ -250,8 +250,8 @@ func cleanStr(str string) string {
 func getCharInfo(server *Server, charName string) string {
 	infos := []CharInfo{}
 
-	for _, stage := range server.stages {
-		for client := range stage.clients {
+	for _, stage := range server.Stages {
+		for client := range stage.Clients {
 
 			if client.Name == "" {
 				continue
@@ -262,7 +262,7 @@ func getCharInfo(server *Server, charName string) string {
 					CharID:    client.charID,
 					CharName:  client.Name,
 					IP:        client.rawConn.RemoteAddr().String(),
-					StageId:   stage.id,
+					StageId:   stage.Id,
 					StageName: stage.GetName(),
 				})
 			}
@@ -286,8 +286,8 @@ func getCharInfo(server *Server, charName string) string {
 func disconnectChar(server *Server, charName string) string {
 	infos := []CharInfo{}
 
-	for _, stage := range server.stages {
-		for client := range stage.clients {
+	for _, stage := range server.Stages {
+		for client := range stage.Clients {
 
 			if client.Name == "" {
 				continue
@@ -297,7 +297,7 @@ func disconnectChar(server *Server, charName string) string {
 				infos = append(infos, CharInfo{
 					CharID:    client.charID,
 					CharName:  client.Name,
-					StageId:   stage.id,
+					StageId:   stage.Id,
 					StageName: stage.GetName(),
 				})
 

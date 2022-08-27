@@ -53,21 +53,21 @@ type userBinaryPartID struct {
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
-	Channels       []*Server
-	ID             uint16
-	IP             string
-	Port           uint16
+	Channels       []*Server `json:"-"`
+	ID             uint16    `json:"id"`
+	IP             string    `json:"ip"`
+	Port           uint16    `json:"port"`
 	logger         *zap.Logger
 	db             *sqlx.DB
 	erupeConfig    *config.Config
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
-	sessions       map[net.Conn]*Session
-	listener       net.Listener // Listener that is created when Server.Start is called.
-	isShuttingDown bool
+	Sessions       map[net.Conn]*Session `json:"-"`
+	listener       net.Listener          // Listener that is created when Server.Start is called.
+	IsShuttingDown bool                  `json:"isShuttingDown"`
 
 	stagesLock sync.RWMutex
-	stages     map[string]*Stage
+	Stages     map[string]*Stage `json:"stages"`
 
 	// UserBinary
 	userBinaryPartsLock sync.RWMutex
@@ -75,14 +75,14 @@ type Server struct {
 
 	// Semaphore
 	semaphoreLock  sync.RWMutex
-	semaphore      map[string]*Semaphore
-	semaphoreIndex uint32
+	Semaphore      map[string]*Semaphore `json:"semaphore"`
+	SemaphoreIndex uint32                `json:"semaphoreIndex"`
 
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
 
-	name   string
-	enable bool
+	Name   string `json:"name"`
+	Enable bool   `json:"enable"`
 
 	raviente *Raviente
 }
@@ -151,49 +151,49 @@ func NewServer(config *Config) *Server {
 		erupeConfig:     config.ErupeConfig,
 		acceptConns:     make(chan net.Conn),
 		deleteConns:     make(chan net.Conn),
-		sessions:        make(map[net.Conn]*Session),
-		stages:          make(map[string]*Stage),
+		Sessions:        make(map[net.Conn]*Session),
+		Stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
-		semaphore:       make(map[string]*Semaphore),
-		semaphoreIndex:  5,
+		Semaphore:       make(map[string]*Semaphore),
+		SemaphoreIndex:  5,
 		discordBot:      config.DiscordBot,
-		name:            config.Name,
-		enable:          config.Enable,
+		Name:            config.Name,
+		Enable:          config.Enable,
 		raviente:        NewRaviente(),
 	}
 
 	// Mezeporta
-	s.stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
+	s.Stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
 
 	// Guild Hall LV1
-	s.stages["sl1Ns202p0a0u0"] = NewStage("sl1Ns202p0a0u0")
+	s.Stages["sl1Ns202p0a0u0"] = NewStage("sl1Ns202p0a0u0")
 
 	// Guild Hall LV2
-	s.stages["sl1Ns203p0a0u0"] = NewStage("sl1Ns203p0a0u0")
+	s.Stages["sl1Ns203p0a0u0"] = NewStage("sl1Ns203p0a0u0")
 
 	// Guild Hall LV3
-	s.stages["sl1Ns204p0a0u0"] = NewStage("sl1Ns204p0a0u0")
+	s.Stages["sl1Ns204p0a0u0"] = NewStage("sl1Ns204p0a0u0")
 
 	// Pugi Farm
-	s.stages["sl1Ns205p0a0u0"] = NewStage("sl1Ns205p0a0u0")
+	s.Stages["sl1Ns205p0a0u0"] = NewStage("sl1Ns205p0a0u0")
 
 	// Rasta bar stage
-	s.stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
+	s.Stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
 
 	// Pallone Carvan
-	s.stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
+	s.Stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
 
 	// Gook Farm
-	s.stages["sl1Ns265p0a0u0"] = NewStage("sl1Ns265p0a0u0")
+	s.Stages["sl1Ns265p0a0u0"] = NewStage("sl1Ns265p0a0u0")
 
 	// Diva fountain / prayer fountain.
-	s.stages["sl2Ns379p0a0u0"] = NewStage("sl2Ns379p0a0u0")
+	s.Stages["sl2Ns379p0a0u0"] = NewStage("sl2Ns379p0a0u0")
 
 	// Diva Hall
-	s.stages["sl1Ns445p0a0u0"] = NewStage("sl1Ns445p0a0u0")
+	s.Stages["sl1Ns445p0a0u0"] = NewStage("sl1Ns445p0a0u0")
 
 	// MezFes
-	s.stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
+	s.Stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
 
 	return s
 }
@@ -220,7 +220,7 @@ func (s *Server) Start() error {
 // Shutdown tries to shut down the server gracefully.
 func (s *Server) Shutdown() {
 	s.Lock()
-	s.isShuttingDown = true
+	s.IsShuttingDown = true
 	s.Unlock()
 
 	s.listener.Close()
@@ -233,7 +233,7 @@ func (s *Server) acceptClients() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			s.Lock()
-			shutdown := s.isShuttingDown
+			shutdown := s.IsShuttingDown
 			s.Unlock()
 
 			if shutdown {
@@ -254,7 +254,7 @@ func (s *Server) manageSessions() {
 			// Gracefully handle acceptConns channel closing.
 			if newConn == nil {
 				s.Lock()
-				shutdown := s.isShuttingDown
+				shutdown := s.IsShuttingDown
 				s.Unlock()
 
 				if shutdown {
@@ -265,14 +265,14 @@ func (s *Server) manageSessions() {
 			session := NewSession(s, newConn)
 
 			s.Lock()
-			s.sessions[newConn] = session
+			s.Sessions[newConn] = session
 			s.Unlock()
 
 			session.Start()
 
 		case delConn := <-s.deleteConns:
 			s.Lock()
-			delete(s.sessions, delConn)
+			delete(s.Sessions, delConn)
 			s.Unlock()
 		}
 	}
@@ -281,7 +281,7 @@ func (s *Server) manageSessions() {
 // BroadcastMHF queues a MHFPacket to be sent to all sessions.
 func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	// Broadcast the data.
-	for _, session := range s.sessions {
+	for _, session := range s.Sessions {
 		if session == ignoredSession {
 			continue
 		}
@@ -303,7 +303,7 @@ func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, 
 		if c == ignoredChannel {
 			continue
 		}
-		for _, session := range c.sessions {
+		for _, session := range c.Sessions {
 			if session == ignoredSession {
 				continue
 			}
@@ -324,7 +324,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 		Type:       5,
 		Flags:      0x80,
 		Message:    message,
-		SenderName: s.name,
+		SenderName: s.Name,
 	}
 	msgBinChat.Build(bf)
 
@@ -376,9 +376,9 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
 	for _, c := range s.Channels {
 		c.stagesLock.RLock()
-		for _, stage := range c.stages {
+		for _, stage := range c.Stages {
 			stage.RLock()
-			for client := range stage.clients {
+			for client := range stage.Clients {
 				if client.charID == charID {
 					stage.RUnlock()
 					c.stagesLock.RUnlock()
@@ -395,11 +395,11 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 func (s *Server) FindObjectByChar(charID uint32) *Object {
 	s.stagesLock.RLock()
 	defer s.stagesLock.RUnlock()
-	for _, stage := range s.stages {
+	for _, stage := range s.Stages {
 		stage.RLock()
-		for objId := range stage.objects {
-			obj := stage.objects[objId]
-			if obj.ownerCharID == charID {
+		for objId := range stage.Objects {
+			obj := stage.Objects[objId]
+			if obj.OwnerCharID == charID {
 				stage.RUnlock()
 				return obj
 			}
@@ -413,9 +413,9 @@ func (s *Server) FindObjectByChar(charID uint32) *Object {
 func (s *Server) NextSemaphoreID() uint32 {
 	for {
 		exists := false
-		s.semaphoreIndex = s.semaphoreIndex + 1
-		for _, semaphore := range s.semaphore {
-			if semaphore.id == s.semaphoreIndex {
+		s.SemaphoreIndex = s.SemaphoreIndex + 1
+		for _, semaphore := range s.Semaphore {
+			if semaphore.id == s.SemaphoreIndex {
 				exists = true
 			}
 		}
@@ -423,5 +423,5 @@ func (s *Server) NextSemaphoreID() uint32 {
 			break
 		}
 	}
-	return s.semaphoreIndex
+	return s.SemaphoreIndex
 }

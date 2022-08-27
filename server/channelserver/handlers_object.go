@@ -15,8 +15,8 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	for {
 		exists := false
 		nextID = s.stage.NextObjectID()
-		for _, object := range s.stage.objects {
-			if object.id == nextID {
+		for _, object := range s.stage.Objects {
+			if object.Id == nextID {
 				exists = true
 				break
 			}
@@ -28,29 +28,29 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 
 	s.stage.Lock()
 	newObj := &Object{
-		id:          nextID,
-		ownerCharID: s.charID,
-		x:           pkt.X,
-		y:           pkt.Y,
-		z:           pkt.Z,
+		Id:          nextID,
+		OwnerCharID: s.charID,
+		X:           pkt.X,
+		Y:           pkt.Y,
+		Z:           pkt.Z,
 	}
-	s.stage.objects[s.charID] = newObj
+	s.stage.Objects[s.charID] = newObj
 	s.stage.Unlock()
 
 	// Response to our requesting client.
 	resp := byteframe.NewByteFrame()
-	resp.WriteUint32(newObj.id) // New local obj handle.
+	resp.WriteUint32(newObj.Id) // New local obj handle.
 	doAckSimpleSucceed(s, pkt.AckHandle, resp.Data())
 	// Duplicate the object creation to all sessions in the same stage.
 	dupObjUpdate := &mhfpacket.MsgSysDuplicateObject{
-		ObjID:       newObj.id,
-		X:           newObj.x,
-		Y:           newObj.y,
-		Z:           newObj.z,
-		OwnerCharID: newObj.ownerCharID,
+		ObjID:       newObj.Id,
+		X:           newObj.X,
+		Y:           newObj.Y,
+		Z:           newObj.Z,
+		OwnerCharID: newObj.OwnerCharID,
 	}
 
-	s.logger.Info(fmt.Sprintf("Broadcasting new object: %s (%d)", s.Name, newObj.id))
+	s.logger.Info(fmt.Sprintf("Broadcasting new object: %s (%d)", s.Name, newObj.Id))
 	s.stage.BroadcastMHF(dupObjUpdate, s)
 }
 
@@ -63,11 +63,11 @@ func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 		fmt.Printf("[%s - %s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, s.stageID, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
 	}
 	s.stage.Lock()
-	object, ok := s.stage.objects[s.charID]
+	object, ok := s.stage.Objects[s.charID]
 	if ok {
-		object.x = pkt.X
-		object.y = pkt.Y
-		object.z = pkt.Z
+		object.X = pkt.X
+		object.Y = pkt.Y
+		object.Z = pkt.Z
 	}
 	s.stage.Unlock()
 	// One of the few packets we can just re-broadcast directly.
@@ -80,7 +80,7 @@ func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetObjectBinary)
-	for _, session := range s.server.sessions {
+	for _, session := range s.server.Sessions {
 		if session.charID == s.charID {
 			s.server.userBinaryPartsLock.Lock()
 			s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 3}] = pkt.RawDataPayload

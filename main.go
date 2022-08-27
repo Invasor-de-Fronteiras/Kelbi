@@ -13,6 +13,7 @@ import (
 	"erupe-ce/server/channelserver"
 	"erupe-ce/server/discordbot"
 	"erupe-ce/server/entranceserver"
+	httpserver "erupe-ce/server/http-server"
 	"erupe-ce/server/launcherserver"
 	"erupe-ce/server/signserver"
 	"erupe-ce/utils"
@@ -208,6 +209,14 @@ func main() {
 
 	// Register all servers in DB
 	_ = db.MustExec(channelQuery)
+
+	httpContext := httpserver.HttpServerContext{
+		Servers:     channels,
+		ErupeConfig: erupeConfig,
+		Address:     "0.0.0.0:3333",
+	}
+
+	httpserver.RunHttpServer(&httpContext)
 
 	for _, c := range channels {
 		c.Channels = channels
