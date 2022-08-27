@@ -375,19 +375,11 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
 	for _, c := range s.Channels {
-		c.stagesLock.RLock()
-		for _, stage := range c.Stages {
-			stage.RLock()
-			for client := range stage.Clients {
-				if client.charID == charID {
-					stage.RUnlock()
-					c.stagesLock.RUnlock()
-					return client
-				}
+		for _, client := range c.Sessions {
+			if client.charID == charID {
+				return client
 			}
-			stage.RUnlock()
 		}
-		c.stagesLock.RUnlock()
 	}
 	return nil
 }

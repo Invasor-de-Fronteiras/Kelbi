@@ -216,7 +216,7 @@ func main() {
 		Address:     "0.0.0.0:3333",
 	}
 
-	httpserver.RunHttpServer(&httpContext)
+	go httpserver.RunHttpServer(&httpContext)
 
 	for _, c := range channels {
 		c.Channels = channels
