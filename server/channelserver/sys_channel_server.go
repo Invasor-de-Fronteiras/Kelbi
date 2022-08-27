@@ -67,7 +67,7 @@ type Server struct {
 	IsShuttingDown bool                  `json:"isShuttingDown"`
 
 	stagesLock sync.RWMutex
-	Stages     map[string]*Stage `json:"stages"`
+	Stages     map[string]*Stage
 
 	// UserBinary
 	userBinaryPartsLock sync.RWMutex
@@ -379,7 +379,7 @@ func (s *Server) FindSessionByCharID(charID uint32) *Session {
 		for _, stage := range c.Stages {
 			stage.RLock()
 			for client := range stage.Clients {
-				if client.charID == charID {
+				if client.CharID == charID {
 					stage.RUnlock()
 					c.stagesLock.RUnlock()
 					return client
@@ -415,7 +415,7 @@ func (s *Server) NextSemaphoreID() uint32 {
 		exists := false
 		s.SemaphoreIndex = s.SemaphoreIndex + 1
 		for _, semaphore := range s.Semaphore {
-			if semaphore.id == s.SemaphoreIndex {
+			if semaphore.Id == s.SemaphoreIndex {
 				exists = true
 			}
 		}

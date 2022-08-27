@@ -6,6 +6,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -13,7 +14,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	// saved every floor on road, holds values such as floors progressed, points etc.
 	// can be safely handled by the client
 	pkt := p.(*mhfpacket.MsgMhfSaveRengokuData)
-	_, err := s.server.db.Exec("UPDATE characters SET rengokudata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET rengokudata=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update rengokudata savedata in db", zap.Error(err))
 	}
@@ -24,7 +25,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadRengokuData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadRengokuData)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT rengokudata FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT rengokudata FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get rengokudata savedata from db", zap.Error(err))
 	}
@@ -74,7 +75,7 @@ func handleMsgMhfLoadRengokuData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetRengokuBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetRengokuBinary)
 	// a (massively out of date) version resides in the game's /dat/ folder or up to date can be pulled from packets
-	data, err := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "rengoku_data.bin"))
+	data, err := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, "rengoku_data.bin"))
 	if err != nil {
 		panic(err)
 	}

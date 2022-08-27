@@ -6,6 +6,7 @@ import (
 
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"go.uber.org/zap"
 )
 
@@ -24,7 +25,7 @@ type CharacterSaveData struct {
 }
 
 func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error) {
-	result, err := s.server.db.Query("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID)
+	result, err := s.Server.db.Query("SELECT id, savedata, is_new_character, name FROM characters WHERE id = $1", charID)
 
 	if err != nil {
 		s.logger.Error("failed to retrieve save data for character", zap.Error(err), zap.Uint32("charID", charID))
@@ -84,7 +85,7 @@ func (save *CharacterSaveData) Save(s *Session, transaction *sql.Tx) error {
 	if transaction != nil {
 		_, err = transaction.Exec(updateSQL, compressedData, save.CharID, save.IsNewCharacter)
 	} else {
-		_, err = s.server.db.Exec(updateSQL, compressedData, save.CharID, save.IsNewCharacter)
+		_, err = s.Server.db.Exec(updateSQL, compressedData, save.CharID, save.IsNewCharacter)
 	}
 	if err != nil {
 		s.logger.Error("failed to save character data", zap.Error(err), zap.Uint32("charID", save.CharID))

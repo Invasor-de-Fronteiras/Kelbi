@@ -30,7 +30,7 @@ func (gm *GuildMember) IsSubLeader() bool {
 }
 
 func (gm *GuildMember) Save(s *Session) error {
-	_, err := s.server.db.Exec("UPDATE guild_characters SET avoid_leadership=$1 WHERE character_id=$2", gm.AvoidLeadership, gm.CharID)
+	_, err := s.Server.db.Exec("UPDATE guild_characters SET avoid_leadership=$1 WHERE character_id=$2", gm.AvoidLeadership, gm.CharID)
 
 	if err != nil {
 		s.logger.Error(
@@ -74,7 +74,7 @@ SELECT
 `
 
 func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMember, error) {
-	rows, err := s.server.db.Queryx(fmt.Sprintf(`
+	rows, err := s.Server.db.Queryx(fmt.Sprintf(`
 			%s
 			WHERE character.guild_id = $1 AND is_applicant = $2
 	`, guildMembersSelectSQL), guildID, applicants)
@@ -102,7 +102,7 @@ func GetGuildMembers(s *Session, guildID uint32, applicants bool) ([]*GuildMembe
 }
 
 func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
-	rows, err := s.server.db.Queryx(fmt.Sprintf("%s	WHERE character.character_id=$1", guildMembersSelectSQL), charID)
+	rows, err := s.Server.db.Queryx(fmt.Sprintf("%s	WHERE character.character_id=$1", guildMembersSelectSQL), charID)
 
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("failed to retrieve membership data for character '%d'", charID))

@@ -11,7 +11,7 @@ import (
 
 func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
-	_, err := s.server.db.Exec("UPDATE characters SET house=$1 WHERE id=$2", pkt.InteriorData, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET house=$1 WHERE id=$2", pkt.InteriorData, s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -32,11 +32,11 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.Method {
 	case 1:
 		var friendsList string
-		s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&friendsList)
+		s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&friendsList)
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
 			house := HouseData{}
-			row := s.server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", cid)
+			row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", cid)
 			err := row.StructScan(&house)
 			if err != nil {
 				panic(err)
@@ -45,7 +45,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	case 2:
-		guild, err := GetGuildInfoByCharacterId(s, s.charID)
+		guild, err := GetGuildInfoByCharacterId(s, s.CharID)
 		if err != nil {
 			break
 		}
@@ -55,7 +55,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 		for _, member := range guildMembers {
 			house := HouseData{}
-			row := s.server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", member.CharID)
+			row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", member.CharID)
 			err := row.StructScan(&house)
 			if err != nil {
 				panic(err)
@@ -65,7 +65,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 	case 3:
 		house := HouseData{}
-		row := s.server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE name=$1", pkt.Name)
+		row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE name=$1", pkt.Name)
 		err := row.StructScan(&house)
 		if err != nil {
 			panic(err)
@@ -74,7 +74,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 	case 4:
 		house := HouseData{}
-		row := s.server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", pkt.CharID)
+		row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", pkt.CharID)
 		err := row.StructScan(&house)
 		if err != nil {
 			panic(err)
@@ -86,12 +86,12 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var exists int
 	for _, house := range houses {
-		for _, session := range s.server.Sessions {
-			if session.charID == house.CharID {
+		for _, session := range s.Server.Sessions {
+			if session.CharID == house.CharID {
 				exists++
 				bf.WriteUint32(house.CharID)
-				bf.WriteUint8(session.myseries.state)
-				if len(session.myseries.password) > 0 {
+				bf.WriteUint8(session.MySeries.State)
+				if len(session.MySeries.Password) > 0 {
 					bf.WriteUint8(3)
 				} else {
 					bf.WriteUint8(0)
@@ -116,8 +116,8 @@ func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
 	// 03 = open friends
 	// 04 = open guild
 	// 05 = open friends+guild
-	s.myseries.state = pkt.State
-	s.myseries.password = pkt.Password
+	s.MySeries.State = pkt.State
+	s.MySeries.Password = pkt.Password
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -125,8 +125,8 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHouse)
 	bf := byteframe.NewByteFrame()
 	if pkt.Destination != 9 && len(pkt.Password) > 0 && pkt.CheckPass {
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID && pkt.Password != session.myseries.password {
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID && pkt.Password != session.MySeries.Password {
 				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 				return
 			}
@@ -134,7 +134,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var furniture []byte
-	err := s.server.db.QueryRow("SELECT house FROM characters WHERE id=$1", pkt.CharID).Scan(&furniture)
+	err := s.Server.db.QueryRow("SELECT house FROM characters WHERE id=$1", pkt.CharID).Scan(&furniture)
 	if err != nil {
 		panic(err)
 	}
@@ -144,38 +144,38 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Destination {
 	case 3: // Others house
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID {
-				bf.WriteBytes(session.myseries.houseTier)
-				bf.WriteBytes(session.myseries.houseData)
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID {
+				bf.WriteBytes(session.MySeries.HouseTier)
+				bf.WriteBytes(session.MySeries.HouseData)
 				bf.WriteBytes(make([]byte, 19)) // Padding?
 				bf.WriteBytes(furniture)
 			}
 		}
 	case 4: // Bookshelf
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID {
-				bf.WriteBytes(session.myseries.bookshelfData)
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID {
+				bf.WriteBytes(session.MySeries.BookshelfData)
 			}
 		}
 	case 5: // Gallery
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID {
-				bf.WriteBytes(session.myseries.galleryData)
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID {
+				bf.WriteBytes(session.MySeries.GalleryData)
 			}
 		}
 	case 8: // Tore
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID {
-				bf.WriteBytes(session.myseries.toreData)
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID {
+				bf.WriteBytes(session.MySeries.ToreData)
 			}
 		}
 	case 9: // Own house
 		bf.WriteBytes(furniture)
 	case 10: // Garden
-		for _, session := range s.server.Sessions {
-			if session.charID == pkt.CharID {
-				bf.WriteBytes(session.myseries.gardenData)
+		for _, session := range s.Server.Sessions {
+			if session.CharID == pkt.CharID {
+				bf.WriteBytes(session.MySeries.GardenData)
 				c, d := getGookData(s, pkt.CharID)
 				bf.WriteUint16(c)
 				bf.WriteUint16(0)
@@ -194,7 +194,7 @@ func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetMyhouseInfo)
 
 	var data []byte
-	err := s.server.db.QueryRow("SELECT trophy FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT trophy FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		panic(err)
 	}
@@ -208,7 +208,7 @@ func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateMyhouseInfo)
 
-	_, err := s.server.db.Exec("UPDATE characters SET trophy=$1 WHERE id=$2", pkt.Unk0, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET trophy=$1 WHERE id=$2", pkt.Unk0, s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -218,7 +218,7 @@ func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadDecoMyset)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get preset decorations savedata from db", zap.Error(err))
 	}
@@ -239,7 +239,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 	// https://gist.github.com/Andoryuuta/9c524da7285e4b5ca7e52e0fc1ca1daf
 	var loadData []byte
 	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload[1:]) // skip first unk byte
-	err := s.server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.charID).Scan(&loadData)
+	err := s.Server.db.QueryRow("SELECT decomyset FROM characters WHERE id = $1", s.CharID).Scan(&loadData)
 	if err != nil {
 		s.logger.Fatal("Failed to get preset decorations savedata from db", zap.Error(err))
 	} else {
@@ -284,7 +284,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 			}
 			loadData[1] = savedSets // update set count
 		}
-		_, err := s.server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", loadData, s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", loadData, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update decomyset savedata in db", zap.Error(err))
 		}

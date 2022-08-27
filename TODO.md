@@ -25,6 +25,8 @@ GET `/servers/:identify/clients`
 ## HTTP Auth
 
 [ ] - DELETE STAGE
+[ ] - REMOVE SESSION IN STAGE
+[ ] - RESTART SERVER
 [ ] - SEND MESSAGE TO CLIENT
 
 ## Websocket

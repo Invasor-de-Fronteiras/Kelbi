@@ -11,30 +11,30 @@ import (
 type Semaphore struct {
 	sync.RWMutex
 
-	// Stage ID string
-	id_semaphore string
+	// Stage ID string, OLD id_semaphore
+	StageId string `json:"stageID"`
 
-	id uint32
+	Id uint32 `json:"id"`
 
 	// Map of session -> charID.
 	// These are clients that are CURRENTLY in the stage
 	clients map[*Session]uint32
 
 	// Map of charID -> interface{}, only the key is used, value is always nil.
-	reservedClientSlots map[uint32]interface{}
+	ReservedClientSlots map[uint32]interface{} `json:"reservedClientSlots"`
 
 	// Max Players for Semaphore
-	maxPlayers uint16
+	MaxPlayers uint16 `json:"maxPlayers"`
 }
 
 // NewStage creates a new stage with intialized values.
 func NewSemaphore(s *Server, ID string, MaxPlayers uint16) *Semaphore {
 	sema := &Semaphore{
-		id_semaphore:        ID,
-		id:                  s.NextSemaphoreID(),
+		StageId:             ID,
+		Id:                  s.NextSemaphoreID(),
 		clients:             make(map[*Session]uint32),
-		reservedClientSlots: make(map[uint32]interface{}),
-		maxPlayers:          MaxPlayers,
+		ReservedClientSlots: make(map[uint32]interface{}),
+		MaxPlayers:          MaxPlayers,
 	}
 	return sema
 }

@@ -4,13 +4,14 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"go.uber.org/zap"
 )
 
 func handleMsgMhfLoadPlateData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPlateData)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get plate data savedata from db", zap.Error(err))
 	}
@@ -31,7 +32,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		var data []byte
 
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.charID).Scan(&data)
+		err := s.Server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.CharID).Scan(&data)
 		if err != nil {
 			s.logger.Fatal("Failed to get platedata savedata from db", zap.Error(err))
 		}
@@ -55,7 +56,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Fatal("Failed to diff and compress platedata savedata", zap.Error(err))
 		}
 
-		_, err = s.server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", saveOutput, s.charID)
+		_, err = s.Server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", saveOutput, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update platedata savedata in db", zap.Error(err))
 		}
@@ -63,7 +64,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("Wrote recompressed platedata back to DB.")
 	} else {
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET platedata=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update platedata savedata in db", zap.Error(err))
 		}
@@ -75,7 +76,7 @@ func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadPlateBox(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPlateBox)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get sigil box savedata from db", zap.Error(err))
 	}
@@ -96,7 +97,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 		var data []byte
 
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.charID).Scan(&data)
+		err := s.Server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.CharID).Scan(&data)
 		if err != nil {
 			s.logger.Fatal("Failed to get sigil box savedata from db", zap.Error(err))
 		}
@@ -121,7 +122,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Fatal("Failed to diff and compress savedata", zap.Error(err))
 		}
 
-		_, err = s.server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", saveOutput, s.charID)
+		_, err = s.Server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", saveOutput, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update platebox savedata in db", zap.Error(err))
 		}
@@ -129,7 +130,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("Wrote recompressed platebox back to DB.")
 	} else {
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET platebox=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update platedata savedata in db", zap.Error(err))
 		}
@@ -140,7 +141,7 @@ func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadPlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPlateMyset)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT platemyset FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT platemyset FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get presets sigil savedata from db", zap.Error(err))
 	}
@@ -157,7 +158,7 @@ func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateMyset)
 	// looks to always return the full thing, simply update database, no extra processing
 
-	_, err := s.server.db.Exec("UPDATE characters SET platemyset=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET platemyset=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update platemyset savedata in db", zap.Error(err))
 	}

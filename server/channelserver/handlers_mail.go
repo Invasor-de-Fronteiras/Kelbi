@@ -8,6 +8,7 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
@@ -37,7 +38,7 @@ func (m *Mail) Send(s *Session, transaction *sql.Tx) error {
 	var err error
 
 	if transaction == nil {
-		_, err = s.server.db.Exec(query, m.SenderID, m.RecipientID, m.Subject, m.Body, m.AttachedItemID, m.AttachedItemAmount, m.IsGuildInvite)
+		_, err = s.Server.db.Exec(query, m.SenderID, m.RecipientID, m.Subject, m.Body, m.AttachedItemID, m.AttachedItemAmount, m.IsGuildInvite)
 	} else {
 		_, err = transaction.Exec(query, m.SenderID, m.RecipientID, m.Subject, m.Body, m.AttachedItemID, m.AttachedItemAmount, m.IsGuildInvite)
 	}
@@ -61,7 +62,7 @@ func (m *Mail) Send(s *Session, transaction *sql.Tx) error {
 }
 
 func (m *Mail) MarkRead(s *Session) error {
-	_, err := s.server.db.Exec(`
+	_, err := s.Server.db.Exec(`
 		UPDATE mail SET read = true WHERE id = $1
 	`, m.ID)
 
@@ -78,7 +79,7 @@ func (m *Mail) MarkRead(s *Session) error {
 }
 
 func (m *Mail) MarkDeleted(s *Session) error {
-	_, err := s.server.db.Exec(`
+	_, err := s.Server.db.Exec(`
 		UPDATE mail SET deleted = true WHERE id = $1
 	`, m.ID)
 
@@ -95,7 +96,7 @@ func (m *Mail) MarkDeleted(s *Session) error {
 }
 
 func (m *Mail) MarkAcquired(s *Session) error {
-	_, err := s.server.db.Exec(`
+	_, err := s.Server.db.Exec(`
 		UPDATE mail SET attached_item_received = true WHERE id = $1
 	`, m.ID)
 
@@ -112,7 +113,7 @@ func (m *Mail) MarkAcquired(s *Session) error {
 }
 
 func (m *Mail) MarkLocked(s *Session, locked bool) error {
-	_, err := s.server.db.Exec(`
+	_, err := s.Server.db.Exec(`
 		UPDATE mail SET locked = $1 WHERE id = $2
 	`, locked, m.ID)
 
@@ -129,7 +130,7 @@ func (m *Mail) MarkLocked(s *Session, locked bool) error {
 }
 
 func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
-	rows, err := s.server.db.Queryx(`
+	rows, err := s.Server.db.Queryx(`
 		SELECT
 			m.id,
 			m.sender_id,
@@ -176,7 +177,7 @@ func GetMailListForCharacter(s *Session, charID uint32) ([]Mail, error) {
 }
 
 func GetMailByID(s *Session, ID int) (*Mail, error) {
-	row := s.server.db.QueryRowx(`
+	row := s.Server.db.QueryRowx(`
 		SELECT
 			m.id,
 			m.sender_id,
@@ -242,7 +243,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 }
 
 func getCharacterName(s *Session, charID uint32) (string, error) {
-	row := s.server.db.QueryRow("SELECT name FROM characters WHERE id = $1", charID)
+	row := s.Server.db.QueryRow("SELECT name FROM characters WHERE id = $1", charID)
 
 	charName := ""
 
@@ -258,7 +259,7 @@ func getCharacterName(s *Session, charID uint32) (string, error) {
 func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMail)
 
-	mailId := s.mailList[pkt.AccIndex]
+	mailId := s.MailList[pkt.AccIndex]
 
 	if mailId == 0 {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -285,27 +286,27 @@ func handleMsgMhfReadMail(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfListMail)
 
-	mail, err := GetMailListForCharacter(s, s.charID)
+	mail, err := GetMailListForCharacter(s, s.CharID)
 
 	if err != nil {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		panic(err)
 	}
 
-	if s.mailList == nil {
-		s.mailList = make([]int, 256)
+	if s.MailList == nil {
+		s.MailList = make([]int, 256)
 	}
 
 	msg := byteframe.NewByteFrame()
 
 	msg.WriteUint32(uint32(len(mail)))
 
-	startIndex := s.mailAccIndex
+	startIndex := s.MailAccIndex
 
 	for i, m := range mail {
 		accIndex := startIndex + uint8(i)
-		s.mailList[accIndex] = m.ID
-		s.mailAccIndex++
+		s.MailList[accIndex] = m.ID
+		s.MailAccIndex++
 
 		itemAttached := m.AttachedItemID != 0
 
@@ -329,7 +330,7 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 		// flags |= 0x04
 
 		// Workaround until EN mail items are patched
-		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.DisableMailItems {
+		if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.DisableMailItems {
 			if itemAttached {
 				flags |= 0x08
 			}
@@ -361,7 +362,7 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfOprtMail(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOprtMail)
 
-	mail, err := GetMailByID(s, s.mailList[pkt.AccIndex])
+	mail, err := GetMailByID(s, s.MailList[pkt.AccIndex])
 	if err != nil {
 		panic(err)
 	}
@@ -392,7 +393,7 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 	`
 
 	if pkt.RecipientID == 0 { // Guild mail
-		g, err := GetGuildInfoByCharacterId(s, s.charID)
+		g, err := GetGuildInfoByCharacterId(s, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to get guild info for mail")
 		}
@@ -401,13 +402,13 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Fatal("Failed to get guild members for mail")
 		}
 		for i := 0; i < len(gm); i++ {
-			_, err := s.server.db.Exec(query, s.charID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false)
+			_, err := s.Server.db.Exec(query, s.CharID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false)
 			if err != nil {
 				s.logger.Fatal("Failed to send mail")
 			}
 		}
 	} else {
-		_, err := s.server.db.Exec(query, s.charID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
+		_, err := s.Server.db.Exec(query, s.CharID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
 		if err != nil {
 			s.logger.Fatal("Failed to send mail")
 		}

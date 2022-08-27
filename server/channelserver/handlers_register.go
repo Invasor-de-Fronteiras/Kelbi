@@ -9,7 +9,7 @@ import (
 func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysOperateRegister)
 	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
-	s.server.raviente.Lock()
+	s.Server.raviente.Lock()
 
 	switch pkt.SemaphoreID {
 	case 3:
@@ -21,8 +21,8 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			data := bf.ReadUint32()
 			resp.WriteUint8(1)
 			resp.WriteUint8(dest)
-			ref := &s.server.raviente.state.stateData[dest]
-			damageMultiplier := s.server.raviente.state.damageMultiplier
+			ref := &s.Server.raviente.state.stateData[dest]
+			damageMultiplier := s.Server.raviente.state.damageMultiplier
 			switch op {
 			case 2:
 				resp.WriteUint32(*ref)
@@ -60,7 +60,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			data := bf.ReadUint32()
 			resp.WriteUint8(1)
 			resp.WriteUint8(dest)
-			ref := &s.server.raviente.support.supportData[dest]
+			ref := &s.Server.raviente.support.supportData[dest]
 			switch op {
 			case 2:
 				resp.WriteUint32(*ref)
@@ -89,21 +89,21 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			case 0:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.nextTime = data
+				s.Server.raviente.register.nextTime = data
 			case 1:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.startTime = data
+				s.Server.raviente.register.startTime = data
 			case 2:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.killedTime = data
+				s.Server.raviente.register.killedTime = data
 			case 3:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.postTime = data
+				s.Server.raviente.register.postTime = data
 			case 4:
-				ref := &s.server.raviente.register.register[0]
+				ref := &s.Server.raviente.register.register[0]
 				switch op {
 				case 2:
 					resp.WriteUint32(*ref)
@@ -120,9 +120,9 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			case 5:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.carveQuest = data
+				s.Server.raviente.register.carveQuest = data
 			case 6:
-				ref := &s.server.raviente.register.register[1]
+				ref := &s.Server.raviente.register.register[1]
 				switch op {
 				case 2:
 					resp.WriteUint32(*ref)
@@ -137,7 +137,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 					resp.WriteUint32(data)
 				}
 			case 7:
-				ref := &s.server.raviente.register.register[2]
+				ref := &s.Server.raviente.register.register[2]
 				switch op {
 				case 2:
 					resp.WriteUint32(*ref)
@@ -152,7 +152,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 					resp.WriteUint32(data)
 				}
 			case 8:
-				ref := &s.server.raviente.register.register[3]
+				ref := &s.Server.raviente.register.register[3]
 				switch op {
 				case 2:
 					resp.WriteUint32(*ref)
@@ -169,13 +169,13 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			case 9:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.maxPlayers = data
+				s.Server.raviente.register.maxPlayers = data
 			case 10:
 				resp.WriteUint32(0)
 				resp.WriteUint32(data)
-				s.server.raviente.register.ravienteType = data
+				s.Server.raviente.register.ravienteType = data
 			case 11:
-				ref := &s.server.raviente.register.register[4]
+				ref := &s.Server.raviente.register.register[4]
 				switch op {
 				case 2:
 					resp.WriteUint32(*ref)
@@ -198,7 +198,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	}
 	s.notifyRavi()
-	s.server.raviente.Unlock()
+	s.Server.raviente.Unlock()
 }
 
 func handleMsgSysLoadRegister(s *Session, p mhfpacket.MHFPacket) {
@@ -210,24 +210,24 @@ func handleMsgSysLoadRegister(s *Session, p mhfpacket.MHFPacket) {
 		resp := byteframe.NewByteFrame()
 		resp.WriteUint8(0)
 		resp.WriteUint8(12)
-		resp.WriteUint32(s.server.raviente.register.nextTime)
-		resp.WriteUint32(s.server.raviente.register.startTime)
-		resp.WriteUint32(s.server.raviente.register.killedTime)
-		resp.WriteUint32(s.server.raviente.register.postTime)
-		resp.WriteUint32(s.server.raviente.register.register[0])
-		resp.WriteUint32(s.server.raviente.register.carveQuest)
-		resp.WriteUint32(s.server.raviente.register.register[1])
-		resp.WriteUint32(s.server.raviente.register.register[2])
-		resp.WriteUint32(s.server.raviente.register.register[3])
-		resp.WriteUint32(s.server.raviente.register.maxPlayers)
-		resp.WriteUint32(s.server.raviente.register.ravienteType)
-		resp.WriteUint32(s.server.raviente.register.register[4])
+		resp.WriteUint32(s.Server.raviente.register.nextTime)
+		resp.WriteUint32(s.Server.raviente.register.startTime)
+		resp.WriteUint32(s.Server.raviente.register.killedTime)
+		resp.WriteUint32(s.Server.raviente.register.postTime)
+		resp.WriteUint32(s.Server.raviente.register.register[0])
+		resp.WriteUint32(s.Server.raviente.register.carveQuest)
+		resp.WriteUint32(s.Server.raviente.register.register[1])
+		resp.WriteUint32(s.Server.raviente.register.register[2])
+		resp.WriteUint32(s.Server.raviente.register.register[3])
+		resp.WriteUint32(s.Server.raviente.register.maxPlayers)
+		resp.WriteUint32(s.Server.raviente.register.ravienteType)
+		resp.WriteUint32(s.Server.raviente.register.register[4])
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	case 29:
 		resp := byteframe.NewByteFrame()
 		resp.WriteUint8(0)
 		resp.WriteUint8(29)
-		for _, v := range s.server.raviente.state.stateData {
+		for _, v := range s.Server.raviente.state.stateData {
 			resp.WriteUint32(v)
 		}
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -235,7 +235,7 @@ func handleMsgSysLoadRegister(s *Session, p mhfpacket.MHFPacket) {
 		resp := byteframe.NewByteFrame()
 		resp.WriteUint8(0)
 		resp.WriteUint8(25)
-		for _, v := range s.server.raviente.support.supportData {
+		for _, v := range s.Server.raviente.support.supportData {
 			resp.WriteUint32(v)
 		}
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -257,35 +257,35 @@ func (s *Session) notifyRavi() {
 	raviNotif.WriteUint16(0x0010) // End it.
 	sema := getRaviSemaphore(s)
 	if sema != "" {
-		for session := range s.server.Semaphore[sema].clients {
+		for session := range s.Server.Semaphore[sema].clients {
 			session.QueueSend(raviNotif.Data())
 		}
 	}
 }
 
 func getRaviSemaphore(s *Session) string {
-	for _, semaphore := range s.server.Semaphore {
-		if strings.HasPrefix(semaphore.id_semaphore, "hs_l0u3B5") && strings.HasSuffix(semaphore.id_semaphore, "3") {
-			return semaphore.id_semaphore
+	for _, semaphore := range s.Server.Semaphore {
+		if strings.HasPrefix(semaphore.StageId, "hs_l0u3B5") && strings.HasSuffix(semaphore.StageId, "3") {
+			return semaphore.StageId
 		}
 	}
 	return ""
 }
 
 func resetRavi(s *Session) {
-	s.server.raviente.Lock()
-	s.server.raviente.register.nextTime = 0
-	s.server.raviente.register.startTime = 0
-	s.server.raviente.register.killedTime = 0
-	s.server.raviente.register.postTime = 0
-	s.server.raviente.register.ravienteType = 0
-	s.server.raviente.register.maxPlayers = 0
-	s.server.raviente.register.carveQuest = 0
-	s.server.raviente.state.damageMultiplier = 1
-	s.server.raviente.register.register = []uint32{0, 0, 0, 0, 0}
-	s.server.raviente.state.stateData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	s.server.raviente.support.supportData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	s.server.raviente.Unlock()
+	s.Server.raviente.Lock()
+	s.Server.raviente.register.nextTime = 0
+	s.Server.raviente.register.startTime = 0
+	s.Server.raviente.register.killedTime = 0
+	s.Server.raviente.register.postTime = 0
+	s.Server.raviente.register.ravienteType = 0
+	s.Server.raviente.register.maxPlayers = 0
+	s.Server.raviente.register.carveQuest = 0
+	s.Server.raviente.state.damageMultiplier = 1
+	s.Server.raviente.register.register = []uint32{0, 0, 0, 0, 0}
+	s.Server.raviente.state.stateData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	s.Server.raviente.support.supportData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	s.Server.raviente.Unlock()
 }
 
 func handleMsgSysNotifyRegister(s *Session, p mhfpacket.MHFPacket) {}

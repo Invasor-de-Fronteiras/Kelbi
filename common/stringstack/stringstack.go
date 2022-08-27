@@ -6,8 +6,8 @@ import (
 
 // StringStack is a basic LIFO "stack" for storing strings.
 type StringStack struct {
-	Locked bool
-	stack  []string
+	Locked bool     `json:"locked"`
+	Stack  []string `json:"stack"`
 }
 
 // New creates a new instance of StringStack
@@ -17,7 +17,7 @@ func New() *StringStack {
 
 // Set sets up a new StringStack
 func (s *StringStack) Set(v string) {
-	s.stack = []string{v}
+	s.Stack = []string{v}
 }
 
 // Lock freezes the StringStack
@@ -36,17 +36,17 @@ func (s *StringStack) Unlock() {
 
 // Push pushes a string onto the stack.
 func (s *StringStack) Push(v string) {
-	s.stack = append(s.stack, v)
+	s.Stack = append(s.Stack, v)
 }
 
 // Pop pops a string from the stack.
 func (s *StringStack) Pop() (string, error) {
-	if len(s.stack) == 0 {
+	if len(s.Stack) == 0 {
 		return "", errors.New("no items on stack")
 	}
 
-	x := s.stack[len(s.stack)-1]
-	s.stack = s.stack[:len(s.stack)-1]
+	x := s.Stack[len(s.Stack)-1]
+	s.Stack = s.Stack[:len(s.Stack)-1]
 
 	return x, nil
 }

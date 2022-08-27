@@ -19,10 +19,10 @@ type Object struct {
 	Z           float32 `json:"z"`
 }
 
-// stageBinaryKey is a struct used as a map key for identifying a stage binary part.
-type stageBinaryKey struct {
-	id0 uint8
-	id1 uint8
+// StageBinaryKey is a struct used as a map key for identifying a stage binary part.
+type StageBinaryKey struct {
+	Id0 uint8 `json:"id0"`
+	Id1 uint8 `json:"id1"`
 }
 
 // Stage holds stage-specific information
@@ -46,7 +46,7 @@ type Stage struct {
 
 	// These are raw binary blobs that the stage owner sets,
 	// other clients expect the server to echo them back in the exact same format.
-	RawBinaryData map[stageBinaryKey][]byte `json:"-"`
+	RawBinaryData map[StageBinaryKey][]byte `json:"-"`
 
 	MaxPlayers uint16 `json:"maxPlayers"`
 	Password   string `json:"password"`
@@ -61,7 +61,7 @@ func NewStage(ID string) *Stage {
 		ReservedClientSlots: make(map[uint32]bool),
 		Objects:             make(map[uint32]*Object),
 		ObjectIndex:         0,
-		RawBinaryData:       make(map[stageBinaryKey][]byte),
+		RawBinaryData:       make(map[StageBinaryKey][]byte),
 		MaxPlayers:          4,
 		CreatedAt:           time.Now().Format("01-02-2006 15:04:05"),
 	}
