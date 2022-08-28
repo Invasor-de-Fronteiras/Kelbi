@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"erupe-ce/network/mhfpacket"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -42,7 +43,7 @@ type GuildAlliance struct {
 }
 
 func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
-	rows, err := s.server.db.Queryx(fmt.Sprintf(`
+	rows, err := s.Server.db.Queryx(fmt.Sprintf(`
 		%s
 		WHERE ga.id = $1
 	`, allianceInfoSelectQuery), AllianceID)
@@ -102,7 +103,7 @@ func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (
 
 func handleMsgMhfCreateJoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateJoint)
-	_, err := s.server.db.Exec("INSERT INTO guild_alliances (name, parent_id) VALUES ($1, $2)", pkt.Name, pkt.GuildID)
+	_, err := s.Server.db.Exec("INSERT INTO guild_alliances (name, parent_id) VALUES ($1, $2)", pkt.Name, pkt.GuildID)
 	if err != nil {
 		s.logger.Fatal("Failed to create guild alliance in db", zap.Error(err))
 	}
@@ -123,8 +124,8 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Action {
 	case mhfpacket.OPERATE_JOINT_DISBAND:
-		if guild.LeaderCharID == s.charID && alliance.ParentGuildID == guild.ID {
-			_, err = s.server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
+		if guild.LeaderCharID == s.CharID && alliance.ParentGuildID == guild.ID {
+			_, err = s.Server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
 			if err != nil {
 				s.logger.Fatal("Failed to disband alliance", zap.Error(err))
 			}
@@ -132,19 +133,19 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			s.logger.Warn(
 				"Non-owner of alliance attempted disband",
-				zap.Uint32("CharID", s.charID),
+				zap.Uint32("CharID", s.CharID),
 				zap.Uint32("AllyID", alliance.ID),
 			)
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		}
 	case mhfpacket.OPERATE_JOINT_LEAVE:
-		if guild.LeaderCharID == s.charID {
+		if guild.LeaderCharID == s.CharID {
 			// delete alliance application
 			// or leave alliance
 		} else {
 			s.logger.Warn(
 				"Non-owner of guild attempted alliance leave",
-				zap.Uint32("CharID", s.charID),
+				zap.Uint32("CharID", s.CharID),
 			)
 			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		}

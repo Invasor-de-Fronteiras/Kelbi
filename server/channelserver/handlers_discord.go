@@ -118,7 +118,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 
 		isQuest := stage.isQuest()
 		for client := range stage.Clients {
-			char, err := s.getCharacterForUser(int(client.charID))
+			char, err := s.getCharacterForUser(int(client.CharID))
 			if err == nil {
 				if len(char.Name) > bigNameLen {
 					bigNameLen = len(char.Name)
@@ -259,7 +259,7 @@ func getCharInfo(server *Server, charName string) string {
 
 			if cleanStr(client.Name) == cleanStr(charName) {
 				infos = append(infos, CharInfo{
-					CharID:    client.charID,
+					CharID:    client.CharID,
 					CharName:  client.Name,
 					IP:        client.rawConn.RemoteAddr().String(),
 					StageId:   stage.Id,
@@ -295,7 +295,7 @@ func disconnectChar(server *Server, charName string) string {
 
 			if cleanStr(client.Name) == cleanStr(charName) {
 				infos = append(infos, CharInfo{
-					CharID:    client.charID,
+					CharID:    client.CharID,
 					CharName:  client.Name,
 					StageId:   stage.Id,
 					StageName: stage.GetName(),

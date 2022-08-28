@@ -14,8 +14,8 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	var nextID uint32
 	for {
 		exists := false
-		nextID = s.stage.NextObjectID()
-		for _, object := range s.stage.Objects {
+		nextID = s.Stage.NextObjectID()
+		for _, object := range s.Stage.Objects {
 			if object.Id == nextID {
 				exists = true
 				break
@@ -26,16 +26,16 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	s.stage.Lock()
+	s.Stage.Lock()
 	newObj := &Object{
 		Id:          nextID,
-		OwnerCharID: s.charID,
+		OwnerCharID: s.CharID,
 		X:           pkt.X,
 		Y:           pkt.Y,
 		Z:           pkt.Z,
 	}
-	s.stage.Objects[s.charID] = newObj
-	s.stage.Unlock()
+	s.Stage.Objects[s.CharID] = newObj
+	s.Stage.Unlock()
 
 	// Response to our requesting client.
 	resp := byteframe.NewByteFrame()
@@ -51,7 +51,7 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	s.logger.Info(fmt.Sprintf("Broadcasting new object: %s (%d)", s.Name, newObj.Id))
-	s.stage.BroadcastMHF(dupObjUpdate, s)
+	s.Stage.BroadcastMHF(dupObjUpdate, s)
 }
 
 func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
@@ -59,19 +59,19 @@ func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)
 
-	if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.LogInboundMessages {
-		fmt.Printf("[%s - %s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, s.stageID, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
+	if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.LogInboundMessages {
+		fmt.Printf("[%s - %s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, s.StageID, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
 	}
-	s.stage.Lock()
-	object, ok := s.stage.Objects[s.charID]
+	s.Stage.Lock()
+	object, ok := s.Stage.Objects[s.CharID]
 	if ok {
 		object.X = pkt.X
 		object.Y = pkt.Y
 		object.Z = pkt.Z
 	}
-	s.stage.Unlock()
+	s.Stage.Unlock()
 	// One of the few packets we can just re-broadcast directly.
-	s.stage.BroadcastMHF(pkt, s)
+	s.Stage.BroadcastMHF(pkt, s)
 }
 
 func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {}
@@ -80,16 +80,16 @@ func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetObjectBinary)
-	for _, session := range s.server.Sessions {
-		if session.charID == s.charID {
-			s.server.userBinaryPartsLock.Lock()
-			s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 3}] = pkt.RawDataPayload
-			s.server.userBinaryPartsLock.Unlock()
+	for _, session := range s.Server.Sessions {
+		if session.CharID == s.CharID {
+			s.Server.userBinaryPartsLock.Lock()
+			s.Server.userBinaryParts[userBinaryPartID{charID: s.CharID, index: 3}] = pkt.RawDataPayload
+			s.Server.userBinaryPartsLock.Unlock()
 			msg := &mhfpacket.MsgSysNotifyUserBinary{
-				CharID:     s.charID,
+				CharID:     s.CharID,
 				BinaryType: 3,
 			}
-			s.server.BroadcastMHF(msg, s)
+			s.Server.BroadcastMHF(msg, s)
 		}
 	}
 }

@@ -6,12 +6,13 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
-	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 // THERE ARE [PARTENER] [MERCENARY] [OTOMO AIRU]
@@ -24,7 +25,7 @@ func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadPartner)
 	// load partner from database
 	var data []byte
-	err := s.server.db.QueryRow("SELECT partner FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT partner FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get partner savedata from db", zap.Error(err))
 	}
@@ -42,7 +43,7 @@ func handleMsgMhfSavePartner(s *Session, p mhfpacket.MHFPacket) {
 
 	dumpSaveData(s, pkt.RawDataPayload, "_partner")
 
-	_, err := s.server.db.Exec("UPDATE characters SET partner=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET partner=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update partner savedata in db", zap.Error(err))
 	}
@@ -58,7 +59,7 @@ func handleMsgMhfLoadLegendDispatch(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHunterNavi)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get hunter navigation savedata from db", zap.Error(err))
 	}
@@ -82,7 +83,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		var data []byte
 
 		// Load existing save
-		err := s.server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.charID).Scan(&data)
+		err := s.Server.db.QueryRow("SELECT hunternavi FROM characters WHERE id = $1", s.CharID).Scan(&data)
 		if err != nil {
 			s.logger.Fatal("Failed to get hunternavi savedata from db", zap.Error(err))
 		}
@@ -98,7 +99,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("Diffing...")
 		saveOutput := deltacomp.ApplyDataDiff(pkt.RawDataPayload, data)
 
-		_, err = s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", saveOutput, s.charID)
+		_, err = s.Server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", saveOutput, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update hunternavi savedata in db", zap.Error(err))
 		}
@@ -106,7 +107,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Info("Wrote recompressed hunternavi back to DB.")
 	} else {
 		// simply update database, no extra processing
-		_, err := s.server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update hunternavi savedata in db", zap.Error(err))
 		}
@@ -149,13 +150,13 @@ func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 	if MercDataSize > 0 {
 		// the save packet has an extra null byte after its size
-		_, err := s.server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", MercData[:MercDataSize], s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", MercData[:MercDataSize], s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update savemercenary and gcp in db", zap.Error(err))
 		}
 	}
 	// gcp value is always present regardless
-	_, err := s.server.db.Exec("UPDATE characters SET gcp=$1 WHERE id=$2", GCPValue, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET gcp=$1 WHERE id=$2", GCPValue, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update savemercenary and gcp in db", zap.Error(err))
 	}
@@ -167,12 +168,12 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	var data []byte
 	var gcp uint32
 	// still has issues
-	err := s.server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get savemercenary data from db", zap.Error(err))
 	}
 
-	err = s.server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id = $1", s.charID).Scan(&gcp)
+	err = s.Server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id = $1", s.CharID).Scan(&gcp)
 	if err != nil {
 		panic(err)
 	}
@@ -204,7 +205,7 @@ func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadOtomoAirou)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT otomoairou FROM characters WHERE id = $1", s.charID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT otomoairou FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get partnyaa savedata from db", zap.Error(err))
 	}
@@ -230,7 +231,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		catID := bf.ReadUint32()
 		if catID == 0 {
 			var nextID uint32
-			_ = s.server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&nextID)
+			_ = s.Server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&nextID)
 			bf.Seek(-4, io.SeekCurrent)
 			bf.WriteUint32(nextID)
 		}
@@ -241,7 +242,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {
 		comp = append([]byte{0x01}, comp...)
-		s.server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.charID)
+		s.Server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.CharID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -249,8 +250,8 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateAiroulist)
 	resp := byteframe.NewByteFrame()
-	if _, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, "airoulist.bin")); err == nil {
-		data, _ := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "airoulist.bin"))
+	if _, err := os.Stat(filepath.Join(s.Server.erupeConfig.BinPath, "airoulist.bin")); err == nil {
+		data, _ := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, "airoulist.bin"))
 		resp.WriteBytes(data)
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 		return
@@ -290,7 +291,7 @@ func getGuildAirouList(s *Session) []CatDefinition {
 
 	// returning 0 cats on any guild issues
 	// can probably optimise all of the guild queries pretty heavily
-	guild, err = GetGuildInfoByCharacterId(s, s.charID)
+	guild, err = GetGuildInfoByCharacterId(s, s.CharID)
 	if err != nil {
 		return guildCats
 	}
@@ -300,11 +301,11 @@ func getGuildAirouList(s *Session) []CatDefinition {
 	tempBanDuration := 43200 - (1800) // Minus hunt time
 	bannedCats := make(map[uint32]int)
 	var csvTemp string
-	rows, err := s.server.db.Query(`SELECT cats_used
+	rows, err := s.Server.db.Query(`SELECT cats_used
 	FROM guild_hunts gh
 	INNER JOIN characters c
 	ON gh.host_id = c.id
-	WHERE c.id=$1 AND gh.return+$2>$3`, s.charID, tempBanDuration, Time_Current_Adjusted().Unix())
+	WHERE c.id=$1 AND gh.return+$2>$3`, s.CharID, tempBanDuration, Time_Current_Adjusted().Unix())
 	if err != nil {
 		s.logger.Warn("Failed to get recently used airous", zap.Error(err))
 	}
@@ -316,7 +317,7 @@ func getGuildAirouList(s *Session) []CatDefinition {
 	}
 
 	// ellie's GetGuildMembers didn't seem to pull leader?
-	rows, err = s.server.db.Query(`SELECT c.otomoairou
+	rows, err = s.Server.db.Query(`SELECT c.otomoairou
 	FROM characters c
 	INNER JOIN guild_characters gc
 	ON gc.character_id = c.id

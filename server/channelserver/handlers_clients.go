@@ -11,15 +11,15 @@ import (
 func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysEnumerateClient)
 
-	s.server.stagesLock.RLock()
-	stage, ok := s.server.Stages[pkt.StageID]
+	s.Server.stagesLock.RLock()
+	stage, ok := s.Server.Stages[pkt.StageID]
 	if !ok {
-		s.server.stagesLock.RUnlock()
+		s.Server.stagesLock.RUnlock()
 		s.logger.Warn("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	s.server.stagesLock.RUnlock()
+	s.Server.stagesLock.RUnlock()
 
 	// Read-lock the stage and make the response with all of the charID's in the stage.
 	resp := byteframe.NewByteFrame()
@@ -61,14 +61,14 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 	var count uint32
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(0) // Blacklist count
-	err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
+	err := s.Server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.CharID).Scan(&csv)
 	if err != nil {
 		panic(err)
 	}
 	cids := stringsupport.CSVElems(csv)
 	for _, cid := range cids {
 		var name string
-		err = s.server.db.QueryRow("SELECT name FROM characters WHERE id=$1", cid).Scan(&name)
+		err = s.Server.db.QueryRow("SELECT name FROM characters WHERE id=$1", cid).Scan(&name)
 		if err != nil {
 			continue
 		}
@@ -87,7 +87,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 
 	var csv string
 	if pkt.Blacklist {
-		err := s.server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.charID).Scan(&csv)
+		err := s.Server.db.QueryRow("SELECT blocked FROM characters WHERE id=$1", s.CharID).Scan(&csv)
 		if err != nil {
 			panic(err)
 		}
@@ -96,9 +96,9 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			csv = stringsupport.CSVAdd(csv, int(pkt.CharID))
 		}
-		s.server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.charID)
+		s.Server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.CharID)
 	} else { // Friendlist
-		err := s.server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.charID).Scan(&csv)
+		err := s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&csv)
 		if err != nil {
 			panic(err)
 		}
@@ -107,7 +107,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			csv = stringsupport.CSVAdd(csv, int(pkt.CharID))
 		}
-		s.server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.charID)
+		s.Server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.CharID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

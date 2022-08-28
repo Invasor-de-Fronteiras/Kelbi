@@ -8,13 +8,14 @@ import (
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network/mhfpacket"
+
 	"go.uber.org/zap"
 )
 
 func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfPostGuildScout)
 
-	actorCharGuildData, err := GetCharacterGuildData(s, s.charID)
+	actorCharGuildData, err := GetCharacterGuildData(s, s.CharID)
 
 	if err != nil {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
@@ -45,7 +46,7 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	transaction, err := s.server.db.Begin()
+	transaction, err := s.Server.db.Begin()
 
 	if err != nil {
 		panic(err)
@@ -59,14 +60,14 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
-	senderName, err := getCharacterName(s, s.charID)
+	senderName, err := getCharacterName(s, s.CharID)
 
 	if err != nil {
 		panic(err)
 	}
 
 	mail := &Mail{
-		SenderID:    s.charID,
+		SenderID:    s.CharID,
 		RecipientID: pkt.CharID,
 		Subject:     "Guild! ヽ(・∀・)ﾉ",
 		Body: fmt.Sprintf(
@@ -98,7 +99,7 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfCancelGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCancelGuildScout)
 
-	guildCharData, err := GetCharacterGuildData(s, s.charID)
+	guildCharData, err := GetCharacterGuildData(s, s.CharID)
 
 	if err != nil {
 		panic(err)
@@ -135,23 +136,23 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
-	_, err = guild.GetApplicationForCharID(s, s.charID, GuildApplicationTypeInvited)
+	_, err = guild.GetApplicationForCharID(s, s.CharID, GuildApplicationTypeInvited)
 
 	if err != nil {
 		s.logger.Warn(
 			"could not retrieve guild invitation",
 			zap.Error(err),
 			zap.Uint32("guildID", guild.ID),
-			zap.Uint32("charID", s.charID),
+			zap.Uint32("charID", s.CharID),
 		)
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	if pkt.Answer {
-		err = guild.AcceptApplication(s, s.charID)
+		err = guild.AcceptApplication(s, s.CharID)
 	} else {
-		err = guild.RejectApplication(s, s.charID)
+		err = guild.RejectApplication(s, s.CharID)
 	}
 
 	if err != nil {
@@ -168,7 +169,7 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 
 	successMail := Mail{
 		SenderID:      pkt.LeaderID,
-		RecipientID:   s.charID,
+		RecipientID:   s.CharID,
 		Subject:       "Happy days!",
 		Body:          fmt.Sprintf("You successfully joined %s and should be proud of all you have accomplished.", guild.Name),
 		IsGuildInvite: false,
@@ -188,20 +189,20 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildScoutList)
 
-	guildInfo, err := GetGuildInfoByCharacterId(s, s.charID)
+	guildInfo, err := GetGuildInfoByCharacterId(s, s.CharID)
 
-	if guildInfo == nil && s.prevGuildID == 0 {
+	if guildInfo == nil && s.PrevGuildID == 0 {
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
 	} else {
-		guildInfo, err = GetGuildInfoByID(s, s.prevGuildID)
+		guildInfo, err = GetGuildInfoByID(s, s.PrevGuildID)
 		if guildInfo == nil || err != nil {
 			doAckSimpleFail(s, pkt.AckHandle, nil)
 			return
 		}
 	}
 
-	rows, err := s.server.db.Queryx(`
+	rows, err := s.Server.db.Queryx(`
 		SELECT c.id, c.name, ga.actor_id
 			FROM guild_applications ga 
 			JOIN characters c ON c.id = ga.character_id
@@ -268,7 +269,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetRejectGuildScout)
 
-	row := s.server.db.QueryRow("SELECT restrict_guild_scout FROM characters WHERE id=$1", s.charID)
+	row := s.Server.db.QueryRow("SELECT restrict_guild_scout FROM characters WHERE id=$1", s.CharID)
 
 	var currentStatus bool
 
@@ -278,7 +279,7 @@ func handleMsgMhfGetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error(
 			"failed to retrieve character guild scout status",
 			zap.Error(err),
-			zap.Uint32("charID", s.charID),
+			zap.Uint32("charID", s.CharID),
 		)
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return
@@ -296,13 +297,13 @@ func handleMsgMhfGetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSetRejectGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetRejectGuildScout)
 
-	_, err := s.server.db.Exec("UPDATE characters SET restrict_guild_scout=$1 WHERE id=$2", pkt.Reject, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET restrict_guild_scout=$1 WHERE id=$2", pkt.Reject, s.CharID)
 
 	if err != nil {
 		s.logger.Error(
 			"failed to update character guild scout status",
 			zap.Error(err),
-			zap.Uint32("charID", s.charID),
+			zap.Uint32("charID", s.CharID),
 		)
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 		return

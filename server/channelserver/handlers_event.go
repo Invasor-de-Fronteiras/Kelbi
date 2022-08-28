@@ -119,7 +119,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 
 	var loginBoostStatus []loginBoost
 	insert := false
-	boostState, err := s.server.db.Query("SELECT week_req, week_count, available, end_time, last_week FROM login_boost_state WHERE char_id=$1 ORDER BY week_req ASC", s.charID)
+	boostState, err := s.Server.db.Query("SELECT week_req, week_count, available, end_time, last_week FROM login_boost_state WHERE char_id=$1 ORDER BY week_req ASC", s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -193,7 +193,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 			loginBoostStatus[d].WeekCount = 0
 		}
 		if !insert {
-			_, err := s.server.db.Exec(`UPDATE login_boost_state SET week_count=$1, end_time=$2, available=$3, last_week=$4 WHERE char_id=$5 AND week_req=$6`, loginBoostStatus[d].WeekCount, loginBoostStatus[d].Expiration, loginBoostStatus[d].Available, loginBoostStatus[d].LastWeek, s.charID, loginBoostStatus[d].WeekReq)
+			_, err := s.Server.db.Exec(`UPDATE login_boost_state SET week_count=$1, end_time=$2, available=$3, last_week=$4 WHERE char_id=$5 AND week_req=$6`, loginBoostStatus[d].WeekCount, loginBoostStatus[d].Expiration, loginBoostStatus[d].Available, loginBoostStatus[d].LastWeek, s.CharID, loginBoostStatus[d].WeekReq)
 			if err != nil {
 				panic(err)
 			}
@@ -201,7 +201,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 	}
 	for _, v := range loginBoostStatus {
 		if insert {
-			_, err := s.server.db.Exec(`INSERT INTO login_boost_state (char_id, week_req, week_count, available, last_week, end_time) VALUES ($1,$2,$3,$4,$5, $6)`, s.charID, v.WeekReq, v.WeekCount, v.Available, v.LastWeek, v.Expiration)
+			_, err := s.Server.db.Exec(`INSERT INTO login_boost_state (char_id, week_req, week_count, available, last_week, end_time) VALUES ($1,$2,$3,$4,$5, $6)`, s.CharID, v.WeekReq, v.WeekCount, v.Available, v.LastWeek, v.Expiration)
 			if err != nil {
 				panic(err)
 			}
@@ -240,7 +240,7 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 		t = t.Add(240 * time.Minute)
 		resp.WriteUint32(uint32(t.Unix()))
 	}
-	_, err := s.server.db.Exec(`UPDATE login_boost_state SET end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.charID, pkt.BoostWeekUsed)
+	_, err := s.Server.db.Exec(`UPDATE login_boost_state SET end_time=$1 WHERE char_id=$2 AND week_req=$3`, uint32(t.Unix()), s.CharID, pkt.BoostWeekUsed)
 
 	if err != nil {
 		panic(err)
@@ -251,7 +251,7 @@ func handleMsgMhfUseKeepLoginBoost(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
 	var t = timeServerFix.Tstatic_midnight()
-	var event int = s.server.erupeConfig.DevModeOptions.DivaEvent
+	var event int = s.Server.erupeConfig.DevModeOptions.DivaEvent
 
 	year, month, day := t.Date()
 	midnight := time.Date(year, month, day, 0, 0, 0, 0, t.Location())

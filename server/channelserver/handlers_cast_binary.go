@@ -42,7 +42,7 @@ func sendServerChatMessage(s *Session, message string) {
 	msgBinChat.Build(bf)
 
 	castedBin := &mhfpacket.MsgSysCastedBinary{
-		CharID:         s.charID,
+		CharID:         s.CharID,
 		MessageType:    BinaryMessageTypeChat,
 		RawDataPayload: bf.Data(),
 	}
@@ -109,7 +109,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 
 	// Make the response to forward to the other client(s).
 	resp := &mhfpacket.MsgSysCastedBinary{
-		CharID:         s.charID,
+		CharID:         s.CharID,
 		BroadcastType:  pkt.BroadcastType, // (The client never uses Type0 upon receiving)
 		MessageType:    pkt.MessageType,
 		RawDataPayload: realPayload,
@@ -118,25 +118,25 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	// Send to the proper recipients.
 	switch pkt.BroadcastType {
 	case BroadcastTypeWorld:
-		s.server.WorldcastMHF(resp, s, nil)
+		s.Server.WorldcastMHF(resp, s, nil)
 	case BroadcastTypeStage:
 		if isDiceCommand {
-			s.stage.BroadcastMHF(resp, nil) // send dice result back to caller
+			s.Stage.BroadcastMHF(resp, nil) // send dice result back to caller
 		} else {
-			s.stage.BroadcastMHF(resp, s)
+			s.Stage.BroadcastMHF(resp, s)
 		}
 	case BroadcastTypeServer:
 		if pkt.MessageType == 1 {
 			raviSema := getRaviSemaphore(s)
 			if raviSema != "" {
-				s.server.BroadcastMHF(resp, s)
+				s.Server.BroadcastMHF(resp, s)
 			}
 		} else {
-			s.server.BroadcastMHF(resp, s)
+			s.Server.BroadcastMHF(resp, s)
 		}
 	case BroadcastTypeTargeted:
 		for _, targetID := range (*msgBinTargeted).TargetCharIDs {
-			char := s.server.FindSessionByCharID(targetID)
+			char := s.Server.FindSessionByCharID(targetID)
 
 			if char != nil {
 				char.QueueSendMHF(resp)
@@ -144,9 +144,9 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		}
 	default:
 		s.Lock()
-		haveStage := s.stage != nil
+		haveStage := s.Stage != nil
 		if haveStage {
-			s.stage.BroadcastMHF(resp, s)
+			s.Stage.BroadcastMHF(resp, s)
 		}
 		s.Unlock()
 	}
@@ -180,18 +180,18 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 
 		// Discord integration
 		if chatMessage.Type == binpacket.ChatTypeLocal || chatMessage.Type == binpacket.ChatTypeParty {
-			s.server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
+			s.Server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
 		}
 		// RAVI COMMANDS V2
 		if strings.HasPrefix(chatMessage.Message, "!ravi") {
 			if getRaviSemaphore(s) != "" {
-				s.server.raviente.Lock()
+				s.Server.raviente.Lock()
 				if !strings.HasPrefix(chatMessage.Message, "!ravi ") {
 					sendServerChatMessage(s, "No Raviente command specified!")
 				} else {
 					if strings.HasPrefix(chatMessage.Message, "!ravi start") {
-						if s.server.raviente.register.startTime == 0 {
-							s.server.raviente.register.startTime = s.server.raviente.register.postTime
+						if s.Server.raviente.register.startTime == 0 {
+							s.Server.raviente.register.startTime = s.Server.raviente.register.postTime
 
 							sendServerChatMessage(s, "The Great Slaying will begin in a moment")
 							s.notifyRavi()
@@ -203,41 +203,41 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						n, numerr := fmt.Sscanf(chatMessage.Message, "!ravi sm %d", &num)
 						if numerr != nil || n != 1 {
 							sendServerChatMessage(s, "Error in command. Format: !ravi sm n")
-						} else if s.server.raviente.state.damageMultiplier == 1 {
+						} else if s.Server.raviente.state.damageMultiplier == 1 {
 							if num > 32 {
 								sendServerChatMessage(s, "Raviente multiplier too high, defaulting to 32x")
-								s.server.raviente.state.damageMultiplier = 32
+								s.Server.raviente.state.damageMultiplier = 32
 							} else {
 								sendServerChatMessage(s, fmt.Sprintf("Raviente multiplier set to %dx", num))
-								s.server.raviente.state.damageMultiplier = uint32(num)
+								s.Server.raviente.state.damageMultiplier = uint32(num)
 							}
 						} else {
-							sendServerChatMessage(s, fmt.Sprintf("Raviente multiplier is already set to %dx!", s.server.raviente.state.damageMultiplier))
+							sendServerChatMessage(s, fmt.Sprintf("Raviente multiplier is already set to %dx!", s.Server.raviente.state.damageMultiplier))
 						}
 					} else if strings.HasPrefix(chatMessage.Message, "!ravi cm") || strings.HasPrefix(chatMessage.Message, "!ravi checkmultiplier") {
-						sendServerChatMessage(s, fmt.Sprintf("Raviente multiplier is currently %dx", s.server.raviente.state.damageMultiplier))
+						sendServerChatMessage(s, fmt.Sprintf("Raviente multiplier is currently %dx", s.Server.raviente.state.damageMultiplier))
 					} else if strings.HasPrefix(chatMessage.Message, "!ravi sr") || strings.HasPrefix(chatMessage.Message, "!ravi sendres") {
-						if s.server.raviente.state.stateData[28] > 0 {
+						if s.Server.raviente.state.stateData[28] > 0 {
 							sendServerChatMessage(s, "Sending resurrection support!")
-							s.server.raviente.state.stateData[28] = 0
+							s.Server.raviente.state.stateData[28] = 0
 						} else {
 							sendServerChatMessage(s, "Resurrection support has not been requested!")
 						}
 					} else if strings.HasPrefix(chatMessage.Message, "!ravi ss") || strings.HasPrefix(chatMessage.Message, "!ravi sendsed") {
 						sendServerChatMessage(s, "Sending sedation support if requested!")
 						// Total BerRavi HP
-						HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
-						s.server.raviente.support.supportData[1] = HP
+						HP := s.Server.raviente.state.stateData[0] + s.Server.raviente.state.stateData[1] + s.Server.raviente.state.stateData[2] + s.Server.raviente.state.stateData[3] + s.Server.raviente.state.stateData[4]
+						s.Server.raviente.support.supportData[1] = HP
 					} else if strings.HasPrefix(chatMessage.Message, "!ravi rs") || strings.HasPrefix(chatMessage.Message, "!ravi reqsed") {
 						sendServerChatMessage(s, "Requesting sedation support!")
 						// Total BerRavi HP
-						HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
-						s.server.raviente.support.supportData[1] = HP + 12
+						HP := s.Server.raviente.state.stateData[0] + s.Server.raviente.state.stateData[1] + s.Server.raviente.state.stateData[2] + s.Server.raviente.state.stateData[3] + s.Server.raviente.state.stateData[4]
+						s.Server.raviente.support.supportData[1] = HP + 12
 					} else {
 						sendServerChatMessage(s, "Raviente command not recognised!")
 					}
 				}
-				s.server.raviente.Unlock()
+				s.Server.raviente.Unlock()
 			} else {
 				sendServerChatMessage(s, "No one has joined the Great Slaying!")
 			}

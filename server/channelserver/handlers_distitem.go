@@ -29,7 +29,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	distCount := 0
-	dists, err := s.server.db.Queryx(`
+	dists, err := s.Server.db.Queryx(`
 		SELECT d.id, event_name, description, times_acceptable,
 		min_hr, max_hr, min_sr, max_sr, min_gr, max_gr,
 		(
@@ -44,7 +44,7 @@ func handleMsgMhfEnumerateDistItem(s *Session, p mhfpacket.MHFPacket) {
 		END deadline
 		FROM distribution d
 		WHERE character_id = $1 AND type = $2 OR character_id IS NULL AND type = $2 ORDER BY id DESC;
-	`, s.charID, pkt.Unk0)
+	`, s.CharID, pkt.Unk0)
 	if err != nil {
 		s.logger.Error("Error getting distribution data from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -88,7 +88,7 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.DistributionID == 0 {
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 6))
 	} else {
-		row := s.server.db.QueryRowx("SELECT data FROM distribution WHERE id = $1", pkt.DistributionID)
+		row := s.Server.db.QueryRowx("SELECT data FROM distribution WHERE id = $1", pkt.DistributionID)
 		dist := &ItemDist{}
 		err := row.StructScan(dist)
 		if err != nil {
@@ -102,10 +102,10 @@ func handleMsgMhfApplyDistItem(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(dist.Data)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 
-		_, err = s.server.db.Exec(`
+		_, err = s.Server.db.Exec(`
 			INSERT INTO public.distributions_accepted
 			VALUES ($1, $2)
-		`, pkt.DistributionID, s.charID)
+		`, pkt.DistributionID, s.CharID)
 		if err != nil {
 			s.logger.Error("Error updating accepted dist count", zap.Error(err))
 		}
@@ -120,7 +120,7 @@ func handleMsgMhfAcquireDistItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetDistDescription(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetDistDescription)
 	var desc string
-	err := s.server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&desc)
+	err := s.Server.db.QueryRow("SELECT description FROM distribution WHERE id = $1", pkt.DistributionID).Scan(&desc)
 	if err != nil {
 		s.logger.Error("Error parsing item distribution description", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))

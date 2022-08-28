@@ -23,26 +23,26 @@ type Session struct {
 	sync.Mutex
 	logger        *zap.Logger
 	hasLoggerName bool
-	server        *Server
+	Server        *Server `json:"-"`
 	rawConn       net.Conn
 	cryptConn     *network.CryptConn
 	sendPackets   chan []byte
 	clientContext *clientctx.ClientContext
 
-	userEnteredStage bool // If the user has entered a stage before
-	myseries         MySeries
-	stageID          string
-	stage            *Stage
-	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
-	stagePass        string // Temporary storage
-	prevGuildID      uint32 // Stores the last GuildID used in InfoGuild
-	charID           uint32
-	logKey           []byte
-	sessionStart     int64
-	rights           uint32
-	token            string
+	UserEnteredStage bool     `json:"userEnteredStage"` // If the user has entered a stage before
+	MySeries         MySeries `json:"mySeries"`
+	StageID          string   `json:"stageID"`
+	Stage            *Stage   `json:"stage"`
+	ReservationStage *Stage   `json:"reservationStage"` // Required for the stateful MsgSysUnreserveStage packet.
+	StagePass        string   `json:"stagePass"`        // Temporary storage
+	PrevGuildID      uint32   `json:"prevGuildID"`      // Stores the last GuildID used in InfoGuild
+	CharID           uint32   `json:"charID"`
+	LogKey           []byte   `json:"logKey"`
+	SessionStart     int64    `json:"sessionStart"`
+	Rights           uint32   `json:"rights"`
+	Token            string   `json:"token"`
 
-	semaphore *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
+	Semaphore *Semaphore `json:"Semaphore"` // Required for the stateful MsgSysUnreserveStage packet.
 
 	// A stack containing the stage movement history (push on enter/move, pop on back)
 	stageMoveStack *stringstack.StringStack
@@ -50,30 +50,30 @@ type Session struct {
 	// Accumulated index used for identifying mail for a client
 	// I'm not certain why this is used, but since the client is sending it
 	// I want to rely on it for now as it might be important later.
-	mailAccIndex uint8
+	MailAccIndex uint8 `json:"mailAccIndex"`
 	// Contains the mail list that maps accumulated indexes to mail IDs
-	mailList []int
+	MailList []int `json:"mailList"`
 
 	// For Debuging
-	Name string
+	Name string `json:"Name"`
 }
 
 type MySeries struct {
-	houseTier     []byte
-	houseData     []byte
-	bookshelfData []byte
-	galleryData   []byte
-	toreData      []byte
-	gardenData    []byte
-	state         uint8
-	password      string
+	HouseTier     []byte `json:"houseTier"`
+	HouseData     []byte `json:"houseData"`
+	BookshelfData []byte `json:"bookshelfData"`
+	GalleryData   []byte `json:"galleryData"`
+	ToreData      []byte `json:"toreData"`
+	GardenData    []byte `json:"gardenData"`
+	State         uint8  `json:"state"`
+	Password      string `json:"password"`
 }
 
 // NewSession creates a new Session type.
 func NewSession(server *Server, conn net.Conn) *Session {
 	s := &Session{
 		logger:        server.logger.Named(conn.RemoteAddr().String()),
-		server:        server,
+		Server:        server,
 		rawConn:       conn,
 		hasLoggerName: false,
 		cryptConn:     network.NewCryptConn(conn),
@@ -83,8 +83,8 @@ func NewSession(server *Server, conn net.Conn) *Session {
 				Encoding: japanese.ShiftJIS,
 			},
 		},
-		userEnteredStage: false,
-		sessionStart:     Time_Current_Adjusted().Unix(),
+		UserEnteredStage: false,
+		SessionStart:     Time_Current_Adjusted().Unix(),
 		stageMoveStack:   stringstack.New(),
 	}
 	return s
@@ -133,7 +133,12 @@ func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	bf.WriteUint16(uint16(pkt.Opcode()))
 
 	// Build the packet onto the byteframe.
-	pkt.Build(bf, s.clientContext)
+	err := pkt.Build(bf, s.clientContext)
+
+	if err != nil {
+		fmt.Println(fmt.Sprintf("deu ruim2: %s - %s", pkt.Opcode(), err.Error()))
+
+	}
 
 	// Queue it.
 	s.QueueSend(bf.Data())
@@ -193,13 +198,14 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 	opcode := network.PacketID(opcodeUint16)
 
 	// This shouldn't be needed, but it's better to recover and let the connection die than to panic the server.
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("[%s] ", s.Name)
-			fmt.Println("Recovered from panic", r)
+	// defer func() {
+	// 	if r := recover(); r != nil {
 
-		}
-	}()
+	// 		fmt.Printf("[%s] ", s.Name)
+	// 		fmt.Println("Recovered from panic", r)
+
+	// 	}
+	// }()
 
 	s.logMessage(opcodeUint16, pktGroup, s.Name, "Server")
 
@@ -247,13 +253,13 @@ func ignored(opcode network.PacketID) bool {
 }
 
 func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipient string) {
-	if !s.server.erupeConfig.DevMode {
+	if !s.Server.erupeConfig.DevMode {
 		return
 	}
 
-	if sender == "Server" && !s.server.erupeConfig.DevModeOptions.LogOutboundMessages {
+	if sender == "Server" && !s.Server.erupeConfig.DevModeOptions.LogOutboundMessages {
 		return
-	} else if !s.server.erupeConfig.DevModeOptions.LogInboundMessages {
+	} else if !s.Server.erupeConfig.DevModeOptions.LogInboundMessages {
 		return
 	}
 
@@ -263,7 +269,7 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 	}
 	fmt.Printf("[%s] -> [%s]\n", sender, recipient)
 	fmt.Printf("Opcode: %s\n", opcodePID)
-	if len(data) <= s.server.erupeConfig.DevModeOptions.MaxHexdumpLength {
+	if len(data) <= s.Server.erupeConfig.DevModeOptions.MaxHexdumpLength {
 		fmt.Printf("Data [%d bytes]:\n%s\n", len(data), hex.Dump(data))
 	} else {
 		fmt.Printf("Data [%d bytes]:\n(Too long!)\n\n", len(data))

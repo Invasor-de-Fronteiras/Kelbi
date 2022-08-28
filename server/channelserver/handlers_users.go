@@ -10,25 +10,25 @@ func handleMsgSysDeleteUser(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetUserBinary)
-	s.server.userBinaryPartsLock.Lock()
-	s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: pkt.BinaryType}] = pkt.RawDataPayload
-	s.server.userBinaryPartsLock.Unlock()
+	s.Server.userBinaryPartsLock.Lock()
+	s.Server.userBinaryParts[userBinaryPartID{charID: s.CharID, index: pkt.BinaryType}] = pkt.RawDataPayload
+	s.Server.userBinaryPartsLock.Unlock()
 
 	msg := &mhfpacket.MsgSysNotifyUserBinary{
-		CharID:     s.charID,
+		CharID:     s.CharID,
 		BinaryType: pkt.BinaryType,
 	}
 
-	s.server.BroadcastMHF(msg, s)
+	s.Server.BroadcastMHF(msg, s)
 }
 
 func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetUserBinary)
 
 	// Try to get the data.
-	s.server.userBinaryPartsLock.RLock()
-	defer s.server.userBinaryPartsLock.RUnlock()
-	data, ok := s.server.userBinaryParts[userBinaryPartID{charID: pkt.CharID, index: pkt.BinaryType}]
+	s.Server.userBinaryPartsLock.RLock()
+	defer s.Server.userBinaryPartsLock.RUnlock()
+	data, ok := s.Server.userBinaryParts[userBinaryPartID{charID: pkt.CharID, index: pkt.BinaryType}]
 	// resp := byteframe.NewByteFrame()
 
 	// If we can't get the real data, fail.

@@ -33,7 +33,7 @@ func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
 	bf := byteframe.NewByteFrame()
-	state := s.server.erupeConfig.DevModeOptions.TournamentEvent
+	state := s.Server.erupeConfig.DevModeOptions.TournamentEvent
 	// Unk
 	// Unk
 	// Start?
@@ -72,7 +72,7 @@ func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoFesta)
 	bf := byteframe.NewByteFrame()
-	state := s.server.erupeConfig.DevModeOptions.FestaEvent
+	state := s.Server.erupeConfig.DevModeOptions.FestaEvent
 	bf.WriteUint32(0xdeadbeef) // festaID
 	// Registration Week Start
 	// Introductory Week Start

@@ -52,7 +52,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	// int16: Road floors cleared requirement
 	// int16: Road White Fatalis weekly kills
 	if pkt.ShopType == 2 {
-		shopEntries, err := s.server.db.Query("SELECT entryType, itemhash, currType, currNumber, currQuant, percentage, rarityIcon, rollsCount, itemCount, dailyLimit, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1", pkt.ShopID)
+		shopEntries, err := s.Server.db.Query("SELECT entryType, itemhash, currType, currNumber, currQuant, percentage, rarityIcon, rollsCount, itemCount, dailyLimit, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1", pkt.ShopID)
 		if err != nil {
 			panic(err)
 		}
@@ -98,7 +98,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	} else if pkt.ShopType == 1 {
 		gachaCount := 0
-		shopEntries, err := s.server.db.Query("SELECT hash, reqGR, reqHR, gachaName, gachaLink0, gachaLink1, COALESCE(gachaLink2, ''), extraIcon, gachaType, hideFlag FROM gacha_shop")
+		shopEntries, err := s.Server.db.Query("SELECT hash, reqGR, reqHR, gachaName, gachaLink0, gachaLink1, COALESCE(gachaLink2, ''), extraIcon, gachaType, hideFlag FROM gacha_shop")
 		if err != nil {
 			panic(err)
 		}
@@ -164,7 +164,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		_, week := time.Now().ISOWeek()
 		season := fmt.Sprintf("%d", week%4)
-		shopEntries, err := s.server.db.Query("SELECT itemhash,itemID,Points,TradeQuantity,rankReqLow,rankReqHigh,rankReqG,storeLevelReq,maximumQuantity,boughtQuantity,roadFloorsRequired,weeklyFatalisKills, COALESCE(enable_weeks, '') FROM normal_shop_items WHERE shoptype=$1 AND shopid=$2", pkt.ShopType, pkt.ShopID)
+		shopEntries, err := s.Server.db.Query("SELECT itemhash,itemID,Points,TradeQuantity,rankReqLow,rankReqHigh,rankReqG,storeLevelReq,maximumQuantity,boughtQuantity,roadFloorsRequired,weeklyFatalisKills, COALESCE(enable_weeks, '') FROM normal_shop_items WHERE shoptype=$1 AND shopid=$2", pkt.ShopType, pkt.ShopID)
 		if err != nil {
 			panic(err)
 		}
@@ -196,11 +196,11 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(maximumQuantity)
 			if maximumQuantity > 0 {
 				var itemWeek int
-				err = s.server.db.QueryRow("SELECT COALESCE(usedquantity,0), COALESCE(week,-1) FROM shop_item_state WHERE itemhash=$1 AND char_id=$2", ItemHash, s.charID).Scan(&charQuantity, &itemWeek)
+				err = s.Server.db.QueryRow("SELECT COALESCE(usedquantity,0), COALESCE(week,-1) FROM shop_item_state WHERE itemhash=$1 AND char_id=$2", ItemHash, s.CharID).Scan(&charQuantity, &itemWeek)
 				if err != nil {
 					resp.WriteUint16(0)
 				} else if pkt.ShopID == 7 && itemWeek >= 0 && itemWeek != week {
-					clearShopItemState(s, s.charID, uint32(ItemHash))
+					clearShopItemState(s, s.CharID, uint32(ItemHash))
 					resp.WriteUint16(0)
 				} else {
 					resp.WriteUint16(charQuantity)
@@ -232,10 +232,10 @@ func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
 		_ = bf.ReadUint16() // unk, always 1 in examples
 		itemHash := bf.ReadUint32()
 		buyCount := bf.ReadUint32()
-		_, err := s.server.db.Exec(`INSERT INTO shop_item_state (char_id, itemhash, usedquantity, week)
+		_, err := s.Server.db.Exec(`INSERT INTO shop_item_state (char_id, itemhash, usedquantity, week)
   														 VALUES ($1,$2,$3,$4) ON CONFLICT (char_id, itemhash)
   														 DO UPDATE SET usedquantity = shop_item_state.usedquantity + $3
-  														 WHERE EXCLUDED.char_id=$1 AND EXCLUDED.itemhash=$2`, s.charID, itemHash, buyCount, week)
+  														 WHERE EXCLUDED.char_id=$1 AND EXCLUDED.itemhash=$2`, s.CharID, itemHash, buyCount, week)
 		if err != nil {
 			s.logger.Fatal("Failed to update shop_item_state in db", zap.Error(err))
 		}
@@ -244,7 +244,7 @@ func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func clearShopItemState(s *Session, charId uint32, itemHash uint32) {
-	_, err := s.server.db.Exec(`DELETE FROM shop_item_state WHERE char_id=$1 AND itemhash=$2`, charId, itemHash)
+	_, err := s.Server.db.Exec(`DELETE FROM shop_item_state WHERE char_id=$1 AND itemhash=$2`, charId, itemHash)
 	if err != nil {
 		s.logger.Fatal("Failed to delete shop_item_state in db", zap.Error(err))
 	}
@@ -259,7 +259,7 @@ func handleMsgMhfGetGachaPlayHistory(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetGachaPoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGachaPoint)
 	var fp, gp, gt uint32
-	_ = s.server.db.QueryRow("SELECT COALESCE(frontier_points, 0), COALESCE(gacha_prem, 0), COALESCE(gacha_trial,0) FROM characters WHERE id=$1", s.charID).Scan(&fp, &gp, &gt)
+	_ = s.Server.db.QueryRow("SELECT COALESCE(frontier_points, 0), COALESCE(gacha_prem, 0), COALESCE(gacha_trial,0) FROM characters WHERE id=$1", s.CharID).Scan(&fp, &gp, &gt)
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(gp) // Real Gacha Points?
 	resp.WriteUint32(gt) // Trial Gacha Point?
@@ -296,18 +296,18 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 	var itemType, itemId, quantity pq.Int64Array
 	var items []lottery.Weighter
 	// get info for updating data and calculating costs
-	err := s.server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount)
+	err := s.Server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount)
 	if err != nil {
 		panic(err)
 	}
 	// get existing items in storage if any
 	var data []byte
-	_ = s.server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.charID).Scan(&data)
+	_ = s.Server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if len(data) == 0 {
 		data = []byte{0x00}
 	}
 	// get gacha items and iterate through them for gacha roll
-	shopEntries, err := s.server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
+	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
 	if err != nil {
 		panic(err)
 	}
@@ -345,13 +345,13 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 
 	// add claimables to DB
 	data[0] = data[0] + results
-	_, err = s.server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update minidata in db", zap.Error(err))
 	}
 	// deduct gacha coins if relevant, items are handled fine by the standard savedata packet immediately afterwards
 	if currType == 19 {
-		_, err = s.server.db.Exec("UPDATE characters SET gacha_trial = CASE WHEN (gacha_trial > $1) then gacha_trial - $1 else gacha_trial end, gacha_prem = CASE WHEN NOT (gacha_trial > $1) then gacha_prem - $1 else gacha_prem end WHERE id=$2", currNumber, s.charID)
+		_, err = s.Server.db.Exec("UPDATE characters SET gacha_trial = CASE WHEN (gacha_trial > $1) then gacha_trial - $1 else gacha_trial end, gacha_prem = CASE WHEN NOT (gacha_trial > $1) then gacha_prem - $1 else gacha_prem end WHERE id=$2", currNumber, s.CharID)
 	}
 	if err != nil {
 		s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
@@ -368,11 +368,11 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeFpoint2Item)
 
 	var itemValue, quant int
-	_ = s.server.db.QueryRow("SELECT quant, itemValue FROM fpoint_items WHERE hash=$1", pkt.ItemHash).Scan(&quant, &itemValue)
+	_ = s.Server.db.QueryRow("SELECT quant, itemValue FROM fpoint_items WHERE hash=$1", pkt.ItemHash).Scan(&quant, &itemValue)
 	itemCost := (int(pkt.Quantity) * quant) * itemValue
 
 	// also update frontierpoints entry in database
-	_, err := s.server.db.Exec("UPDATE characters SET frontier_points=frontier_points::int - $1 WHERE id=$2", itemCost, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET frontier_points=frontier_points::int - $1 WHERE id=$2", itemCost, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update minidata in db", zap.Error(err))
 	}
@@ -383,10 +383,10 @@ func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeItem2Fpoint)
 
 	var itemValue, quant int
-	_ = s.server.db.QueryRow("SELECT quant, itemValue FROM fpoint_items WHERE hash=$1", pkt.ItemHash).Scan(&quant, &itemValue)
+	_ = s.Server.db.QueryRow("SELECT quant, itemValue FROM fpoint_items WHERE hash=$1", pkt.ItemHash).Scan(&quant, &itemValue)
 	itemCost := (int(pkt.Quantity) / quant) * itemValue
 	// also update frontierpoints entry in database
-	_, err := s.server.db.Exec("UPDATE characters SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE id=$2", itemCost, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE id=$2", itemCost, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update minidata in db", zap.Error(err))
 	}
@@ -400,7 +400,7 @@ func handleMsgMhfGetFpointExchangeList(s *Session, p mhfpacket.MHFPacket) {
 	var buyables int
 	var sellables int
 
-	buyRows, err := s.server.db.Query("SELECT hash,itemType,itemID,quant,itemValue FROM fpoint_items WHERE tradeType=0")
+	buyRows, err := s.Server.db.Query("SELECT hash,itemType,itemID,quant,itemValue FROM fpoint_items WHERE tradeType=0")
 	if err != nil {
 		panic(err)
 	}
@@ -422,7 +422,7 @@ func handleMsgMhfGetFpointExchangeList(s *Session, p mhfpacket.MHFPacket) {
 		buyables++
 	}
 
-	sellRows, err := s.server.db.Query("SELECT hash,itemType,itemID,quant,itemValue FROM fpoint_items WHERE tradeType=1")
+	sellRows, err := s.Server.db.Query("SELECT hash,itemType,itemID,quant,itemValue FROM fpoint_items WHERE tradeType=1")
 	if err != nil {
 		panic(err)
 	}
@@ -461,13 +461,13 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	var itemType, itemId, quantity pq.Int64Array
 	var items []lottery.Weighter
 	// get info for updating data and calculating costs
-	err := s.server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount, &itemCount, (*pq.Int64Array)(&itemType), (*pq.Int64Array)(&itemId), (*pq.Int64Array)(&quantity))
+	err := s.Server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount, &itemCount, (*pq.Int64Array)(&itemType), (*pq.Int64Array)(&itemId), (*pq.Int64Array)(&quantity))
 	if err != nil {
 		panic(err)
 	}
 	// get existing items in storage if any
 	var data []byte
-	_ = s.server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.charID).Scan(&data)
+	_ = s.Server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if len(data) == 0 {
 		data = []byte{0x00}
 	}
@@ -481,7 +481,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 		stepResults++
 	}
 	// get gacha items and iterate through them for gacha roll
-	shopEntries, err := s.server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
+	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
 	if err != nil {
 		panic(err)
 	}
@@ -519,24 +519,24 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 	// add claimables to DB
 	data = append(data, stepData...)
 	data[0] = data[0] + results + stepResults
-	_, err = s.server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
 	}
 	// deduct gacha coins if relevant, items are handled fine by the standard savedata packet immediately afterwards
 	// reduce real if trial don't cover cost
 	if currType == 19 {
-		_, err = s.server.db.Exec(`UPDATE characters
+		_, err = s.Server.db.Exec(`UPDATE characters
 																	SET gacha_trial = CASE WHEN (gacha_trial > $1) then gacha_trial - $1 else gacha_trial end,
 																	gacha_prem = CASE WHEN NOT (gacha_trial > $1) then gacha_prem - $1 else gacha_prem end
-																	WHERE id=$2`, currNumber, s.charID)
+																	WHERE id=$2`, currNumber, s.CharID)
 
 	}
 	if err != nil {
 		s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
 	}
 	// update step progression
-	_, err = s.server.db.Exec("UPDATE stepup_state SET step_progression = $1 WHERE char_id = $2", pkt.RollType+1, s.charID)
+	_, err = s.Server.db.Exec("UPDATE stepup_state SET step_progression = $1 WHERE char_id = $2", pkt.RollType+1, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update step_progression in db", zap.Error(err))
 	}
@@ -547,7 +547,7 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReceiveGachaItem)
 	// persistent for claimable items on cat
 	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(gacha_items, $2) FROM characters WHERE id = $1", s.charID, []byte{0x00}).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT COALESCE(gacha_items, $2) FROM characters WHERE id = $1", s.CharID, []byte{0x00}).Scan(&data)
 	if err != nil {
 		panic("Failed to get gacha_items")
 	}
@@ -560,7 +560,7 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 		saveData[0] = saveData[0] - 36
 		doAckBufSucceed(s, pkt.AckHandle, outData)
 		if pkt.Unk0 != 0x2401 {
-			_, err := s.server.db.Exec("UPDATE characters SET gacha_items = $2 WHERE id = $1", s.charID, saveData)
+			_, err := s.Server.db.Exec("UPDATE characters SET gacha_items = $2 WHERE id = $1", s.CharID, saveData)
 			if err != nil {
 				s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
 			}
@@ -568,7 +568,7 @@ func handleMsgMhfReceiveGachaItem(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 		if pkt.Unk0 != 0x2401 {
-			_, err := s.server.db.Exec("UPDATE characters SET gacha_items = null WHERE id = $1", s.charID)
+			_, err := s.Server.db.Exec("UPDATE characters SET gacha_items = null WHERE id = $1", s.CharID)
 			if err != nil {
 				s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
 			}
@@ -581,7 +581,7 @@ func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 	// get the reset time from db
 	var step_progression int
 	var step_time time.Time
-	err := s.server.db.QueryRow(`SELECT COALESCE(step_progression, 0), COALESCE(step_time, $1) FROM stepup_state WHERE char_id = $2 AND shophash = $3`, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), s.charID, pkt.GachaHash).Scan(&step_progression, &step_time)
+	err := s.Server.db.QueryRow(`SELECT COALESCE(step_progression, 0), COALESCE(step_time, $1) FROM stepup_state WHERE char_id = $2 AND shophash = $3`, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), s.CharID, pkt.GachaHash).Scan(&step_progression, &step_time)
 	if err != nil {
 		s.logger.Fatal("Failed to Select coalesce in db", zap.Error(err))
 	}
@@ -597,10 +597,10 @@ func handleMsgMhfGetStepupStatus(s *Session, p mhfpacket.MHFPacket) {
 	if t.After(step_time) {
 		step_progression = 0
 	}
-	_, err = s.server.db.Exec(`INSERT INTO stepup_state (shophash, step_progression, step_time, char_id)
+	_, err = s.Server.db.Exec(`INSERT INTO stepup_state (shophash, step_progression, step_time, char_id)
 														 VALUES ($1,$2,$3,$4) ON CONFLICT (shophash, char_id)
 														 DO UPDATE SET step_progression=$2, step_time=$3
-														 WHERE EXCLUDED.char_id=$4 AND EXCLUDED.shophash=$1`, pkt.GachaHash, step_progression, midday, s.charID)
+														 WHERE EXCLUDED.char_id=$4 AND EXCLUDED.shophash=$1`, pkt.GachaHash, step_progression, midday, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update platedata savedata in db", zap.Error(err))
 	}
@@ -620,7 +620,7 @@ func handleMsgMhfGetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 	var used_itemhash pq.Int64Array
 	// pull array of used values
 	// single sized respone with 0x00 is a valid with no items present
-	_ = s.server.db.QueryRow("SELECT used_itemhash FROM lucky_box_state WHERE shophash=$1 AND char_id=$2", pkt.GachaHash, s.charID).Scan((*pq.Int64Array)(&used_itemhash))
+	_ = s.Server.db.QueryRow("SELECT used_itemhash FROM lucky_box_state WHERE shophash=$1 AND char_id=$2", pkt.GachaHash, s.CharID).Scan((*pq.Int64Array)(&used_itemhash))
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint8(0)
 	for ind := range used_itemhash {
@@ -647,23 +647,23 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 	var itemType, itemId, quantity, usedItemHash pq.Int64Array
 	var items []lottery.Weighter
 	// get info for updating data and calculating costs
-	err := s.server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount)
+	err := s.Server.db.QueryRow("SELECT currType, currNumber, currQuant, rollsCount FROM gacha_shop_items WHERE shophash=$1 AND entryType=$2", pkt.GachaHash, pkt.RollType).Scan(&currType, &currNumber, &currQuant, &rollsCount)
 	if err != nil {
 		panic(err)
 	}
 	// get existing items in storage if any
 	var data []byte
-	_ = s.server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.charID).Scan(&data)
+	_ = s.Server.db.QueryRow("SELECT gacha_items FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if len(data) == 0 {
 		data = []byte{0x00}
 	}
 	// get gacha items and iterate through them for gacha roll
-	shopEntries, err := s.server.db.Query(`SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity
+	shopEntries, err := s.Server.db.Query(`SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity
 																				 FROM gacha_shop_items
 																				 WHERE shophash=$1 AND entryType=100
 																				 EXCEPT ALL SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity
 																				 FROM gacha_shop_items gsi JOIN lucky_box_state lbs ON gsi.itemhash = ANY(lbs.used_itemhash)
-																				 WHERE lbs.char_id=$2`, pkt.GachaHash, s.charID)
+																				 WHERE lbs.char_id=$2`, pkt.GachaHash, s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -705,23 +705,23 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 
 	// add claimables to DB
 	data[0] = data[0] + results
-	_, err = s.server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET gacha_items = $1 WHERE id = $2", data, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update gacha_items in db", zap.Error(err))
 	}
 	// update lucky_box_state
-	_, err = s.server.db.Exec(`	INSERT INTO lucky_box_state (char_id, shophash, used_itemhash)
+	_, err = s.Server.db.Exec(`	INSERT INTO lucky_box_state (char_id, shophash, used_itemhash)
 								VALUES ($1,$2,$3) ON CONFLICT (char_id, shophash)
 								DO UPDATE SET used_itemhash = COALESCE(lucky_box_state.used_itemhash::int[] || $3::int[], $3::int[])
-								WHERE EXCLUDED.char_id=$1 AND EXCLUDED.shophash=$2`, s.charID, pkt.GachaHash, usedItemHash)
+								WHERE EXCLUDED.char_id=$1 AND EXCLUDED.shophash=$2`, s.CharID, pkt.GachaHash, usedItemHash)
 	if err != nil {
 		s.logger.Fatal("Failed to update lucky box state in db", zap.Error(err))
 	}
 	// deduct gacha coins if relevant, items are handled fine by the standard savedata packet immediately afterwards
 	if currType == 19 {
-		_, err = s.server.db.Exec(`	UPDATE characters
+		_, err = s.Server.db.Exec(`	UPDATE characters
 									SET gacha_trial = CASE WHEN (gacha_trial > $1) then gacha_trial - $1 else gacha_trial end, gacha_prem = CASE WHEN NOT (gacha_trial > $1) then gacha_prem - $1 else gacha_prem end
-									WHERE id=$2`, currNumber, s.charID)
+									WHERE id=$2`, currNumber, s.CharID)
 	}
 	if err != nil {
 		s.logger.Fatal("Failed to update gacha_trial in db", zap.Error(err))
@@ -730,7 +730,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfResetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfResetBoxGachaInfo)
-	_, err := s.server.db.Exec("DELETE FROM lucky_box_state WHERE shophash=$1 AND char_id=$2", pkt.GachaHash, s.charID)
+	_, err := s.Server.db.Exec("DELETE FROM lucky_box_state WHERE shophash=$1 AND char_id=$2", pkt.GachaHash, s.CharID)
 	if err != nil {
 		panic(err)
 	}

@@ -14,14 +14,14 @@ import (
 
 func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateStage)
-	s.server.Lock()
-	defer s.server.Unlock()
-	if _, exists := s.server.Stages[pkt.StageID]; exists {
+	s.Server.Lock()
+	defer s.Server.Unlock()
+	if _, exists := s.Server.Stages[pkt.StageID]; exists {
 		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
 		stage := NewStage(pkt.StageID)
 		stage.MaxPlayers = uint16(pkt.PlayerCount)
-		s.server.Stages[stage.Id] = stage
+		s.Server.Stages[stage.Id] = stage
 		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	}
 }
@@ -29,33 +29,33 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysStageDestruct(s *Session, p mhfpacket.MHFPacket) {}
 
 func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
-	s.server.Lock()
-	stage, exists := s.server.Stages[stageID]
-	s.server.Unlock()
+	s.Server.Lock()
+	stage, exists := s.Server.Stages[stageID]
+	s.Server.Unlock()
 
 	if exists {
 		stage.Lock()
-		stage.Clients[s] = s.charID
+		stage.Clients[s] = s.CharID
 		stage.Unlock()
 	} else { // Create new stage object
-		s.server.Lock()
-		s.server.Stages[stageID] = NewStage(stageID)
-		stage = s.server.Stages[stageID]
-		s.server.Unlock()
+		s.Server.Lock()
+		s.Server.Stages[stageID] = NewStage(stageID)
+		stage = s.Server.Stages[stageID]
+		s.Server.Unlock()
 		stage.Lock()
-		stage.Clients[s] = s.charID
+		stage.Clients[s] = s.CharID
 		stage.Unlock()
 	}
 
 	// Ensure this session no longer belongs to reservations.
-	if s.stage != nil {
+	if s.Stage != nil {
 		removeSessionFromStage(s)
 	}
 
 	// Save our new stage ID and pointer to the new stage itself.
 	s.Lock()
-	s.stageID = stageID
-	s.stage = s.server.Stages[stageID]
+	s.StageID = stageID
+	s.Stage = s.Server.Stages[stageID]
 	s.Unlock()
 
 	// Tell the client to cleanup its current stage objects.
@@ -68,19 +68,19 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	newNotif := byteframe.NewByteFrame()
 
 	// Cast existing user data to new user
-	if !s.userEnteredStage {
-		s.userEnteredStage = true
+	if !s.UserEnteredStage {
+		s.UserEnteredStage = true
 
-		for _, session := range s.server.Sessions {
+		for _, session := range s.Server.Sessions {
 			if s == session {
 				continue
 			}
-			temp = &mhfpacket.MsgSysInsertUser{CharID: session.charID}
+			temp = &mhfpacket.MsgSysInsertUser{CharID: session.CharID}
 			newNotif.WriteUint16(uint16(temp.Opcode()))
 			temp.Build(newNotif, s.clientContext)
 			for i := 0; i < 3; i++ {
 				temp = &mhfpacket.MsgSysNotifyUserBinary{
-					CharID:     session.charID,
+					CharID:     session.CharID,
 					BinaryType: uint8(i + 1),
 				}
 				newNotif.WriteUint16(uint16(temp.Opcode()))
@@ -89,13 +89,13 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		}
 	}
 
-	if s.stage != nil { // avoids lock up when using bed for dream quests
+	if s.Stage != nil { // avoids lock up when using bed for dream quests
 		// Notify the client to duplicate the existing objects.
 		s.logger.Info(fmt.Sprintf("Sending existing stage objects to %s", s.Name))
-		s.stage.RLock()
+		s.Stage.RLock()
 		var temp mhfpacket.MHFPacket
-		for _, obj := range s.stage.Objects {
-			if obj.OwnerCharID == s.charID {
+		for _, obj := range s.Stage.Objects {
+			if obj.OwnerCharID == s.CharID {
 				continue
 			}
 			temp = &mhfpacket.MsgSysDuplicateObject{
@@ -109,7 +109,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 			newNotif.WriteUint16(uint16(temp.Opcode()))
 			temp.Build(newNotif, s.clientContext)
 		}
-		s.stage.RUnlock()
+		s.Stage.RUnlock()
 	}
 
 	newNotif.WriteUint16(0x0010) // End it.
@@ -119,13 +119,13 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 }
 
 func destructEmptyStages(s *Session) {
-	s.server.Lock()
-	defer s.server.Unlock()
-	for _, stage := range s.server.Stages {
+	s.Server.Lock()
+	defer s.Server.Unlock()
+	for _, stage := range s.Server.Stages {
 		// Destroy empty Quest/My series/Guild stages.
 		if stage.Id[3:5] == "Qs" || stage.Id[3:5] == "Ms" || stage.Id[3:5] == "Gs" || stage.Id[3:5] == "Ls" {
 			if len(stage.ReservedClientSlots) == 0 && len(stage.Clients) == 0 {
-				delete(s.server.Stages, stage.Id)
+				delete(s.Server.Stages, stage.Id)
 				s.logger.Debug("Destructed stage", zap.String("stage.id", stage.Id))
 			}
 		}
@@ -134,19 +134,19 @@ func destructEmptyStages(s *Session) {
 
 func removeSessionFromStage(s *Session) {
 	// Remove client from old stage.
-	s.stage.Lock()
-	delete(s.stage.Clients, s)
-	delete(s.stage.ReservedClientSlots, s.charID)
+	s.Stage.Lock()
+	delete(s.Stage.Clients, s)
+	delete(s.Stage.ReservedClientSlots, s.CharID)
 
 	// Delete old stage objects owned by the client.
 	s.logger.Info("Sending notification to old stage clients")
-	for _, object := range s.stage.Objects {
-		if object.OwnerCharID == s.charID {
-			s.stage.BroadcastMHF(&mhfpacket.MsgSysDeleteObject{ObjID: object.Id}, s)
-			delete(s.stage.Objects, object.OwnerCharID)
+	for _, object := range s.Stage.Objects {
+		if object.OwnerCharID == s.CharID {
+			s.Stage.BroadcastMHF(&mhfpacket.MsgSysDeleteObject{ObjID: object.Id}, s)
+			delete(s.Stage.Objects, object.OwnerCharID)
 		}
 	}
-	s.stage.Unlock()
+	s.Stage.Unlock()
 	destructEmptyStages(s)
 	destructEmptySemaphores(s)
 }
@@ -155,16 +155,16 @@ func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysEnterStage)
 
 	// Push our current stage ID to the movement stack before entering another one.
-	if s.stageID == "" {
+	if s.StageID == "" {
 		s.stageMoveStack.Set(pkt.StageID)
 	} else {
-		s.stageMoveStack.Push(s.stageID)
+		s.stageMoveStack.Push(s.StageID)
 		s.stageMoveStack.Lock()
 	}
 
 	s.QueueSendMHF(&mhfpacket.MsgSysCleanupObject{})
-	if s.reservationStage != nil {
-		s.reservationStage = nil
+	if s.ReservationStage != nil {
+		s.ReservationStage = nil
 	}
 
 	doStageTransfer(s, pkt.AckHandle, pkt.StageID)
@@ -205,16 +205,16 @@ func handleMsgSysLockStage(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgSysUnlockStage(s *Session, p mhfpacket.MHFPacket) {
-	if s.reservationStage != nil {
-		s.reservationStage.RLock()
-		defer s.reservationStage.RUnlock()
+	if s.ReservationStage != nil {
+		s.ReservationStage.RLock()
+		defer s.ReservationStage.RUnlock()
 
-		for charID := range s.reservationStage.ReservedClientSlots {
-			session := s.server.FindSessionByCharID(charID)
+		for charID := range s.ReservationStage.ReservedClientSlots {
+			session := s.Server.FindSessionByCharID(charID)
 			session.QueueSendMHF(&mhfpacket.MsgSysStageDestruct{})
 		}
 
-		delete(s.server.Stages, s.reservationStage.Id)
+		delete(s.Server.Stages, s.ReservationStage.Id)
 	}
 
 	destructEmptyStages(s)
@@ -223,28 +223,28 @@ func handleMsgSysUnlockStage(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysReserveStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysReserveStage)
 
-	if stage, exists := s.server.Stages[pkt.StageID]; exists {
+	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		stage.Lock()
 		defer stage.Unlock()
-		if _, exists := stage.ReservedClientSlots[s.charID]; exists {
+		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
 			switch pkt.Ready {
 			case 1: // 0x01
-				stage.ReservedClientSlots[s.charID] = false
+				stage.ReservedClientSlots[s.CharID] = false
 			case 17: // 0x11
-				stage.ReservedClientSlots[s.charID] = true
+				stage.ReservedClientSlots[s.CharID] = true
 			}
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else if uint16(len(stage.ReservedClientSlots)) < stage.MaxPlayers {
 			if len(stage.Password) > 0 {
-				if stage.Password != s.stagePass {
+				if stage.Password != s.StagePass {
 					doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 					return
 				}
 			}
-			stage.ReservedClientSlots[s.charID] = false
+			stage.ReservedClientSlots[s.CharID] = false
 			// Save the reservation stage in the session for later use in MsgSysUnreserveStage.
 			s.Lock()
-			s.reservationStage = stage
+			s.ReservationStage = stage
 			s.Unlock()
 			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		} else {
@@ -258,13 +258,13 @@ func handleMsgSysReserveStage(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.Lock()
-	stage := s.reservationStage
-	s.reservationStage = nil
+	stage := s.ReservationStage
+	s.ReservationStage = nil
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
-		if _, exists := stage.ReservedClientSlots[s.charID]; exists {
-			delete(stage.ReservedClientSlots, s.charID)
+		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
+			delete(stage.ReservedClientSlots, s.CharID)
 		}
 		stage.Unlock()
 	}
@@ -273,28 +273,28 @@ func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysSetStagePass(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetStagePass)
 	s.Lock()
-	stage := s.reservationStage
+	stage := s.ReservationStage
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
 		// Will only exist if host.
-		if _, exists := stage.ReservedClientSlots[s.charID]; exists {
+		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
 			stage.Password = pkt.Password
 		}
 		stage.Unlock()
 	} else {
 		// Store for use on next ReserveStage.
 		s.Lock()
-		s.stagePass = pkt.Password
+		s.StagePass = pkt.Password
 		s.Unlock()
 	}
 }
 
 func handleMsgSysSetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysSetStageBinary)
-	if stage, exists := s.server.Stages[pkt.StageID]; exists {
+	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		stage.Lock()
-		stage.RawBinaryData[stageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}] = pkt.RawDataPayload
+		stage.RawBinaryData[StageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}] = pkt.RawDataPayload
 		stage.Unlock()
 	} else {
 		s.logger.Warn("Failed to get stage", zap.String("StageID", pkt.StageID))
@@ -304,9 +304,9 @@ func handleMsgSysSetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysGetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetStageBinary)
 
-	if stage, exists := s.server.Stages[pkt.StageID]; exists {
+	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		stage.Lock()
-		if binaryData, exists := stage.RawBinaryData[stageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]; exists {
+		if binaryData, exists := stage.RawBinaryData[StageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]; exists {
 			doAckBufSucceed(s, pkt.AckHandle, binaryData)
 		} else if pkt.BinaryType1 == 4 {
 			// Unknown binary type that is supposedly generated server side
@@ -326,7 +326,7 @@ func handleMsgSysGetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysWaitStageBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysWaitStageBinary)
-	if stage, exists := s.server.Stages[pkt.StageID]; exists {
+	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		if pkt.BinaryType0 == 1 && pkt.BinaryType1 == 12 {
 			// This might contain the hunter count, or max player count?
 			doAckBufSucceed(s, pkt.AckHandle, []byte{0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
@@ -335,7 +335,7 @@ func handleMsgSysWaitStageBinary(s *Session, p mhfpacket.MHFPacket) {
 		for {
 			s.logger.Debug("MsgSysWaitStageBinary before lock and get stage")
 			stage.Lock()
-			stageBinary, gotBinary := stage.RawBinaryData[stageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]
+			stageBinary, gotBinary := stage.RawBinaryData[StageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]
 			stage.Unlock()
 			s.logger.Debug("MsgSysWaitStageBinary after lock and get stage")
 			if gotBinary {
@@ -357,14 +357,14 @@ func handleMsgSysEnumerateStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysEnumerateStage)
 
 	// Read-lock the server stage map.
-	s.server.stagesLock.RLock()
-	defer s.server.stagesLock.RUnlock()
+	s.Server.stagesLock.RLock()
+	defer s.Server.stagesLock.RUnlock()
 
 	// Build the response
 	resp := byteframe.NewByteFrame()
 	bf := byteframe.NewByteFrame()
 	var joinable int
-	for sid, stage := range s.server.Stages {
+	for sid, stage := range s.Server.Stages {
 		stage.RLock()
 		defer stage.RUnlock()
 

@@ -81,7 +81,7 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 func updateRights(s *Session) {
 	update := &mhfpacket.MsgSysUpdateRight{
 		ClientRespAckHandle: 0,
-		Unk1:                s.rights,
+		Unk1:                s.Rights,
 		Rights: []mhfpacket.ClientRight{
 			{
 				ID:        1,
@@ -140,9 +140,9 @@ func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLogin)
 
-	if !s.server.erupeConfig.DevModeOptions.DisableTokenCheck {
+	if !s.Server.erupeConfig.DevModeOptions.DisableTokenCheck {
 		var token string
-		err := s.server.db.QueryRow("SELECT token FROM sign_sessions WHERE token=$1", pkt.LoginTokenString).Scan(&token)
+		err := s.Server.db.QueryRow("SELECT token FROM sign_sessions WHERE token=$1", pkt.LoginTokenString).Scan(&token)
 		if err != nil {
 			s.rawConn.Close()
 			s.logger.Warn(fmt.Sprintf("Invalid login token, offending CID: (%d)", pkt.CharID0))
@@ -151,32 +151,32 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	rights := uint32(0x0E)
-	s.server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", pkt.CharID0).Scan(&rights)
+	s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", pkt.CharID0).Scan(&rights)
 
 	s.Lock()
-	s.charID = pkt.CharID0
-	s.rights = rights
-	s.token = pkt.LoginTokenString
+	s.CharID = pkt.CharID0
+	s.Rights = rights
+	s.Token = pkt.LoginTokenString
 	s.Unlock()
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(Time_Current_Adjusted().Unix())) // Unix timestamp
 
-	_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.Sessions), s.server.ID)
+	_, err := s.Server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.Server.Sessions), s.Server.ID)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = s.server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.server.ID, s.charID, s.token)
+	_, err = s.Server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.Server.ID, s.CharID, s.Token)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.CharID)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = s.server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.charID)
+	_, err = s.Server.db.Exec("UPDATE users u SET last_character=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -185,7 +185,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 
 	updateRights(s)
 
-	s.server.BroadcastMHF(&mhfpacket.MsgSysInsertUser{CharID: s.charID}, s)
+	s.Server.BroadcastMHF(&mhfpacket.MsgSysInsertUser{CharID: s.CharID}, s)
 }
 
 func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
@@ -193,27 +193,27 @@ func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func logoutPlayer(s *Session) {
-	delete(s.server.Sessions, s.rawConn)
+	delete(s.Server.Sessions, s.rawConn)
 	s.rawConn.Close()
 
-	_, err := s.server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.token)
+	_, err := s.Server.db.Exec("UPDATE sign_sessions SET server_id=NULL, char_id=NULL WHERE token=$1", s.Token)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.server.Sessions), s.server.ID)
+	_, err = s.Server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.Server.Sessions), s.Server.ID)
 	if err != nil {
 		panic(err)
 	}
 
 	var timePlayed int
-	_ = s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
+	_ = s.Server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.CharID).Scan(&timePlayed)
 
-	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.sessionStart)) + timePlayed
+	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.SessionStart)) + timePlayed
 
 	var rpGained int
 
-	if s.rights > 0x40000000 { // N Course
+	if s.Rights > 0x40000000 { // N Course
 		rpGained = timePlayed / 900
 		timePlayed = timePlayed % 900
 	} else {
@@ -221,37 +221,37 @@ func logoutPlayer(s *Session) {
 		timePlayed = timePlayed % 1800
 	}
 
-	_, err = s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.CharID)
 	if err != nil {
 		panic(err)
 	}
 
-	if s.stage == nil {
+	if s.Stage == nil {
 		return
 	}
 
-	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
-		CharID: s.charID,
+	s.Server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser{
+		CharID: s.CharID,
 	}, s)
 
-	s.server.Lock()
-	for _, stage := range s.server.Stages {
-		if _, exists := stage.ReservedClientSlots[s.charID]; exists {
-			delete(stage.ReservedClientSlots, s.charID)
+	s.Server.Lock()
+	for _, stage := range s.Server.Stages {
+		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
+			delete(stage.ReservedClientSlots, s.CharID)
 		}
 	}
-	s.server.Unlock()
+	s.Server.Unlock()
 
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
 	treasureHuntUnregister(s)
 
-	saveData, err := GetCharacterSaveData(s, s.charID)
+	saveData, err := GetCharacterSaveData(s, s.CharID)
 	if err != nil {
 		panic(err)
 	}
 	saveData.RP += uint16(rpGained)
-	transaction, err := s.server.db.Begin()
+	transaction, err := s.Server.db.Begin()
 	err = saveData.Save(s, transaction)
 	if err != nil {
 		transaction.Rollback()
@@ -291,7 +291,7 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 	// TODO(Andoryuuta): In the offical client, the log key index is off by one,
 	// cutting off the last byte in _most uses_. Find and document these accordingly.
 	s.Lock()
-	s.logKey = logKey
+	s.LogKey = logKey
 	s.Unlock()
 
 	// Issue it.
@@ -303,7 +303,7 @@ func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysRecordLog(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysRecordLog)
 	// remove a client returning to town from reserved slots to make sure the stage is hidden from board
-	delete(s.stage.ReservedClientSlots, s.charID)
+	delete(s.Stage.ReservedClientSlots, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
@@ -353,23 +353,23 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 	case 1: // CID
 		bf := byteframe.NewByteFrameFromBytes(pkt.MessageData)
 		CharID := bf.ReadUint32()
-		for _, c := range s.server.Channels {
+		for _, c := range s.Server.Channels {
 			for _, session := range c.Sessions {
-				if session.charID == CharID {
+				if session.CharID == CharID {
 					count++
 					sessionName := stringsupport.UTF8ToSJIS(session.Name)
-					sessionStage := stringsupport.UTF8ToSJIS(session.stageID)
+					sessionStage := stringsupport.UTF8ToSJIS(session.StageID)
 					resp.WriteUint32(binary.LittleEndian.Uint32(net.ParseIP(c.IP).To4()))
 					resp.WriteUint16(c.Port)
-					resp.WriteUint32(session.charID)
+					resp.WriteUint32(session.CharID)
 					resp.WriteBool(true)
 					resp.WriteUint8(uint8(len(sessionName) + 1))
-					resp.WriteUint16(uint16(len(c.userBinaryParts[userBinaryPartID{charID: session.charID, index: 3}])))
+					resp.WriteUint16(uint16(len(c.userBinaryParts[userBinaryPartID{charID: session.CharID, index: 3}])))
 					resp.WriteBytes(make([]byte, 40))
 					resp.WriteUint8(uint8(len(sessionStage) + 1))
 					resp.WriteBytes(make([]byte, 8))
 					resp.WriteNullTerminatedBytes(sessionName)
-					resp.WriteBytes(c.userBinaryParts[userBinaryPartID{session.charID, 3}])
+					resp.WriteBytes(c.userBinaryParts[userBinaryPartID{session.CharID, 3}])
 					resp.WriteNullTerminatedBytes(sessionStage)
 				}
 			}
@@ -380,7 +380,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf.ReadUint16() // maxResults
 		bf.ReadUint8()  // Unk
 		searchTerm := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
-		for _, c := range s.server.Channels {
+		for _, c := range s.Server.Channels {
 			for _, session := range c.Sessions {
 				if count == 100 {
 					break
@@ -388,18 +388,18 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				if strings.Contains(session.Name, searchTerm) {
 					count++
 					sessionName := stringsupport.UTF8ToSJIS(session.Name)
-					sessionStage := stringsupport.UTF8ToSJIS(session.stageID)
+					sessionStage := stringsupport.UTF8ToSJIS(session.StageID)
 					resp.WriteUint32(binary.LittleEndian.Uint32(net.ParseIP(c.IP).To4()))
 					resp.WriteUint16(c.Port)
-					resp.WriteUint32(session.charID)
+					resp.WriteUint32(session.CharID)
 					resp.WriteBool(true)
 					resp.WriteUint8(uint8(len(sessionName) + 1))
-					resp.WriteUint16(uint16(len(c.userBinaryParts[userBinaryPartID{session.charID, 3}])))
+					resp.WriteUint16(uint16(len(c.userBinaryParts[userBinaryPartID{session.CharID, 3}])))
 					resp.WriteBytes(make([]byte, 40))
 					resp.WriteUint8(uint8(len(sessionStage) + 1))
 					resp.WriteBytes(make([]byte, 8))
 					resp.WriteNullTerminatedBytes(sessionName)
-					resp.WriteBytes(c.userBinaryParts[userBinaryPartID{charID: session.charID, index: 3}])
+					resp.WriteBytes(c.userBinaryParts[userBinaryPartID{charID: session.CharID, index: 3}])
 					resp.WriteNullTerminatedBytes(sessionStage)
 				}
 			}
@@ -413,7 +413,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		maxResults := bf.ReadUint16()
 		bf.ReadBytes(1)
 		stageID := stringsupport.SJISToUTF8(bf.ReadNullTerminatedBytes())
-		for _, c := range s.server.Channels {
+		for _, c := range s.Server.Channels {
 			if c.IP == ipString && c.Port == port {
 				for _, stage := range c.Stages {
 					if stage.Id == stageID {
@@ -422,11 +422,11 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 						}
 						for session := range stage.Clients {
 							count++
-							sessionStage := stringsupport.UTF8ToSJIS(session.stageID)
+							sessionStage := stringsupport.UTF8ToSJIS(session.StageID)
 							sessionName := stringsupport.UTF8ToSJIS(session.Name)
 							resp.WriteUint32(binary.LittleEndian.Uint32(net.ParseIP(c.IP).To4()))
 							resp.WriteUint16(c.Port)
-							resp.WriteUint32(session.charID)
+							resp.WriteUint32(session.CharID)
 							resp.WriteUint8(uint8(len(sessionStage) + 1))
 							resp.WriteUint8(uint8(len(sessionName) + 1))
 							resp.WriteUint8(0)
@@ -463,7 +463,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		case 5: // Quick Party
 			// Unk
 		}
-		for _, c := range s.server.Channels {
+		for _, c := range s.Server.Channels {
 			for _, stage := range c.Stages {
 				if count == maxResults {
 					break
@@ -485,11 +485,11 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 
 					resp.WriteUint16(uint16(len(sessionStage) + 1))
 					resp.WriteUint8(1)
-					resp.WriteUint8(uint8(len(stage.RawBinaryData[stageBinaryKey{1, 1}])))
+					resp.WriteUint8(uint8(len(stage.RawBinaryData[StageBinaryKey{1, 1}])))
 					resp.WriteBytes(make([]byte, 16))
 					resp.WriteNullTerminatedBytes(sessionStage)
 					resp.WriteBytes([]byte{0x00})
-					resp.WriteBytes(stage.RawBinaryData[stageBinaryKey{1, 1}])
+					resp.WriteBytes(stage.RawBinaryData[StageBinaryKey{1, 1}])
 				}
 			}
 		}
@@ -509,7 +509,7 @@ func handleMsgMhfServerCommand(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfAnnounce(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAnnounce)
-	s.server.BroadcastRaviente(pkt.IPAddress, pkt.Port, pkt.StageID, pkt.Type)
+	s.Server.BroadcastRaviente(pkt.IPAddress, pkt.Port, pkt.StageID, pkt.Type)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -563,7 +563,7 @@ func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateUnionItem)
 	var boxContents []byte
 	bf := byteframe.NewByteFrame()
-	err := s.server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.charID)).Scan(&boxContents)
+	err := s.Server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.CharID)).Scan(&boxContents)
 	if err != nil {
 		s.logger.Fatal("Failed to get shared item box contents from db", zap.Error(err))
 	} else {
@@ -591,7 +591,7 @@ func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	var boxContents []byte
 	var oldItems []Item
 
-	err := s.server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.charID)).Scan(&boxContents)
+	err := s.Server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.CharID)).Scan(&boxContents)
 	if err != nil {
 		s.logger.Fatal("Failed to get shared item box contents from db", zap.Error(err))
 	} else {
@@ -639,7 +639,7 @@ func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// Upload new item cache
-	_, err = s.server.db.Exec("UPDATE users SET item_box = $1 FROM characters WHERE  users.id = characters.user_id AND characters.id = $2", bf.Data(), int(s.charID))
+	_, err = s.Server.db.Exec("UPDATE users SET item_box = $1 FROM characters WHERE  users.id = characters.user_id AND characters.id = $2", bf.Data(), int(s.CharID))
 	if err != nil {
 		s.logger.Fatal("Failed to update shared item box contents in db", zap.Error(err))
 	}
@@ -649,7 +649,7 @@ func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfAcquireCafeItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireCafeItem)
 	var netcafe_points int
-	err := s.server.db.QueryRow("UPDATE characters SET netcafe_points = netcafe_points - $1 WHERE id = $2 RETURNING netcafe_points", pkt.PointCost, s.charID).Scan(&netcafe_points)
+	err := s.Server.db.QueryRow("UPDATE characters SET netcafe_points = netcafe_points - $1 WHERE id = $2 RETURNING netcafe_points", pkt.PointCost, s.CharID).Scan(&netcafe_points)
 	if err != nil {
 		s.logger.Fatal("Failed to get plate data savedata from db", zap.Error(err))
 	}
@@ -661,7 +661,7 @@ func handleMsgMhfAcquireCafeItem(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfUpdateCafepoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateCafepoint)
 	var netcafe_points int
-	err := s.server.db.QueryRow("SELECT COALESCE(netcafe_points, 0) FROM characters WHERE id = $1", s.charID).Scan(&netcafe_points)
+	err := s.Server.db.QueryRow("SELECT COALESCE(netcafe_points, 0) FROM characters WHERE id = $1", s.CharID).Scan(&netcafe_points)
 	if err != nil {
 		s.logger.Fatal("Failed to get plate data savedata from db", zap.Error(err))
 	}
@@ -688,14 +688,14 @@ func handleMsgMhfCheckDailyCafepoint(s *Session, p mhfpacket.MHFPacket) {
 
 	// get time after which daily claiming would be valid from db
 	var dailyTime time.Time
-	err := s.server.db.QueryRow("SELECT COALESCE(daily_time, $2) FROM characters WHERE id = $1", s.charID, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)).Scan(&dailyTime)
+	err := s.Server.db.QueryRow("SELECT COALESCE(daily_time, $2) FROM characters WHERE id = $1", s.CharID, time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)).Scan(&dailyTime)
 	if err != nil {
 		s.logger.Fatal("Failed to get daily_time savedata from db", zap.Error(err))
 	}
 
 	if t.After(dailyTime) {
 		// +5 netcafe points and setting next valid window
-		_, err := s.server.db.Exec("UPDATE characters SET daily_time=$1, netcafe_points=netcafe_points::int + 5 WHERE id=$2", midday, s.charID)
+		_, err := s.Server.db.Exec("UPDATE characters SET daily_time=$1, netcafe_points=netcafe_points::int + 5 WHERE id=$2", midday, s.CharID)
 		if err != nil {
 			s.logger.Fatal("Failed to update daily_time and netcafe_points savedata in db", zap.Error(err))
 		}
@@ -732,14 +732,14 @@ func getGookData(s *Session, cid uint32) (uint16, []byte) {
 	var count uint16
 	bf := byteframe.NewByteFrame()
 	for i := 0; i < 5; i++ {
-		err := s.server.db.QueryRow(fmt.Sprintf("SELECT gook%d FROM gook WHERE id=$1", i), cid).Scan(&data)
+		err := s.Server.db.QueryRow(fmt.Sprintf("SELECT gook%d FROM gook WHERE id=$1", i), cid).Scan(&data)
 		if err != nil {
-			s.server.db.Exec("INSERT INTO gook (id) VALUES ($1)", s.charID)
+			s.Server.db.Exec("INSERT INTO gook (id) VALUES ($1)", s.CharID)
 			return 0, bf.Data()
 		}
 		if err == nil && data != nil {
 			count++
-			if s.charID == cid && count == 1 {
+			if s.CharID == cid && count == 1 {
 				gook := byteframe.NewByteFrameFromBytes(data)
 				bf.WriteBytes(gook.ReadBytes(4))
 				d := gook.ReadBytes(2)
@@ -757,7 +757,7 @@ func getGookData(s *Session, cid uint32) (uint16, []byte) {
 func handleMsgMhfEnumerateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuacot)
 	bf := byteframe.NewByteFrame()
-	count, data := getGookData(s, s.charID)
+	count, data := getGookData(s, s.CharID)
 	bf.WriteUint16(count)
 	bf.WriteBytes(data)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -767,7 +767,7 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
 	for _, gook := range pkt.Gooks {
 		if !gook.Exists {
-			s.server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=NULL WHERE id=$1", gook.Index), s.charID)
+			s.Server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=NULL WHERE id=$1", gook.Index), s.CharID)
 		} else {
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint32(gook.Index)
@@ -775,7 +775,7 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteBytes(gook.Data)
 			bf.WriteUint8(gook.NameLen)
 			bf.WriteBytes(gook.Name)
-			s.server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=$1 WHERE id=$2", gook.Index), bf.Data(), s.charID)
+			s.Server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=$1 WHERE id=$2", gook.Index), bf.Data(), s.CharID)
 		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -1732,7 +1732,7 @@ func handleMsgMhfGetEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	// +10,000 for actual ID to be unlocked by each bit
 	// Returning 3200 bytes of FF just unlocks everything for now
 	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(skin_hist::bytea, $2::bytea) FROM characters WHERE id = $1", s.charID, make([]byte, 0xC80)).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT COALESCE(skin_hist::bytea, $2::bytea) FROM characters WHERE id = $1", s.CharID, make([]byte, 0xC80)).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get skin_hist savedata from db", zap.Error(err))
 	}
@@ -1743,7 +1743,7 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateEquipSkinHist)
 	// sends a raw armour ID back that needs to be mapped into the persistent bitmask above (-10,000)
 	var data []byte
-	err := s.server.db.QueryRow("SELECT COALESCE(skin_hist, $2) FROM characters WHERE id = $1", s.charID, make([]byte, 0xC80)).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT COALESCE(skin_hist, $2) FROM characters WHERE id = $1", s.CharID, make([]byte, 0xC80)).Scan(&data)
 	if err != nil {
 		s.logger.Fatal("Failed to get skin_hist from db", zap.Error(err))
 	}
@@ -1771,7 +1771,7 @@ func handleMsgMhfUpdateEquipSkinHist(s *Session, p mhfpacket.MHFPacket) {
 	byteInd := (bit / 8)
 	bitInByte := bit % 8
 	data[startByte+byteInd] |= bits.Reverse8((1 << uint(bitInByte)))
-	_, err = s.server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.charID)
+	_, err = s.Server.db.Exec("UPDATE characters SET skin_hist=$1 WHERE id=$2", data, s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -1790,7 +1790,7 @@ func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetEnhancedMinidata)
 	// this looks to be the detailed chunk of information you can pull up on players in town
 	var data []byte
-	err := s.server.db.QueryRow("SELECT minidata FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
+	err := s.Server.db.QueryRow("SELECT minidata FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
 	if err != nil {
 		data = make([]byte, 0x400) // returning empty might avoid a client softlock
 		//s.logger.Fatal("Failed to get minidata from db", zap.Error(err))
@@ -1800,7 +1800,7 @@ func handleMsgMhfGetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSetEnhancedMinidata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetEnhancedMinidata)
-	_, err := s.server.db.Exec("UPDATE characters SET minidata=$1 WHERE id=$2", pkt.RawDataPayload, s.charID)
+	_, err := s.Server.db.Exec("UPDATE characters SET minidata=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update minidata in db", zap.Error(err))
 	}
