@@ -333,7 +333,7 @@ func (s *Server) isDiscordAdmin(ds *discordgo.Session, m *discordgo.MessageCreat
 // onDiscordMessage handles receiving messages from discord and forwarding them ingame.
 func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore messages from our bot, or ones that are not in the correct channel.
-	if m.Author.ID == ds.State.User.ID || !s.enable {
+	if m.Author.ID == ds.State.User.ID || !s.Enable {
 		return
 	}
 
