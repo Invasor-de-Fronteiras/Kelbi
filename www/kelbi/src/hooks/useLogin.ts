@@ -45,7 +45,7 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
         const lastAuth = window.external.getLastAuthResult();
         const signRes = window.external.getSignResult();
 
-        if (lastAuth === LastAuthResult.None || signRes === SignResult.None) {
+        if (lastAuth === LastAuthResult.None) {
           return;
         }
 
@@ -61,6 +61,8 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
           handleSuccess();
         } else if (signRes === SignResult.NotMatchPassword) {
           handleError(new Error('senha incorreta!'));
+        } else if (LastAuthResult.AuthErrorNet) {
+          handleError(new Error('Servidor offline, entre em contato com os administradores.'));
         } else {
           handleError(new Error(`falha na autenticação! ${lastAuth} ${signRes}`));
         }
