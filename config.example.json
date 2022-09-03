@@ -39,6 +39,7 @@
     },
     "launcher": {
       "port": 80,
+      "path": "www/kelbi/build",
       "UseOriginalLauncherFiles": false
     },
     "sign": {
