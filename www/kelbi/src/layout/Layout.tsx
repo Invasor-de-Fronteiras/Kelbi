@@ -10,14 +10,16 @@ import { LauncherButtonGroup } from '../components/buttons/LauncherButtonGroup';
 import { openConfig, openDiscord, openGithub } from '../utils/launcher';
 
 import './Layout.css';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DevTool } from '../components/DevTool';
+import { useLauncher } from '../context/LauncherContext';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { showDebugger } = useLauncher();
+
   return (
     <>
       <div id='main'>
@@ -35,7 +37,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </div>
-      {/* <DevTool /> */}
+      {showDebugger ? <DevTool /> : null}
       <Background />
       <LauncherButtonGroup />
     </>
