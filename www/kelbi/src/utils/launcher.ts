@@ -39,6 +39,7 @@ export enum LastAuthResult {
   AuthSuccess = 'AUTH_SUCCESS',
   InLoading = 'AUTH_PROGRESS',
   AuthErrorAcc = 'AUTH_ERROR_ACC',
+  AuthErrorNet = 'AUTH_ERROR_NET',
 }
 
 export enum SignResult {
