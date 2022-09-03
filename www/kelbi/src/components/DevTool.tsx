@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useEffect, useMemo, useState } from 'react';
-import { randomHexColor } from '../utils/util';
-import { BiShow } from 'react-icons/bi';
+
+import './DevTool.css';
 
 // data from original launcher
 const _UPD_BAR_WID = 302;
@@ -13,8 +13,7 @@ const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
  */
 export function DevTool() {
   const [data, setData] = useState({});
-  const [err, setErr] = useState(null);
-  const [show, setShow] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const timeout = setInterval(() => {
@@ -36,14 +35,13 @@ export function DevTool() {
         const launcherReturnCode = window.external.getLauncherReturnCode();
 
         setData({
+          browserLang: navigator.language,
           updatePercentageTotal,
           accountRights,
           mhfBootMode,
           lastServerIndex,
           serverListXML,
           mhfMutexNumber,
-          userId,
-          password,
           lastAuthResult,
           signResult,
           enableSessionId,
@@ -51,66 +49,52 @@ export function DevTool() {
           extractLog,
           updateStatus,
           launcherReturnCode,
+          calcUpdatePercentageTotal: Math.ceil(Number(updatePercentageTotal) * _UPD_BAR_PER),
+          ...(showLogin ? { userId, password } : {}),
         });
       } catch (err) {
-        setErr(err);
+        setData((prev) => ({
+          ...prev,
+          errName: err?.name,
+          errMsg: err?.message,
+          errStack: err?.stack,
+          errTime: new Date(),
+        }));
       }
     }, 100);
     return () => clearInterval(timeout);
-  }, []);
+  }, [showLogin]);
 
   return (
-    <div
-      style={{
-        backgroundColor: '#fff',
-        position: 'absolute',
-        zIndex: 1,
-        padding: '5px',
-        width: 'min-content',
-        maxWidth: '50%',
-        height: 'min-content',
-        top: 0,
-        right: 0,
-        marginRight: '10%',
-      }}
-    >
-      <div className='flex flex-row items-center justify-center'>
+    <div id='debugger'>
+      <div className='header'>
         <h1>Dev Tool</h1>
-        <BiShow style={{ marginLeft: 10 }} size={25} onClick={() => setShow(!show)} />
+        <p>
+          Painel de Debug do Launcher, para entender seus efeitos colateiras e acompanhar os
+          estados. Usado para encontrar erros no launcher.
+        </p>
+        <div id='show-login'>
+          <input type='checkbox' checked={showLogin} onClick={() => setShowLogin((e) => !e)} />
+          <label>Show Login</label>
+        </div>
       </div>
-      <span>{navigator.language}</span>
-      <h2>States</h2>
-      {show && (
-        <>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {(Object.keys(data) as (keyof typeof data)[])
-              .filter((key) => !!data[key])
-              .map((key) => {
-                return <DebugItem data={data[key]} key={key} name={key} />;
-              })}
-            {/** @ts-ignore */}
-            {data?.updatePercentageTotal && (
-              <>
-                <span>
-                  {/** @ts-ignore */}
-                  calc updatePercentageTotal: {Math.ceil(data.updatePercentageTotal * _UPD_BAR_PER)}
-                </span>
-              </>
-            )}
-          </div>
-          {err && (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h2>Error</h2>
-              {/** @ts-ignore */}
-              <span>name: {err?.name}</span>
-              {/** @ts-ignore */}
-              <span>msg: {err?.message}</span>
-              {/** @ts-ignore */}
-              <span>stack: {err?.stack}</span>
-            </div>
-          )}
-        </>
-      )}
+      <table>
+        <caption>WATCH</caption>
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Value</th>
+            <th>Copy</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(Object.keys(data) as (keyof typeof data)[])
+            .filter((key) => !!data[key])
+            .map((key) => {
+              return <DebugItem data={data[key]} key={key} name={key} />;
+            })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -121,22 +105,20 @@ interface DebugItemProps {
 }
 
 function DebugItem({ data, name }: DebugItemProps) {
-  const [accordion, setAccordion] = useState(false);
-  const color = useMemo(() => randomHexColor(), []);
-  const value = useMemo(() => (typeof data === 'object' ? JSON.stringify(data) : data), [data]);
+  const value = useMemo(
+    () => (typeof data === 'object' ? JSON.stringify(data) : data?.toString() ?? data),
+    [data],
+  );
+
   return (
-    <div key={name}>
-      <BiShow onClick={() => setAccordion(!accordion)} />
-      <span style={{ color }}>{name}:</span>
-      <span>{value}</span>
-      {accordion && (
-        <input
-          style={{
-            border: '1px solid #ccc',
-          }}
-          value={value}
-        />
-      )}
-    </div>
+    <tr key={name}>
+      <td>
+        <strong>{name}</strong>
+      </td>
+      <td>{value}</td>
+      <td>
+        <input value={value} />
+      </td>
+    </tr>
   );
 }
