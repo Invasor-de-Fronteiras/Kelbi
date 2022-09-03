@@ -7,6 +7,15 @@ install-launcher-deps:
 build-launcher: install-launcher-deps
 	cd $(LAUNCHER_FOLDER_PATH) && npm run build
 
+format-launcher:
+	cd $(LAUNCHER_FOLDER_PATH) && npm run format
+
+lint-launcher:
+	cd $(LAUNCHER_FOLDER_PATH) && npm run lint
+
+format: format-launcher lint-launcher
+	go fmt .
+
 run-db:
 	docker-compose up -d
 
