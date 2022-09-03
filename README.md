@@ -1,4 +1,3 @@
-
 ![Dark theme preview](http://invidget.switchblade.xyz/967058504403808356)
 
 # Kelbi - MHFZ Server
@@ -23,7 +22,26 @@ Europe is a Monster Hunter Frontier Z Server developed by several people!
 
 ## Local Development
 
-TODO
+### Requirements
+
+- [Go](https://go.dev)
+- [PostgreSQL](https://www.postgresql.org)
+- Makefile
+- [Docker](https://www.docker.com/)
+
+### Instructions
+
+Run `make setup` to start PostgreSQL, run migrations and build launcher:
+
+```sh
+make setup
+```
+
+Start the Erupe:
+
+```sh
+make start # or go run .
+```
 
 ## Contributing
 
@@ -33,7 +51,7 @@ If your contribution is an advance for Erupe, prefer to send it to the [main com
 
 Licensed under [MIT](/LICENSE).
 
-<!-- 
+<!--
 ## WARNING
 
 This project is in its infancy and has no reliable active developer, no documentation, and no support.
