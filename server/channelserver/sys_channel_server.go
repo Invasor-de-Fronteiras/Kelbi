@@ -411,7 +411,7 @@ func (s *Server) NextSemaphoreID() uint32 {
 				exists = true
 			}
 		}
-		if exists == false {
+		if !exists {
 			break
 		}
 	}

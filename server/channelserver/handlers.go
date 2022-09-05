@@ -10,6 +10,7 @@ import (
 	"net"
 	"strings"
 
+	//nolint:staticcheck
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
@@ -236,6 +237,7 @@ func logoutPlayer(s *Session) {
 
 	s.Server.Lock()
 	for _, stage := range s.Server.Stages {
+		//nolint:gosimple
 		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
 			delete(stage.ReservedClientSlots, s.CharID)
 		}
@@ -251,7 +253,13 @@ func logoutPlayer(s *Session) {
 		panic(err)
 	}
 	saveData.RP += uint16(rpGained)
+	//nolint:ineffassign
 	transaction, err := s.Server.db.Begin()
+	if err != nil {
+		transaction.Rollback()
+		panic(err)
+	}
+
 	err = saveData.Save(s, transaction)
 	if err != nil {
 		transaction.Rollback()

@@ -136,7 +136,7 @@ func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	err := pkt.Build(bf, s.clientContext)
 
 	if err != nil {
-		fmt.Println(fmt.Sprintf("deu ruim2: %s - %s", pkt.Opcode(), err.Error()))
+		fmt.Printf("deu ruim2: %s - %s", pkt.Opcode(), err.Error())
 
 	}
 

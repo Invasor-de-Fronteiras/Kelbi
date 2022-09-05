@@ -8,6 +8,7 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
+
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -103,7 +104,6 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 	switch {
 	case err == sql.ErrNoRows:
 		s.logger.Info("Account not found", zap.String("reqUsername", reqUsername))
-		serverRespBytes = makeSignInFailureResp(SIGN_EAUTH)
 
 		// HACK(Andoryuuta): Create a new account if it doesn't exit.
 		s.logger.Info("Creating account", zap.String("reqUsername", reqUsername), zap.String("reqPassword", reqPassword))
@@ -123,10 +123,12 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 		}
 
 		serverRespBytes = s.makeSignInResp(id)
+		//nolint:gosimple
 		break
 	case err != nil:
 		serverRespBytes = makeSignInFailureResp(SIGN_EABORT)
 		s.logger.Warn("Got error on SQL query", zap.Error(err))
+		//nolint:gosimple
 		break
 	default:
 		if bcrypt.CompareHashAndPassword([]byte(password), []byte(reqPassword)) == nil {

@@ -88,6 +88,7 @@ func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	}
 }
 
+//nolint:unused
 func (s *Stage) isCharInQuestByID(charID uint32) bool {
 	if _, exists := s.ReservedClientSlots[charID]; exists {
 		return exists

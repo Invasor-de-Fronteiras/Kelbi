@@ -188,8 +188,12 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildScoutList)
-
 	guildInfo, err := GetGuildInfoByCharacterId(s, s.CharID)
+
+	if err != nil {
+		doAckSimpleFail(s, pkt.AckHandle, nil)
+		return
+	}
 
 	if guildInfo == nil && s.PrevGuildID == 0 {
 		doAckSimpleFail(s, pkt.AckHandle, nil)

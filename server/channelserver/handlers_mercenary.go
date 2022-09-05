@@ -7,6 +7,8 @@ import (
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
 	"io"
+
+	//nolint:staticcheck
 	"io/ioutil"
 	"math/rand"
 	"os"

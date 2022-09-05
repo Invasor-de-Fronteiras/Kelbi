@@ -572,9 +572,10 @@ func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 	return buildGuildObjectFromDbResult(rows, err, s)
 }
 
+//nolint:staticcheck
 func buildGuildObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*Guild, error) {
 	guild := &Guild{}
-
+	//nolint:staticcheck
 	err = result.StructScan(guild)
 
 	if err != nil {
@@ -744,6 +745,10 @@ func handleDonateRP(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, bf *byteframe
 	}
 	saveData.RP -= rp
 	transaction, err := s.Server.db.Begin()
+	if err != nil {
+		return err
+	}
+
 	err = saveData.Save(s, transaction)
 	if err != nil {
 		transaction.Rollback()

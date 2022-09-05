@@ -6,6 +6,8 @@ import (
 	"erupe-ce/common/stringsupport"
 	"fmt"
 	"io"
+
+	//nolint:staticcheck
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -116,6 +118,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 
 func grpToGR(n uint32) uint16 {
 	var gr uint16
+	//nolint:ineffassign
 	gr = 1
 	switch grp := int(n); {
 	case grp < 208750: // Up to 50
@@ -135,6 +138,7 @@ func grpToGR(n uint32) uint16 {
 			}
 		}
 		gr = uint16(i + 2)
+		//nolint:gosimple
 		break
 	case grp < 593400: // 51-99
 		grp -= 208750
@@ -147,6 +151,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 7850
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 993400: // 100-149
 		grp -= 593400
@@ -159,6 +164,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 8000
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 1400900: // 150-199
 		grp -= 993400
@@ -171,6 +177,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 8150
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 2315900: // 200-299
 		grp -= 1400900
@@ -183,6 +190,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 9150
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 3340900: // 300-399
 		grp -= 2315900
@@ -195,6 +203,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 10250
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 4505900: // 400-499
 		grp -= 3340900
@@ -207,6 +216,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 11650
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 5850900: // 500-599
 		grp -= 4505900
@@ -219,6 +229,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 13450
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 7415900: // 600-699
 		grp -= 5850900
@@ -231,6 +242,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 15650
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 9230900: // 700-799
 		grp -= 7415900
@@ -243,6 +255,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 18150
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	case grp < 11345900: // 800-899
 		grp -= 9230900
@@ -255,6 +268,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 21150
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	default: // 900+
 		grp -= 11345900
@@ -267,6 +281,7 @@ func grpToGR(n uint32) uint16 {
 			grp -= 23950
 		}
 		gr = uint16(i)
+		//nolint:gosimple
 		break
 	}
 	return gr

@@ -263,6 +263,7 @@ func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
+		// nolint:gosimple
 		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
 			delete(stage.ReservedClientSlots, s.CharID)
 		}

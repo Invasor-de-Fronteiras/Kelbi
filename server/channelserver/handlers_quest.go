@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	//nolint:staticcheck
 	"io/ioutil"
 	"os"
 	"path/filepath"
