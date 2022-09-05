@@ -295,6 +295,7 @@ func dumpSaveData(s *Session, data []byte, suffix string) {
 		path := filepath.Join(s.Server.erupeConfig.DevModeOptions.SaveDumps.OutputDir, fmt.Sprintf("%s_", s.Name), fmt.Sprintf("%d_%s_%s%s.bin", s.CharID, s.Name, Time_Current().Format("2006-01-02_15.04.05"), suffix))
 
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			// nolint:errcheck // Error return value of `.` is not checked
 			os.Mkdir(dir, os.ModeDir)
 		}
 		err := ioutil.WriteFile(path, data, 0644)
@@ -325,6 +326,7 @@ func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to decompress savedata", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrameFromBytes(decompSaveData)
+	// nolint:errcheck
 	bf.Seek(88, io.SeekStart)
 	binary1 := bf.ReadNullTerminatedBytes()
 	s.Server.userBinaryPartsLock.Lock()

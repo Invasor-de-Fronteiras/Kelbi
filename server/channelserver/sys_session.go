@@ -169,7 +169,7 @@ func (s *Session) sendLoop() {
 
 		// Append the MSG_SYS_END tailing opcode.
 		terminatedPacket = append(terminatedPacket, []byte{0x00, 0x10}...)
-
+		// nolint:errcheck
 		s.cryptConn.SendPacket(terminatedPacket)
 	}
 }

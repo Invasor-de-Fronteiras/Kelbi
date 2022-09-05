@@ -81,6 +81,7 @@ func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
+		// nolint:errcheck
 		pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.

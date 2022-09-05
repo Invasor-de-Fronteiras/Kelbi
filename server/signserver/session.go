@@ -62,6 +62,7 @@ func (s *Session) handlePacket(pkt []byte) error {
 	case "DELETE:100":
 		loginTokenString := string(bf.ReadNullTerminatedBytes())
 		characterID := int(bf.ReadUint32())
+		// nolint:errcheck
 		s.server.deleteCharacter(characterID, loginTokenString)
 		sugar.Infof("Deleted character ID: %v\n", characterID)
 		err := s.cryptConn.SendPacket([]byte{0x01}) // DEL_SUCCESS

@@ -152,6 +152,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	rights := uint32(0x0E)
+	// nolint:errcheck // Error return value of `.` is not checked
 	s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", pkt.CharID0).Scan(&rights)
 
 	s.Lock()
@@ -253,18 +254,21 @@ func logoutPlayer(s *Session) {
 		panic(err)
 	}
 	saveData.RP += uint16(rpGained)
-	//nolint:ineffassign
+	// nolint:ineffassign
 	transaction, err := s.Server.db.Begin()
 	if err != nil {
+		// nolint:errcheck
 		transaction.Rollback()
 		panic(err)
 	}
 
 	err = saveData.Save(s, transaction)
 	if err != nil {
+		// nolint:errcheck // Error return value of `.` is not checked
 		transaction.Rollback()
 		panic(err)
 	} else {
+		// nolint:errcheck // Error return value of `.` is not checked
 		transaction.Commit()
 	}
 }
@@ -502,6 +506,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	}
+	// nolint:errcheck
 	resp.Seek(0, io.SeekStart)
 	resp.WriteUint16(count)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -742,6 +747,7 @@ func getGookData(s *Session, cid uint32) (uint16, []byte) {
 	for i := 0; i < 5; i++ {
 		err := s.Server.db.QueryRow(fmt.Sprintf("SELECT gook%d FROM gook WHERE id=$1", i), cid).Scan(&data)
 		if err != nil {
+			// nolint:errcheck // Error return value of `.` is not checked
 			s.Server.db.Exec("INSERT INTO gook (id) VALUES ($1)", s.CharID)
 			return 0, bf.Data()
 		}
@@ -775,6 +781,7 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuacot)
 	for _, gook := range pkt.Gooks {
 		if !gook.Exists {
+			// nolint:errcheck
 			s.Server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=NULL WHERE id=$1", gook.Index), s.CharID)
 		} else {
 			bf := byteframe.NewByteFrame()
@@ -783,6 +790,7 @@ func handleMsgMhfUpdateGuacot(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteBytes(gook.Data)
 			bf.WriteUint8(gook.NameLen)
 			bf.WriteBytes(gook.Name)
+			// nolint:errcheck // Error return value of `.` is not checked
 			s.Server.db.Exec(fmt.Sprintf("UPDATE gook SET gook%d=$1 WHERE id=$2", gook.Index), bf.Data(), s.CharID)
 		}
 	}

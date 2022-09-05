@@ -46,6 +46,7 @@ func (m *MsgMhfEnumerateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	m.Type = EnumerateGuildType(bf.ReadUint8())
 	m.Page = bf.ReadUint8()
 	m.RawDataPayload = bf.DataFromCurrent()
+	// nolint:errcheck // Error return value of `.` is not checked
 	bf.Seek(-2, io.SeekEnd)
 	return nil
 }

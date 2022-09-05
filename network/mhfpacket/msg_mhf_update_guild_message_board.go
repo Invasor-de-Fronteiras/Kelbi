@@ -26,6 +26,7 @@ func (m *MsgMhfUpdateGuildMessageBoard) Parse(bf *byteframe.ByteFrame, ctx *clie
 	m.MessageOp = bf.ReadUint32()
 	if m.MessageOp != 5 {
 		m.Request = bf.DataFromCurrent()
+		// nolint:errcheck
 		bf.Seek(int64(len(bf.Data())-2), 0)
 	}
 	return nil

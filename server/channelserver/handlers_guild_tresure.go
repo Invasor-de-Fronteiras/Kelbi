@@ -126,8 +126,10 @@ func treasureHuntUnregister(s *Session) {
 	var hunters string
 	rows, _ := s.Server.db.Queryx("SELECT id, hunters FROM guild_hunts WHERE guild_id=$1", guild.ID)
 	for rows.Next() {
+		// nolint:errcheck
 		rows.Scan(&huntID, &hunters)
 		hunters = stringsupport.CSVRemove(hunters, int(s.CharID))
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guild_hunts SET hunters=$1 WHERE id=$2", hunters, huntID)
 	}
 }
@@ -151,6 +153,7 @@ func handleMsgMhfOperateGuildTresureReport(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	} else if pkt.State == 1 { // Collected by hunter
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guild_hunts SET hunters='', claimed=true WHERE id=$1", pkt.HuntID)
 	} else if pkt.State == 2 { // Claim treasure
 		err := s.Server.db.QueryRow("SELECT treasure FROM guild_hunts WHERE id=$1", pkt.HuntID).Scan(&csv)

@@ -48,6 +48,7 @@ func (s *Semaphore) BroadcastRavi(pkt mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
+		// nolint:errcheck // Error return value of `pkt.Build` is not checked (errcheck) pkt.Build(bf, session.clientContext)
 		pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
@@ -68,6 +69,7 @@ func (s *Semaphore) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Sessio
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
+		// nolint:errcheck
 		pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
