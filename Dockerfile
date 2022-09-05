@@ -16,8 +16,7 @@ FROM node:13-alpine as web
 WORKDIR /app
 ENV PATH /app/node_modules/.bin:$PATH
 COPY www/kelbi /app
-RUN npm ci
-CMD ["npm", "run", "build"]
+RUN npm ci && npm run build
 
 # stage 2: copy only the application binary file and necessary files to the alpine container
 FROM alpine:3.12
