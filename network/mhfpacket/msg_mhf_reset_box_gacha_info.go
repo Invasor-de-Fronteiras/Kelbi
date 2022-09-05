@@ -1,15 +1,15 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfResetBoxGachaInfo represents the MSG_MHF_RESET_BOX_GACHA_INFO
-type MsgMhfResetBoxGachaInfo struct{
+type MsgMhfResetBoxGachaInfo struct {
 	AckHandle uint32
 	GachaHash uint32
 }

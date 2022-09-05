@@ -1,18 +1,18 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+	"errors"
 
- 	"erupe-ce/network/clientctx"
-	"erupe-ce/network"
 	"erupe-ce/common/byteframe"
+	"erupe-ce/network"
+	"erupe-ce/network/clientctx"
 )
 
 // MsgMhfGetStepupStatus represents the MSG_MHF_GET_STEPUP_STATUS
-type MsgMhfGetStepupStatus struct{
+type MsgMhfGetStepupStatus struct {
 	AckHandle uint32
 	GachaHash uint32
-	Unk uint8
+	Unk       uint8
 }
 
 // Opcode returns the ID associated with this packet type.
