@@ -40,6 +40,7 @@ func sendServerChatMessage(s *Session, message string) {
 		Message:    message,
 		SenderName: "Erupe",
 	}
+	// nolint:errcheck // Error return value of `.` is not checked
 	msgBinChat.Build(bf)
 
 	castedBin := &mhfpacket.MsgSysCastedBinary{
@@ -72,6 +73,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	isDiceCommand := false
 	if pkt.MessageType == BinaryMessageTypeChat {
 		tmp.SetLE()
+		// nolint:errcheck // Error return value of `.` is not checked
 		tmp.Seek(int64(0), 0)
 		_ = tmp.ReadUint32()
 		authorLen = tmp.ReadUint16()
@@ -83,6 +85,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 	realPayload := pkt.RawDataPayload
 	if pkt.BroadcastType == BroadcastTypeTargeted {
 		tmp.SetBE()
+		// nolint:errcheck // Error return value of `.` is not checked
 		tmp.Seek(int64(0), 0)
 		msgBinTargeted = &binpacket.MsgBinTargeted{}
 		err := msgBinTargeted.Parse(tmp)
@@ -161,6 +164,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		bf.SetLE()
 
 		chatMessage := &binpacket.MsgBinChat{}
+		// nolint:errcheck // Error return value of `.` is not checked
 		chatMessage.Parse(bf)
 
 		fmt.Printf("Got chat message: %+v\n", chatMessage)

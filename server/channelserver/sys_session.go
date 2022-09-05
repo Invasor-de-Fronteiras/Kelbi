@@ -136,7 +136,7 @@ func (s *Session) QueueSendMHF(pkt mhfpacket.MHFPacket) {
 	err := pkt.Build(bf, s.clientContext)
 
 	if err != nil {
-		fmt.Println(fmt.Sprintf("deu ruim2: %s - %s", pkt.Opcode(), err.Error()))
+		fmt.Printf("deu ruim2: %s - %s", pkt.Opcode(), err.Error())
 
 	}
 
@@ -169,7 +169,7 @@ func (s *Session) sendLoop() {
 
 		// Append the MSG_SYS_END tailing opcode.
 		terminatedPacket = append(terminatedPacket, []byte{0x00, 0x10}...)
-
+		// nolint:errcheck
 		s.cryptConn.SendPacket(terminatedPacket)
 	}
 }

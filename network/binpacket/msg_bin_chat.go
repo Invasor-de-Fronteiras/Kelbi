@@ -12,10 +12,10 @@ type ChatType uint8
 // Chat types
 const (
 	ChatTypeLocal    ChatType = 1
-	ChatTypeGuild             = 2
-	ChatTypeAlliance          = 3
-	ChatTypeParty             = 4
-	ChatTypeWhisper           = 5
+	ChatTypeGuild    ChatType = 2
+	ChatTypeAlliance ChatType = 3
+	ChatTypeParty    ChatType = 4
+	ChatTypeWhisper  ChatType = 5
 )
 
 // MsgBinChat is a binpacket for chat messages.

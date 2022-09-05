@@ -279,6 +279,7 @@ func (s *Server) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) 
 		bf.WriteUint16(uint16(pkt.Opcode()))
 
 		// Build the packet onto the byteframe.
+		// nolint:errcheck // Error return value of `pkt.Build` is not checked
 		pkt.Build(bf, session.clientContext)
 
 		// Enqueue in a non-blocking way that drops the packet if the connections send buffer channel is full.
@@ -297,6 +298,7 @@ func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, 
 			}
 			bf := byteframe.NewByteFrame()
 			bf.WriteUint16(uint16(pkt.Opcode()))
+			// nolint:errcheck // Error return value of `pkt.Build` is not checked
 			pkt.Build(bf, session.clientContext)
 			session.QueueSendNonBlocking(bf.Data())
 		}
@@ -314,6 +316,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 		Message:    message,
 		SenderName: s.Name,
 	}
+	// nolint:errcheck //  Error return value of `msgBinChat.Build` is not checked
 	msgBinChat.Build(bf)
 
 	s.BroadcastMHF(&mhfpacket.MsgSysCastedBinary{
@@ -357,6 +360,7 @@ func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type u
 func (s *Server) DiscordChannelSend(charName string, content string) {
 	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s**: %s", charName, content)
+		// nolint:errcheck // rror return value of `s.discordBot.RealtimeChannelSend` is not checked (errcheck)
 		s.discordBot.RealtimeChannelSend(message)
 	}
 }
@@ -402,7 +406,7 @@ func (s *Server) NextSemaphoreID() uint32 {
 				exists = true
 			}
 		}
-		if exists == false {
+		if !exists {
 			break
 		}
 	}

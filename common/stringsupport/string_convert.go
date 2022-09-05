@@ -2,6 +2,7 @@ package stringsupport
 
 import (
 	"bytes"
+	//nolint:staticcheck
 	"io/ioutil"
 	"strconv"
 	"strings"

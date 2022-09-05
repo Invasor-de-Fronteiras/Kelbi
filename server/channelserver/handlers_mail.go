@@ -226,6 +226,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 		SenderName: getCharacterName(s, m.SenderID),
 	}
 
+	// nolint:errcheck // Error return value of `notification.Build` is not checked
 	notification.Build(bf)
 
 	castedBinary := &mhfpacket.MsgSysCastedBinary{
@@ -234,7 +235,7 @@ func SendMailNotification(s *Session, m *Mail, recipient *Session) {
 		MessageType:    BinaryMessageTypeMailNotify,
 		RawDataPayload: bf.Data(),
 	}
-
+	// nolint:errcheck
 	castedBinary.Build(bf, s.clientContext)
 
 	recipient.QueueSendMHF(castedBinary)

@@ -60,9 +60,10 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 	return buildAllianceObjectFromDbResult(rows, err, s)
 }
 
+//nolint:staticcheck
 func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*GuildAlliance, error) {
 	alliance := &GuildAlliance{}
-
+	//nolint:staticcheck
 	err = result.StructScan(alliance)
 
 	if err != nil {
@@ -151,7 +152,7 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 		}
 	default:
 		panic(fmt.Sprintf("Unhandled operate joint action '%d'", pkt.Action))
-		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		// doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 }
 

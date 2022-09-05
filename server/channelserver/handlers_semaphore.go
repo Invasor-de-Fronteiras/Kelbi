@@ -14,9 +14,11 @@ import (
 func removeSessionFromSemaphore(s *Session) {
 	s.Server.semaphoreLock.Lock()
 	for _, semaphore := range s.Server.Semaphore {
+		//nolint:gosimple
 		if _, exists := semaphore.ReservedClientSlots[s.CharID]; exists {
 			delete(semaphore.ReservedClientSlots, s.CharID)
 		}
+		//nolint:gosimple
 		if _, exists := semaphore.clients[s]; exists {
 			delete(semaphore.clients, s)
 		}

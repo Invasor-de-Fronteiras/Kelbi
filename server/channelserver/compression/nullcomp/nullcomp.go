@@ -71,10 +71,12 @@ func Compress(rawData []byte) ([]byte, error) {
 					output = append(output, []byte{byte(nullCount)}...)
 					break
 				} else if i != 0 && nullCount != 0 {
+					// nolint:errcheck // Error return value of `.` is not checked
 					r.UnreadByte()
 					output = append(output, []byte{byte(nullCount)}...)
 					break
 				} else if i != 0 && nullCount == 0 {
+					// nolint:errcheck // Error return value of `.` is not checked
 					r.UnreadByte()
 					output = output[:len(output)-2]
 					output = append(output, []byte{byte(0xFF)}...)

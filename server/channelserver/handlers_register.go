@@ -244,9 +244,11 @@ func (s *Session) notifyRavi() {
 	raviNotif := byteframe.NewByteFrame()
 	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 4}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
+	// nolint:errcheck // Error return value of `temp.Build` is not checked
 	temp.Build(raviNotif, s.clientContext)
 	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 5}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
+	// nolint:errcheck
 	temp.Build(raviNotif, s.clientContext)
 	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 6}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))

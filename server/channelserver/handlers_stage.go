@@ -77,6 +77,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 			}
 			temp = &mhfpacket.MsgSysInsertUser{CharID: session.CharID}
 			newNotif.WriteUint16(uint16(temp.Opcode()))
+			// nolint:errcheck
 			temp.Build(newNotif, s.clientContext)
 			for i := 0; i < 3; i++ {
 				temp = &mhfpacket.MsgSysNotifyUserBinary{
@@ -84,6 +85,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 					BinaryType: uint8(i + 1),
 				}
 				newNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
 				temp.Build(newNotif, s.clientContext)
 			}
 		}
@@ -107,6 +109,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 				OwnerCharID: obj.OwnerCharID,
 			}
 			newNotif.WriteUint16(uint16(temp.Opcode()))
+			// nolint:errcheck
 			temp.Build(newNotif, s.clientContext)
 		}
 		s.Stage.RUnlock()
@@ -269,6 +272,7 @@ func handleMsgSysUnreserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.Unlock()
 	if stage != nil {
 		stage.Lock()
+		// nolint:gosimple
 		if _, exists := stage.ReservedClientSlots[s.CharID]; exists {
 			delete(stage.ReservedClientSlots, s.CharID)
 		}

@@ -77,6 +77,7 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint32(16)
 		resp.WriteBytes(stringsupport.PaddedString(name, 16, true))
 	}
+	// nolint:errcheck // Error return value of `.` is not checked
 	resp.Seek(0, 0)
 	resp.WriteUint32(count)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -96,6 +97,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			csv = stringsupport.CSVAdd(csv, int(pkt.CharID))
 		}
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE characters SET blocked=$1 WHERE id=$2", csv, s.CharID)
 	} else { // Friendlist
 		err := s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&csv)
@@ -107,6 +109,7 @@ func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			csv = stringsupport.CSVAdd(csv, int(pkt.CharID))
 		}
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE characters SET friends=$1 WHERE id=$2", csv, s.CharID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
