@@ -120,9 +120,10 @@ func GetCharacterGuildData(s *Session, charID uint32) (*GuildMember, error) {
 	return buildGuildMemberObjectFromDBResult(rows, err, s)
 }
 
+//nolint:staticcheck
 func buildGuildMemberObjectFromDBResult(rows *sqlx.Rows, err error, s *Session) (*GuildMember, error) {
 	memberData := &GuildMember{}
-
+	//nolint:staticcheck
 	err = rows.StructScan(&memberData)
 
 	if err != nil {

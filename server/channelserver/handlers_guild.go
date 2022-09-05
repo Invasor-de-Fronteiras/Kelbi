@@ -572,9 +572,10 @@ func GetGuildInfoByCharacterId(s *Session, charID uint32) (*Guild, error) {
 	return buildGuildObjectFromDbResult(rows, err, s)
 }
 
+//nolint:staticcheck
 func buildGuildObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*Guild, error) {
 	guild := &Guild{}
-
+	//nolint:staticcheck
 	err = result.StructScan(guild)
 
 	if err != nil {
@@ -674,10 +675,13 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 		return
 	case mhfpacket.OPERATE_GUILD_DONATE_RANK:
+		// nolint:errcheck // Error return value of `.` is not checked
 		handleDonateRP(s, pkt, bf, guild, false)
 	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_DENY:
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID)
 	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_ALLOW:
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID)
 	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
 		handleAvoidLeadershipUpdate(s, pkt, true)
@@ -692,6 +696,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		_ = pbf.ReadUint8() // len
 		_ = pbf.ReadUint32()
 		guild.Comment = stringsupport.SJISToUTF8(pbf.ReadNullTerminatedBytes())
+		// nolint:errcheck // Error return value of `.` is not checked
 		guild.Save(s)
 	case mhfpacket.OPERATE_GUILD_UPDATE_MOTTO:
 		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
@@ -700,6 +705,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		}
 		guild.SubMotto = pkt.UnkData[3]
 		guild.MainMotto = pkt.UnkData[4]
+		// nolint:errcheck // Error return value of `.` is not checked
 		guild.Save(s)
 	case mhfpacket.OPERATE_GUILD_RENAME_PUGI_1:
 		handleRenamePugi(s, pkt.UnkData, guild, 1)
@@ -712,6 +718,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_2:
 	case mhfpacket.OPERATE_GUILD_CHANGE_PUGI_3:
 	case mhfpacket.OPERATE_GUILD_DONATE_EVENT:
+		// nolint:errcheck // Error return value of `.` is not checked
 		handleDonateRP(s, pkt, bf, guild, true)
 	default:
 		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
@@ -733,6 +740,7 @@ func handleRenamePugi(s *Session, data []byte, guild *Guild, num int) {
 	default:
 		guild.PugiName3 = name
 	}
+	// nolint:errcheck
 	guild.Save(s)
 }
 
@@ -744,8 +752,13 @@ func handleDonateRP(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, bf *byteframe
 	}
 	saveData.RP -= rp
 	transaction, err := s.Server.db.Begin()
+	if err != nil {
+		return err
+	}
+
 	err = saveData.Save(s, transaction)
 	if err != nil {
+		// nolint:errcheck // Error return value of `.` is not checked
 		transaction.Rollback()
 		return err
 	}
@@ -756,9 +769,11 @@ func handleDonateRP(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, bf *byteframe
 	_, err = s.Server.db.Exec(updateSQL, rp, guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to donate rank RP to guild", zap.Error(err), zap.Uint32("guildID", guild.ID))
+		// nolint:errcheck
 		transaction.Rollback()
 		return err
 	} else {
+		// nolint:errcheck // Error return value of `.` is not checked
 		transaction.Commit()
 	}
 	bf.WriteUint32(uint32(saveData.RP))
@@ -839,6 +854,8 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		doAckSimpleFail(s, pkt.AckHandle, nil)
 	} else {
+
+		// nolint:errcheck // Error return value of `.` is not checked
 		mail.Send(s, nil)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, nil)
@@ -1883,6 +1900,7 @@ func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID)
 	// TODO: What is this supposed to return? This works for now
 	doAckBufSucceed(s, pkt.AckHandle, []byte{0x01})

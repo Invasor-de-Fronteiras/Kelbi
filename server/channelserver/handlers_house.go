@@ -32,6 +32,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.Method {
 	case 1:
 		var friendsList string
+		// nolint:errcheck // Error return value of `` is not checked
 		s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&friendsList)
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {

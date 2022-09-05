@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
+	//nolint:staticcheck
 	"io/ioutil"
 	"testing"
 

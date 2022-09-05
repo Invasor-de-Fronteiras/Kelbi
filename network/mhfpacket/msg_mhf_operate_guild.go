@@ -55,6 +55,7 @@ func (m *MsgMhfOperateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.GuildID = bf.ReadUint32()
 	m.Action = OperateGuildAction(bf.ReadUint8())
 	m.UnkData = bf.DataFromCurrent()
+	// nolint:errcheck // Error return value of `.` is not checked
 	bf.Seek(int64(len(bf.Data())-2), 0)
 	return nil
 }

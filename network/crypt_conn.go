@@ -115,7 +115,9 @@ func (cc *CryptConn) SendPacket(data []byte) error {
 		return err
 	}
 
+	// nolint:errcheck // Error return value of `.` is not checked
 	cc.conn.Write(headerBytes)
+	// nolint:errcheck // Error return value of `.` is not checked
 	cc.conn.Write(encData)
 
 	cc.sentPackets++

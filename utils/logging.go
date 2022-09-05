@@ -15,7 +15,7 @@ func NewLogger() (logger *zap.Logger, err error) {
 	)
 
 	logger = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
-
+	// nolint:errcheck
 	defer logger.Sync()
 
 	return

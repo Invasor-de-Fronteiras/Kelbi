@@ -91,6 +91,6 @@ func RunHttpServer(context *HttpServerContext) {
 
 		c.IndentedJSON(http.StatusOK, data)
 	})
-
+	// nolint:errcheck
 	router.Run(context.Address)
 }

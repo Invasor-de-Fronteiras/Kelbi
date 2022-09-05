@@ -7,6 +7,8 @@ import (
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
 	"io"
+
+	//nolint:staticcheck
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -232,6 +234,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		if catID == 0 {
 			var nextID uint32
 			_ = s.Server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&nextID)
+			// nolint:errcheck
 			bf.Seek(-4, io.SeekCurrent)
 			bf.WriteUint32(nextID)
 		}
@@ -242,6 +245,7 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {
 		comp = append([]byte{0x01}, comp...)
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE characters SET otomoairou=$1 WHERE id=$2", comp, s.CharID)
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -310,6 +314,7 @@ func getGuildAirouList(s *Session) []CatDefinition {
 		s.logger.Warn("Failed to get recently used airous", zap.Error(err))
 	}
 	for rows.Next() {
+		// nolint:errcheck // Error return value of `rows.Scan` is not checked
 		rows.Scan(&csvTemp)
 		for i, j := range stringsupport.CSVElems(csvTemp) {
 			bannedCats[uint32(j)] = i
@@ -370,17 +375,22 @@ func GetCatDetails(bf *byteframe.ByteFrame) []CatDefinition {
 		catStart, _ := bf.Seek(0, io.SeekCurrent)
 
 		catDef.CatID = bf.ReadUint32()
+		// nolint:errcheck
 		bf.Seek(1, io.SeekCurrent)        // unknown value, probably a bool
 		catDef.CatName = bf.ReadBytes(18) // always 18 len, reads first null terminated string out of section and discards rest
 		catDef.CurrentTask = bf.ReadUint8()
+		// nolint:errcheck
 		bf.Seek(16, io.SeekCurrent) // appearance data and what is seemingly null bytes
 		catDef.Personality = bf.ReadUint8()
 		catDef.Class = bf.ReadUint8()
+		// nolint:errcheck
 		bf.Seek(5, io.SeekCurrent)          // affection and colour sliders
 		catDef.Experience = bf.ReadUint32() // raw cat rank points, doesn't have a rank
-		bf.Seek(1, io.SeekCurrent)          // bool for weapon being equipped
-		catDef.WeaponType = bf.ReadUint8()  // weapon type, presumably always 6 for melee?
-		catDef.WeaponID = bf.ReadUint16()   // weapon id
+		// nolint:errcheck
+		bf.Seek(1, io.SeekCurrent)         // bool for weapon being equipped
+		catDef.WeaponType = bf.ReadUint8() // weapon type, presumably always 6 for melee?
+		catDef.WeaponID = bf.ReadUint16()  // weapon id
+		// nolint:errcheck
 		bf.Seek(catStart+int64(catDefLen), io.SeekStart)
 		cats[x] = catDef
 	}

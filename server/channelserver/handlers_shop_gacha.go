@@ -93,6 +93,8 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 			return
 		}
+
+		// nolint:errcheck // Error return value of `resp.Seek` is not checked
 		resp.Seek(4, 0)
 		resp.WriteUint16(uint16(entryCount))
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -137,6 +139,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(uint16(gachaType))
 			gachaCount++
 		}
+		// nolint:errcheck
 		resp.Seek(0, 0)
 		resp.WriteUint16(uint16(gachaCount))
 		resp.WriteUint16(uint16(gachaCount))
@@ -216,6 +219,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 			return
 		}
+		// nolint:errcheck
 		resp.Seek(0, 0)
 		resp.WriteUint16(uint16(entryCount))
 		resp.WriteUint16(uint16(entryCount))
@@ -333,12 +337,14 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 			dbUpdate.WriteUint16(uint16(items[ind].(*gachaItem).itemId[y]))
 			dbUpdate.WriteUint16(uint16(items[ind].(*gachaItem).quantity[y]))
 			data = append(data, dbUpdate.Data()...)
+			// nolint:errcheck // Error return value of `rollFrame.Seek` is not checked
 			dbUpdate.Seek(0, 0)
 			// response needs all item info and the rarity
 			resp.WriteBytes(dbUpdate.Data())
 			resp.WriteUint8(uint8(items[ind].(*gachaItem).rarityIcon))
 		}
 	}
+	// nolint:errcheck
 	resp.Seek(0, 0)
 	resp.WriteUint8(uint8(results))
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -440,6 +446,7 @@ func handleMsgMhfGetFpointExchangeList(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint16(uint16(itemValue))
 		sellables++
 	}
+	// nolint:errcheck
 	resp.Seek(0, 0)
 	resp.WriteUint16(uint16(sellables))
 	resp.WriteUint16(uint16(buyables))
@@ -504,6 +511,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 			rollFrame.WriteUint16(uint16(items[ind].(*gachaItem).itemId[y]))
 			rollFrame.WriteUint16(uint16(items[ind].(*gachaItem).quantity[y]))
 			data = append(data, rollFrame.Data()...)
+			// nolint:errcheck // Error return value of `rollFrame.Seek` is not checked
 			rollFrame.Seek(0, 0)
 			// response needs all item info and the rarity
 			resp.WriteBytes(rollFrame.Data())
@@ -511,6 +519,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 	resp.WriteBytes(stepFrame.Data())
+	// nolint:errcheck
 	resp.Seek(0, 0)
 	resp.WriteUint8(uint8(results + stepResults))
 	resp.WriteUint8(uint8(results))
@@ -628,6 +637,7 @@ func handleMsgMhfGetBoxGachaInfo(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint8(1)
 		count++
 	}
+	// nolint:errcheck
 	resp.Seek(0, 0)
 	resp.WriteUint8(uint8(count))
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -689,6 +699,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 			dbUpdate.WriteUint16(uint16(items[ind].(*gachaItem).itemId[y]))
 			dbUpdate.WriteUint16(uint16(items[ind].(*gachaItem).quantity[y]))
 			data = append(data, dbUpdate.Data()...)
+			// nolint:errcheck // Error return value of `dbUpdate.Seek` is not checked
 			dbUpdate.Seek(0, 0)
 			// response needs all item info and the rarity
 			resp.WriteBytes(dbUpdate.Data())
@@ -699,6 +710,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 		// remove rolled
 		items = append(items[:ind], items[ind+1:]...)
 	}
+	// nolint:errcheck
 	resp.Seek(0, 0)
 	resp.WriteUint8(uint8(results))
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())

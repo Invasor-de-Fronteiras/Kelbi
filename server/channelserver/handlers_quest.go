@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"fmt"
+	//nolint:staticcheck
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -56,6 +57,7 @@ func handleMsgMhfLoadFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveFavoriteQuest)
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE characters SET savefavoritequest=$1 WHERE id=$2", pkt.Data, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }

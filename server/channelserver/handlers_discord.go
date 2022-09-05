@@ -347,55 +347,65 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 
 	// Move to slash commadns
 	if commandName == "!players" {
+		// nolint:errcheck // Error return value of `.` is not checked
 		ds.ChannelMessageSend(m.ChannelID, PlayerList(s))
 		return
 	}
 
 	if commandName == "!char" {
 		if len(args) < 2 {
+			// nolint:errcheck // Error return value of `.` is not checked
 			ds.ChannelMessageSend(m.ChannelID, "Usage: !char <char name>")
 			return
 		}
 
 		charName := strings.Join(args[1:], " ")
+		// nolint:errcheck // Error return value of `.` is not checked
 		ds.ChannelMessageSend(m.ChannelID, getCharInfo(s, charName))
 		return
 	}
 
 	if commandName == "!disconnect" && s.isDiscordAdmin(ds, m) {
 		if len(args) < 2 {
+			// nolint:errcheck
 			ds.ChannelMessageSend(m.ChannelID, "Usage: !disconnect <char name>")
 			return
 		}
 
 		charName := strings.Join(args[1:], " ")
+		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, disconnectChar(s, charName))
 		return
 	}
 
 	if commandName == "!debug" && s.isDiscordAdmin(ds, m) {
+		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, debug(s))
 		return
 	}
 
 	if commandName == "!kill" && s.isDiscordAdmin(ds, m) {
+		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, "Dizimando aldeia em 3..2..1")
 		os.Exit(1)
 		return
 	}
 
 	if commandName == "!questlist" && s.isDiscordAdmin(ds, m) {
+		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, questlist(s))
 		return
 	}
 
 	if commandName == "!remove-stage" && s.isDiscordAdmin(ds, m) {
 		if len(args) < 2 {
+			// nolint:errcheck
 			ds.ChannelMessageSend(m.ChannelID, "Usage: !remove-stage <stage id>")
 			return
 		}
 
 		stageId := strings.Join(args[1:], " ")
+		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, removeStageById(s, stageId))
 		return
 	}

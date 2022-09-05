@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	//nolint:staticcheck
 	"io/ioutil"
 	"path/filepath"
 
