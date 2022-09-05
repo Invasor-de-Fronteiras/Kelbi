@@ -1,20 +1,20 @@
 package mhfpacket
 
-import (
-	"errors"
+import ( 
+ "errors" 
 
-	"erupe-ce/common/byteframe"
+ 	"erupe-ce/network/clientctx"
 	"erupe-ce/network"
-	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfExchangeItem2Fpoint represents the MSG_MHF_EXCHANGE_ITEM_2_FPOINT
-type MsgMhfExchangeItem2Fpoint struct {
+type MsgMhfExchangeItem2Fpoint struct{
 	AckHandle uint32
-	ItemHash  uint32
-	ItemType  uint16
-	ItemId    uint16
-	Quantity  byte
+	ItemHash uint32
+	ItemType uint16
+	ItemId uint16
+	Quantity byte
 }
 
 // Opcode returns the ID associated with this packet type.

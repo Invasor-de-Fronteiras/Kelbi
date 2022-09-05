@@ -1,11 +1,11 @@
 package mhfpacket
 
-import (
-	"errors"
+import ( 
+ "errors" 
 
-	"erupe-ce/common/byteframe"
+ 	"erupe-ce/network/clientctx"
 	"erupe-ce/network"
-	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfSaveOtomoAirou represents the MSG_MHF_SAVE_OTOMO_AIROU

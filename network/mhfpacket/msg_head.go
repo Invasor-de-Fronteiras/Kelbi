@@ -5,8 +5,8 @@ import (
 
 	"erupe-ce/network/clientctx"
 
-	"erupe-ce/common/byteframe"
 	"erupe-ce/network"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgHead represents the MSG_HEAD

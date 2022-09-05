@@ -6,9 +6,9 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"erupe-ce/server/channelserver/compression/deltacomp"
 	"erupe-ce/server/channelserver/compression/nullcomp"
+
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -41,7 +41,7 @@ func handleMsgMhfLoadPartner(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSavePartner(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePartner)
 
-	dumpSaveData(s, pkt.RawDataPayload, "_partner")
+	dumpSaveData(s, pkt.RawDataPayload, "partner")
 
 	_, err := s.Server.db.Exec("UPDATE characters SET partner=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
@@ -77,7 +77,7 @@ func handleMsgMhfLoadHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveHunterNavi)
 
-	dumpSaveData(s, pkt.RawDataPayload, "_hunternavi")
+	dumpSaveData(s, pkt.RawDataPayload, "hunternavi")
 
 	if pkt.IsDataDiff {
 		var data []byte
@@ -123,75 +123,87 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfMercenaryHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfMercenaryHuntdata)
-	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x0A))
+	if pkt.Unk0 == 1 {
+		// Format:
+		// uint8 Hunts
+		// struct Hunt
+		//   uint32 HuntID
+		//   uint32 MonID
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 1))
+	} else {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0))
+	}
 }
 
-func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEnumerateMercenaryLog)
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint32(0)
+	// Format:
+	// struct Log
+	//   uint32 Timestamp
+	//   []byte Name (len 18)
+	//   uint8 Unk
+	//   uint8 Unk
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+}
 
 func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateMercenary)
 
 	bf := byteframe.NewByteFrame()
 
-	bf.WriteUint32(0x00)          // Unk
-	bf.WriteUint32(rand.Uint32()) // Partner ID?
+	var nextID uint32
+	s.Server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
+
+	bf.WriteUint32(nextID)     // New MercID
+	bf.WriteUint32(0xDEADBEEF) // Unk
 
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
-	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
-	GCPValue := bf.ReadUint32()
-	_ = bf.ReadUint32() // unk
-	MercDataSize := bf.ReadUint32()
-	MercData := bf.ReadBytes(uint(MercDataSize))
-	_ = bf.ReadUint32() // unk
-
-	if MercDataSize > 0 {
-		// the save packet has an extra null byte after its size
-		_, err := s.Server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", MercData[:MercDataSize], s.CharID)
-		if err != nil {
-			s.logger.Fatal("Failed to update savemercenary and gcp in db", zap.Error(err))
-		}
+	if len(pkt.MercData) > 0 {
+		s.Server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", pkt.MercData, s.CharID)
 	}
-	// gcp value is always present regardless
-	_, err := s.Server.db.Exec("UPDATE characters SET gcp=$1 WHERE id=$2", GCPValue, s.CharID)
-	if err != nil {
-		s.logger.Fatal("Failed to update savemercenary and gcp in db", zap.Error(err))
-	}
+	s.Server.db.Exec("UPDATE characters SET gcp=$1 WHERE id=$2", pkt.GCP, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryW)
+	if pkt.Unk0 {
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
+		return
+	}
 	var data []byte
 	var gcp uint32
-	// still has issues
-	err := s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", s.CharID).Scan(&data)
-	if err != nil {
-		s.logger.Fatal("Failed to get savemercenary data from db", zap.Error(err))
-	}
-
-	err = s.Server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id = $1", s.CharID).Scan(&gcp)
-	if err != nil {
-		panic(err)
-	}
-	if len(data) == 0 {
-		data = []byte{0x00}
-	}
+	s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", s.CharID).Scan(&data)
+	s.Server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id = $1", s.CharID).Scan(&gcp)
 
 	resp := byteframe.NewByteFrame()
-	resp.WriteBytes(data)
-	resp.WriteUint16(0)
+	if len(data) == 0 {
+		resp.WriteBytes(make([]byte, 3))
+	} else {
+		resp.WriteBytes(data[1:])
+		resp.WriteUint32(0) // Unk
+	}
 	resp.WriteUint32(gcp)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
-	// accessing actual rasta data of someone else still unsure of the formatting of this
-	doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	var data []byte
+	s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
+	resp := byteframe.NewByteFrame()
+	if len(data) == 0 {
+		resp.WriteBool(false)
+	} else {
+		resp.WriteBytes(data[4:])
+	}
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgMhfContractMercenary(s *Session, p mhfpacket.MHFPacket) {}
@@ -218,6 +230,7 @@ func handleMsgMhfLoadOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveOtomoAirou)
+	dumpSaveData(s, pkt.RawDataPayload, "otomoairou")
 	decomp, err := nullcomp.Decompress(pkt.RawDataPayload[1:])
 	if err != nil {
 		s.logger.Error("Failed to decompress airou", zap.Error(err))
@@ -225,19 +238,31 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	bf := byteframe.NewByteFrameFromBytes(decomp)
+	save := byteframe.NewByteFrame()
+	var catsExist uint8
+	save.WriteUint8(0)
+
 	cats := bf.ReadUint8()
 	for i := 0; i < int(cats); i++ {
 		dataLen := bf.ReadUint32()
 		catID := bf.ReadUint32()
 		if catID == 0 {
-			var nextID uint32
-			_ = s.Server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&nextID)
-			bf.Seek(-4, io.SeekCurrent)
-			bf.WriteUint32(nextID)
+			_ = s.Server.db.QueryRow("SELECT nextval('airou_id_seq')").Scan(&catID)
 		}
-		_ = bf.ReadBytes(uint(dataLen) - 4)
+		exists := bf.ReadBool()
+		data := bf.ReadBytes(uint(dataLen) - 5)
+		if exists {
+			catsExist++
+			save.WriteUint32(dataLen)
+			save.WriteUint32(catID)
+			save.WriteBool(exists)
+			save.WriteBytes(data)
+		}
 	}
-	comp, err := nullcomp.Compress(bf.Data())
+	save.WriteBytes(bf.DataFromCurrent())
+	save.Seek(0, 0)
+	save.WriteUint8(catsExist)
+	comp, err := nullcomp.Compress(save.Data())
 	if err != nil {
 		s.logger.Error("Failed to compress airou", zap.Error(err))
 	} else {

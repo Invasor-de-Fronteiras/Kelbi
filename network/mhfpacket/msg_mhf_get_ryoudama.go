@@ -1,19 +1,19 @@
 package mhfpacket
 
-import (
-	"errors"
+import ( 
+ "errors" 
 
-	"erupe-ce/common/byteframe"
+ 	"erupe-ce/network/clientctx"
 	"erupe-ce/network"
-	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfGetRyoudama represents the MSG_MHF_GET_RYOUDAMA
-type MsgMhfGetRyoudama struct {
-	AckHandle uint32
-	Unk0      uint16
-	Unk1      uint32
-	Unk2      uint8
+type MsgMhfGetRyoudama struct{
+	AckHandle      uint32
+	Unk0      		 uint16
+	Unk1      		 uint32
+	Unk2      		 uint8
 }
 
 // Opcode returns the ID associated with this packet type.

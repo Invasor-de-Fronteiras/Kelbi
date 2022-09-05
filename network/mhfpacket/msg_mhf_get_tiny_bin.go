@@ -1,11 +1,11 @@
 package mhfpacket
 
-import (
-	"errors"
+import ( 
+ "errors" 
 
-	"erupe-ce/common/byteframe"
+ 	"erupe-ce/network/clientctx"
 	"erupe-ce/network"
-	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgMhfGetTinyBin represents the MSG_MHF_GET_TINY_BIN

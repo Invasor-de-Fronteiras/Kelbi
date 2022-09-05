@@ -57,6 +57,7 @@ type Guild struct {
 	PugiName3      string         `db:"pugi_name_3"`
 	Recruiting     bool           `db:"recruiting"`
 	FestivalColour FestivalColour `db:"festival_colour"`
+	Souls          uint32         `db:"souls"`
 	Rank           uint16         `db:"rank"`
 	AllianceID     uint32         `db:"alliance_id"`
 	Icon           *GuildIcon     `db:"icon"`
@@ -122,11 +123,12 @@ SELECT
 	leader_id,
 	lc.name as leader_name,
 	comment,
-	pugi_name_1,
-	pugi_name_2,
-	pugi_name_3,
+	COALESCE(pugi_name_1, '') AS pugi_name_1,
+	COALESCE(pugi_name_2, '') AS pugi_name_2,
+	COALESCE(pugi_name_3, '') AS pugi_name_3,
 	recruiting,
-	festival_colour,
+	COALESCE((SELECT team FROM festa_registrations fr WHERE fr.guild_id = g.id), 'none') AS festival_colour,
+	(SELECT SUM(souls) FROM guild_characters gc WHERE gc.guild_id = g.id) AS souls,
 	CASE
 		WHEN rank_rp <= 48 THEN rank_rp/24
 		WHEN rank_rp <= 288 THEN rank_rp/48+1
@@ -135,23 +137,14 @@ SELECT
 		WHEN rank_rp < 1200 THEN 16
 		ELSE 17
 	END rank,
-	CASE WHEN (
+	COALESCE((
 		SELECT id FROM guild_alliances ga WHERE
 	 	ga.parent_id = g.id OR
 	 	ga.sub1_id = g.id OR
 	 	ga.sub2_id = g.id
-	) IS NULL THEN 0
-	ELSE (
-		SELECT id FROM guild_alliances ga WHERE
-	 	ga.parent_id = g.id OR
-	 	ga.sub1_id = g.id OR
-	 	ga.sub2_id = g.id
-	)
-	END alliance_id,
+	), 0) AS alliance_id,
 	icon,
-	(
-		SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id
-	) AS member_count
+	(SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id) AS member_count
 	FROM guilds g
 	JOIN guild_characters lgc ON lgc.character_id = leader_id
 	JOIN characters lc on leader_id = lc.id
@@ -159,8 +152,8 @@ SELECT
 
 func (guild *Guild) Save(s *Session) error {
 	_, err := s.Server.db.Exec(`
-		UPDATE guilds SET main_motto=$2, sub_motto=$3, comment=$4, pugi_name_1=$5, pugi_name_2=$6, pugi_name_3=$7, festival_colour=$8, icon=$9 WHERE id=$1
-	`, guild.ID, guild.MainMotto, guild.SubMotto, guild.Comment, guild.PugiName1, guild.PugiName2, guild.PugiName3, guild.FestivalColour, guild.Icon)
+		UPDATE guilds SET main_motto=$2, sub_motto=$3, comment=$4, pugi_name_1=$5, pugi_name_2=$6, pugi_name_3=$7, icon=$8, leader_id=$9 WHERE id=$1
+	`, guild.ID, guild.MainMotto, guild.SubMotto, guild.Comment, guild.PugiName1, guild.PugiName2, guild.PugiName3, guild.Icon, guild.GuildLeader.LeaderCharID)
 
 	if err != nil {
 		s.logger.Error("failed to update guild data", zap.Error(err), zap.Uint32("guildID", guild.ID))
@@ -644,6 +637,33 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(uint32(response))
 		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 		return
+	case mhfpacket.OPERATE_GUILD_RESIGN:
+		guildMembers, err := GetGuildMembers(s, guild.ID, false)
+		success := false
+		if err == nil {
+			sort.Slice(guildMembers[:], func(i, j int) bool {
+				return guildMembers[i].OrderIndex < guildMembers[j].OrderIndex
+			})
+			for i := 1; i < len(guildMembers); i++ {
+				if !guildMembers[i].AvoidLeadership {
+					guild.LeaderCharID = guildMembers[i].CharID
+					guildMembers[0].OrderIndex = guildMembers[i].OrderIndex
+					guildMembers[i].OrderIndex = 1
+					guildMembers[0].Save(s)
+					guildMembers[i].Save(s)
+					bf.WriteUint32(guildMembers[i].CharID)
+					success = true
+					break
+				}
+			}
+			guild.Save(s)
+			doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
+		}
+		if !success {
+			bf.WriteUint32(0)
+			doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+		}
+		return
 	case mhfpacket.OPERATE_GUILD_APPLY:
 		err = guild.CreateApplication(s, s.CharID, GuildApplicationTypeApplied, nil)
 
@@ -668,6 +688,14 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			// All successful acks return 0x01, assuming 0x00 is failure
 			response = 0x00
+		} else {
+			mail := Mail{
+				RecipientID:     s.CharID,
+				Subject:         "Withdrawal",
+				Body:            fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
+				IsSystemMessage: true,
+			}
+			mail.Send(s, nil)
 		}
 
 		bf.WriteUint32(uint32(response))
@@ -791,14 +819,14 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	guild, err := GetGuildInfoByCharacterId(s, pkt.CharID)
 
 	if err != nil || guild == nil {
-		doAckSimpleFail(s, pkt.AckHandle, nil)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
 	actorCharacter, err := GetCharacterGuildData(s, s.CharID)
 
 	if err != nil || (!actorCharacter.IsSubLeader() && guild.LeaderCharID != s.CharID) {
-		doAckSimpleFail(s, pkt.AckHandle, nil)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
 
@@ -807,41 +835,45 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OPERATE_GUILD_MEMBER_ACTION_ACCEPT:
 		err = guild.AcceptApplication(s, pkt.CharID)
 		mail = Mail{
-			SenderID:      s.CharID,
-			RecipientID:   pkt.CharID,
-			Subject:       "Accepted!",
-			Body:          fmt.Sprintf("Your application to join 「%s」 was accepted.", guild.Name),
-			IsGuildInvite: false,
+			RecipientID:     pkt.CharID,
+			Subject:         "Accepted!",
+			Body:            fmt.Sprintf("Your application to join 「%s」 was accepted.", guild.Name),
+			IsSystemMessage: true,
 		}
 	case mhfpacket.OPERATE_GUILD_MEMBER_ACTION_REJECT:
 		err = guild.RejectApplication(s, pkt.CharID)
 		mail = Mail{
-			SenderID:      s.CharID,
-			RecipientID:   pkt.CharID,
-			Subject:       "Rejected",
-			Body:          fmt.Sprintf("Your application to join 「%s」 was rejected.", guild.Name),
-			IsGuildInvite: false,
+			RecipientID:     pkt.CharID,
+			Subject:         "Rejected",
+			Body:            fmt.Sprintf("Your application to join 「%s」 was rejected.", guild.Name),
+			IsSystemMessage: true,
 		}
 	case mhfpacket.OPERATE_GUILD_MEMBER_ACTION_KICK:
 		err = guild.RemoveCharacter(s, pkt.CharID)
 		mail = Mail{
-			SenderID:      s.CharID,
-			RecipientID:   pkt.CharID,
-			Subject:       "Kicked",
-			Body:          fmt.Sprintf("You were kicked from 「%s」.", guild.Name),
-			IsGuildInvite: false,
+			RecipientID:     pkt.CharID,
+			Subject:         "Kicked",
+			Body:            fmt.Sprintf("You were kicked from 「%s」.", guild.Name),
+			IsSystemMessage: true,
 		}
 	default:
-		doAckSimpleFail(s, pkt.AckHandle, nil)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		s.logger.Warn(fmt.Sprintf("unhandled operateGuildMember action '%d'", pkt.Action))
 	}
 
 	if err != nil {
-		doAckSimpleFail(s, pkt.AckHandle, nil)
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
 		mail.Send(s, nil)
+		for _, channel := range s.Server.Channels {
+			for _, session := range channel.Sessions {
+				if session.CharID == pkt.CharID {
+					SendMailNotification(s, &mail, session)
+				}
+			}
+		}
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
-	doAckSimpleSucceed(s, pkt.AckHandle, nil)
 }
 
 func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
@@ -915,24 +947,12 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteBytes(guildLeaderName)
 		bf.WriteBytes([]byte{0x00, 0x00, 0x00, 0x00}) // Unk
 		bf.WriteBool(false)                           // isReturnGuild
-		bf.WriteBytes([]byte{0x01, 0x02, 0x02})       // Unk
+		bf.WriteBool(false)                           // earnedSpecialHall
+		bf.WriteBytes([]byte{0x02, 0x02})             // Unk
 		bf.WriteUint32(guild.EventRP)
-
-		if guild.PugiName1 == "" {
-			bf.WriteUint16(0x0100)
-		} else {
-			ps.Uint8(bf, guild.PugiName1, true)
-		}
-		if guild.PugiName2 == "" {
-			bf.WriteUint16(0x0100)
-		} else {
-			ps.Uint8(bf, guild.PugiName2, true)
-		}
-		if guild.PugiName3 == "" {
-			bf.WriteUint16(0x0100)
-		} else {
-			ps.Uint8(bf, guild.PugiName3, true)
-		}
+		ps.Uint8(bf, guild.PugiName1, true)
+		ps.Uint8(bf, guild.PugiName2, true)
+		ps.Uint8(bf, guild.PugiName3, true)
 
 		// probably guild pugi properties, should be status, stamina and luck outfits
 		bf.WriteBytes([]byte{
@@ -953,7 +973,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			} else {
 				bf.WriteUint32(alliance.ID)
 				bf.WriteUint32(uint32(alliance.CreatedAt.Unix()))
-				bf.WriteUint16(uint16(alliance.TotalMembers))
+				bf.WriteUint16(alliance.TotalMembers)
 				bf.WriteUint16(0) // Unk0
 				ps.Uint16(bf, alliance.Name, true)
 				if alliance.SubGuild1ID > 0 {
@@ -1016,7 +1036,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 			doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 		}
-		if err != nil {
+		if err != nil || characterGuildData.IsApplicant {
 			bf.WriteUint16(0)
 		} else {
 			bf.WriteUint16(uint16(len(applicants)))
@@ -1064,15 +1084,11 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		} else {
 			bf.WriteUint8(0x00)
 		}
+		bf.WriteUint8(0) // Unk
 
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 	} else {
-		//// REALLY large/complex format... stubbing it out here for simplicity.
-		//resp := byteframe.NewByteFrame()
-		//resp.WriteUint32(0) // Count
-		//resp.WriteUint8(0)  // Unk, read if count == 0.
-
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 8))
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 5))
 	}
 }
 
@@ -1265,6 +1281,18 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
 	}
 
+	if guild != nil {
+		isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
+		if isApplicant {
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+	}
+
+	if guild == nil && s.PrevGuildID > 0 {
+		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
+	}
+
 	if err != nil {
 		s.logger.Warn("failed to retrieve guild sending no result message")
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
@@ -1306,7 +1334,8 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(0x0600)
 		}
 		bf.WriteUint8(member.OrderIndex)
-		ps.Uint16(bf, member.Name, true)
+		bf.WriteBool(member.AvoidLeadership)
+		ps.Uint8(bf, member.Name, true)
 	}
 
 	for _, member := range guildMembers {
@@ -1367,6 +1396,15 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
+	if guild == nil && s.PrevGuildID != 0 {
+		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
+		s.PrevGuildID = 0
+		if guild == nil || err != nil {
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+	}
+
 	if err != nil {
 		s.logger.Warn("failed to respond to manage rights message")
 		return
@@ -1415,12 +1453,8 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 		guild, err = GetGuildInfoByID(s, pkt.GuildID)
 	}
 
-	if err != nil {
-		s.logger.Warn("failed to find guild", zap.Error(err), zap.Uint32("guildID", pkt.GuildID))
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
-		return
-	} else if guild == nil {
-		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+	if err != nil || guild == nil {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x02})
 		return
 	}
 
@@ -1866,7 +1900,10 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
-func handleMsgMhfEntryRookieGuild(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEntryRookieGuild(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEntryRookieGuild)
+	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgMhfUpdateForceGuildRank(s *Session, p mhfpacket.MHFPacket) {}
 
@@ -1884,8 +1921,18 @@ func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
 	s.Server.db.Exec("UPDATE guild_characters SET recruiter=$1 WHERE character_id=$2", pkt.Allowed, pkt.CharID)
-	// TODO: What is this supposed to return? This works for now
-	doAckBufSucceed(s, pkt.AckHandle, []byte{0x01})
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
+
+func handleMsgMhfCheckMonthlyItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfCheckMonthlyItem)
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+	// TODO: Implement month-by-month tracker, 0 = Not claimed, 1 = Claimed
+}
+
+func handleMsgMhfAcquireMonthlyItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfAcquireMonthlyItem)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfEnumerateInvGuild(s *Session, p mhfpacket.MHFPacket) {
@@ -1893,6 +1940,9 @@ func handleMsgMhfEnumerateInvGuild(s *Session, p mhfpacket.MHFPacket) {
 	stubEnumerateNoResults(s, pkt.AckHandle)
 }
 
-func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfOperationInvGuild)
+	doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {}

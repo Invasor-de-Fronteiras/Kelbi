@@ -136,7 +136,6 @@ func removeSessionFromStage(s *Session) {
 	// Remove client from old stage.
 	s.Stage.Lock()
 	delete(s.Stage.Clients, s)
-	delete(s.Stage.ReservedClientSlots, s.CharID)
 
 	// Delete old stage objects owned by the client.
 	s.logger.Info("Sending notification to old stage clients")
@@ -158,6 +157,7 @@ func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 	if s.StageID == "" {
 		s.stageMoveStack.Set(pkt.StageID)
 	} else {
+		s.Stage.ReservedClientSlots[s.CharID] = false
 		s.stageMoveStack.Push(s.StageID)
 		s.stageMoveStack.Lock()
 	}
@@ -176,9 +176,16 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 	// Transfer back to the saved stage ID before the previous move or enter.
 	s.stageMoveStack.Unlock()
 	backStage, err := s.stageMoveStack.Pop()
-
 	if err != nil {
 		panic(err)
+	}
+
+	if _, exists := s.Stage.ReservedClientSlots[s.CharID]; exists {
+		delete(s.Stage.ReservedClientSlots, s.CharID)
+	}
+
+	if _, exists := s.Server.Stages[backStage].ReservedClientSlots[s.CharID]; exists {
+		delete(s.Server.Stages[backStage].ReservedClientSlots, s.CharID)
 	}
 
 	doStageTransfer(s, pkt.AckHandle, backStage)
@@ -222,7 +229,6 @@ func handleMsgSysUnlockStage(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysReserveStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysReserveStage)
-
 	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		stage.Lock()
 		defer stage.Unlock()
@@ -303,7 +309,6 @@ func handleMsgSysSetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysGetStageBinary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysGetStageBinary)
-
 	if stage, exists := s.Server.Stages[pkt.StageID]; exists {
 		stage.Lock()
 		if binaryData, exists := stage.RawBinaryData[StageBinaryKey{pkt.BinaryType0, pkt.BinaryType1}]; exists {

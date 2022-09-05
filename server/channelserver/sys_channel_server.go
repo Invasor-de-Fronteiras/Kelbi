@@ -155,7 +155,7 @@ func NewServer(config *Config) *Server {
 		Stages:          make(map[string]*Stage),
 		userBinaryParts: make(map[userBinaryPartID][]byte),
 		Semaphore:       make(map[string]*Semaphore),
-		SemaphoreIndex:  5,
+		SemaphoreIndex:  7,
 		discordBot:      config.DiscordBot,
 		Name:            config.Name,
 		Enable:          config.Enable,
@@ -165,32 +165,20 @@ func NewServer(config *Config) *Server {
 	// Mezeporta
 	s.Stages["sl1Ns200p0a0u0"] = NewStage("sl1Ns200p0a0u0")
 
-	// Guild Hall LV1
-	s.Stages["sl1Ns202p0a0u0"] = NewStage("sl1Ns202p0a0u0")
-
-	// Guild Hall LV2
-	s.Stages["sl1Ns203p0a0u0"] = NewStage("sl1Ns203p0a0u0")
-
-	// Guild Hall LV3
-	s.Stages["sl1Ns204p0a0u0"] = NewStage("sl1Ns204p0a0u0")
-
-	// Pugi Farm
-	s.Stages["sl1Ns205p0a0u0"] = NewStage("sl1Ns205p0a0u0")
-
 	// Rasta bar stage
 	s.Stages["sl1Ns211p0a0u0"] = NewStage("sl1Ns211p0a0u0")
 
 	// Pallone Carvan
 	s.Stages["sl1Ns260p0a0u0"] = NewStage("sl1Ns260p0a0u0")
 
-	// Gook Farm
-	s.Stages["sl1Ns265p0a0u0"] = NewStage("sl1Ns265p0a0u0")
+	// Pallone Guest House 1st Floor
+	s.Stages["sl1Ns262p0a0u0"] = NewStage("sl1Ns262p0a0u0")
+
+	// Pallone Guest House 2nd Floor
+	s.Stages["sl1Ns263p0a0u0"] = NewStage("sl1Ns263p0a0u0")
 
 	// Diva fountain / prayer fountain.
 	s.Stages["sl2Ns379p0a0u0"] = NewStage("sl2Ns379p0a0u0")
-
-	// Diva Hall
-	s.Stages["sl1Ns445p0a0u0"] = NewStage("sl1Ns445p0a0u0")
 
 	// MezFes
 	s.Stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
@@ -406,6 +394,9 @@ func (s *Server) NextSemaphoreID() uint32 {
 	for {
 		exists := false
 		s.SemaphoreIndex = s.SemaphoreIndex + 1
+		if s.SemaphoreIndex == 0 {
+			s.SemaphoreIndex = 7 // Skip reserved indexes
+		}
 		for _, semaphore := range s.Semaphore {
 			if semaphore.Id == s.SemaphoreIndex {
 				exists = true

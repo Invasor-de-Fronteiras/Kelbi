@@ -11,7 +11,7 @@ import (
 // MsgMhfGetAchievement represents the MSG_MHF_GET_ACHIEVEMENT
 type MsgMhfGetAchievement struct {
 	AckHandle uint32
-	Unk0      uint32 // id?
+	CharID    uint32
 	Unk1      uint32 // char?
 }
 
@@ -23,7 +23,7 @@ func (m *MsgMhfGetAchievement) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfGetAchievement) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.Unk0 = bf.ReadUint32()
+	m.CharID = bf.ReadUint32()
 	m.Unk1 = bf.ReadUint32()
 	return nil
 }

@@ -21,7 +21,6 @@ func removeSessionFromSemaphore(s *Session) {
 			delete(semaphore.clients, s)
 		}
 	}
-
 	s.Server.semaphoreLock.Unlock()
 }
 
@@ -47,12 +46,10 @@ func destructEmptySemaphores(s *Session) {
 }
 
 func releaseRaviSemaphore(s *Session, sema *Semaphore) {
-	if !strings.HasSuffix(sema.StageId, "5") {
-		delete(sema.ReservedClientSlots, s.CharID)
-		delete(sema.clients, s)
-	}
-	if len(sema.ReservedClientSlots) == 0 && len(sema.clients) == 0 {
-		s.logger.Debug("Raviente semaphore is empty, resetting")
+	delete(sema.ReservedClientSlots, s.CharID)
+	delete(sema.clients, s)
+	if strings.HasSuffix(sema.StageId, "2") && len(sema.clients) == 0 {
+		s.logger.Debug("Main raviente semaphore is empty, resetting")
 		resetRavi(s)
 	}
 }
@@ -83,6 +80,7 @@ func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateAcquireSemaphore)
 	SemaphoreID := pkt.SemaphoreID
+
 	newSemaphore, exists := s.Server.Semaphore[SemaphoreID]
 
 	fmt.Printf("Got reserve stage req, StageID: %v\n\n", SemaphoreID)
@@ -92,7 +90,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 			suffix, _ := strconv.ParseUint(pkt.SemaphoreID[len(pkt.SemaphoreID)-1:], 10, 32)
 			s.Server.Semaphore[SemaphoreID] = &Semaphore{
 				StageId:             pkt.SemaphoreID,
-				Id:                  uint32(suffix),
+				Id:                  uint32(suffix + 1),
 				clients:             make(map[*Session]uint32),
 				ReservedClientSlots: make(map[uint32]interface{}),
 				MaxPlayers:          32,
@@ -120,7 +118,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(newSemaphore.Id)
 		doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 	} else {
-		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	}
 }
 

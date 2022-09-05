@@ -1,11 +1,11 @@
 package mhfpacket
 
 import (
-	"errors"
+ "errors"
 
-	"erupe-ce/common/byteframe"
+ 	"erupe-ce/network/clientctx"
 	"erupe-ce/network"
-	"erupe-ce/network/clientctx"
+	"erupe-ce/common/byteframe"
 )
 
 // MsgSysReserve1AA represents the MSG_SYS_reserve1AA
