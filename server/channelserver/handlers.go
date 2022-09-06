@@ -75,9 +75,12 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 	})
 }
 
-func updateRights(s *Session) (err error) {
+func updateRights(s *Session) {
 	s.Rights = uint32(0x0E)
-	err = s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.CharID).Scan(&s.Rights)
+	err := s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.CharID).Scan(&s.Rights)
+	if err != nil {
+		s.logger.Fatal("FAILED UPDATE RIGHTS", zap.Error(err))
+	}
 
 	rights := make([]mhfpacket.ClientRight, 0)
 	tempRights := s.Rights
@@ -145,6 +148,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	s.Token = pkt.LoginTokenString
 	s.Unlock()
 	updateRights(s)
+
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(Time_Current_Adjusted().Unix())) // Unix timestamp
 
@@ -711,7 +715,13 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 		nextClaim = weekNextStart
 	}
 	if nextClaim.Before(weekCurrentStart) {
-		s.Server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1, %s_next=$1 WHERE character_id=$2", pkt.StampType, pkt.StampType, pkt.StampType), weekNextStart, s.CharID)
+		_, err := s.Server.db.Exec(fmt.Sprintf("UPDATE stamps SET %s_total=%s_total+1, %s_next=$1 WHERE character_id=$2", pkt.StampType, pkt.StampType, pkt.StampType), weekNextStart, s.CharID)
+		if err != nil {
+			s.logger.Error("INVALID UPDATE STAMPS ON handleMsgMhfCheckWeeklyStamp", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+
 		updated = 1
 	}
 	s.Server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.CharID).Scan(&total, &redeemed)

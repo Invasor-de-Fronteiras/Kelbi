@@ -186,6 +186,7 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(guild.ID)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		for _, m := range mail {
+			// nolint:errcheck
 			m.Send(s, nil)
 		}
 	}

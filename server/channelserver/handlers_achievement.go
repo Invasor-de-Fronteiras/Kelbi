@@ -5,6 +5,8 @@ import (
 	"erupe-ce/network/mhfpacket"
 	"fmt"
 	"io"
+
+	"go.uber.org/zap"
 )
 
 var achievementCurves = [][]int32{
@@ -90,7 +92,12 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.Server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", pkt.CharID).Scan(&exists)
 	if err != nil {
-		s.Server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID)
+		_, err = s.Server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", pkt.CharID)
+		if err != nil {
+			s.logger.Error("INVALID INSERT INTO ON handleMsgMhfGetAchievement", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	}
 
 	var scores [33]int32
@@ -131,6 +138,7 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint16(0) // Unk
 		resp.WriteUint32(achData.Progress)
 	}
+	// nolint:errcheck
 	resp.Seek(0, io.SeekStart)
 	resp.WriteUint32(points)
 	resp.WriteUint32(points)
@@ -152,7 +160,11 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.Server.db.QueryRow("SELECT id FROM achievements WHERE id=$1", s.CharID).Scan(&exists)
 	if err != nil {
-		s.Server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.CharID)
+		_, err := s.Server.db.Exec("INSERT INTO achievements (id) VALUES ($1)", s.CharID)
+		if err != nil {
+			s.logger.Fatal("INVALID INSERT INTO ON handleMsgMhfGetAchievement", zap.Error(err))
+			return
+		}
 	}
 
 	s.Server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.CharID)

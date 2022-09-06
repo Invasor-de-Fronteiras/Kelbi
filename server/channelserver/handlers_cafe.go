@@ -164,6 +164,7 @@ func handleMsgMhfReceiveCafeDurationBonus(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint32(cafeBonus.ItemID)
 			bf.WriteUint32(cafeBonus.Quantity)
 		}
+		// nolint:errcheck
 		bf.Seek(0, io.SeekStart)
 		bf.WriteUint32(count)
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())

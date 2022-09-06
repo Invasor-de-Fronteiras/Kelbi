@@ -21,6 +21,7 @@ func handleMsgMhfSaveRengokuData(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Fatal("Failed to update rengokudata savedata in db", zap.Error(err))
 	}
 	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
+	// nolint:errcheck
 	bf.Seek(71, 0)
 	maxStageMp := bf.ReadUint32()
 	maxScoreMp := bf.ReadUint32()
@@ -129,6 +130,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	case 0: // Max stage overall MP
 		rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s ORDER BY max_stages_mp DESC", rengokuScoreQuery))
 		for rows.Next() {
+			// nolint:errcheck
 			rows.StructScan(&score)
 			if score.Name == s.Name {
 				bf.WriteUint32(i)

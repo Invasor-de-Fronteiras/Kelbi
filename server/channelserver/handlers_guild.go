@@ -650,13 +650,16 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 					guild.LeaderCharID = guildMembers[i].CharID
 					guildMembers[0].OrderIndex = guildMembers[i].OrderIndex
 					guildMembers[i].OrderIndex = 1
+					// nolint:errcheck
 					guildMembers[0].Save(s)
+					// nolint:errcheck
 					guildMembers[i].Save(s)
 					bf.WriteUint32(guildMembers[i].CharID)
 					success = true
 					break
 				}
 			}
+			// nolint:errcheck
 			guild.Save(s)
 			doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 		}

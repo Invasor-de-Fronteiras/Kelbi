@@ -350,6 +350,7 @@ func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(uint32(title.Acquired.Unix()))
 		bf.WriteUint32(uint32(title.Updated.Unix()))
 	}
+	// nolint:errcheck
 	bf.Seek(0, io.SeekStart)
 	bf.WriteUint16(count)
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -439,7 +440,7 @@ func addWarehouseGift(s *Session, boxType string, giftStack mhfpacket.WarehouseS
 				break
 			}
 		}
-		if exists == false {
+		if !exists {
 			giftBox = append(giftBox, giftStack)
 		}
 	} else {
@@ -532,7 +533,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 				}
 			}
 		}
-		if exists == false {
+		if !exists {
 			newStacks = append(newStacks, update)
 		}
 	}
