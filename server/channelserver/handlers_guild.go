@@ -882,13 +882,10 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 
 		// nolint:errcheck // Error return value of `.` is not checked
 		mail.Send(s, nil)
-		for _, channel := range s.Server.Channels {
-			for _, session := range channel.Sessions {
-				if session.CharID == pkt.CharID {
-					SendMailNotification(s, &mail, session)
-				}
-			}
-		}
+
+		session := s.Server.FindSessionByCharID(pkt.CharID)
+		SendMailNotification(s, &mail, session)
+
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 }

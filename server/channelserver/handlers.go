@@ -75,9 +75,9 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 	})
 }
 
-func updateRights(s *Session) {
+func updateRights(s *Session) (err error) {
 	s.Rights = uint32(0x0E)
-	s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.CharID).Scan(&s.Rights)
+	err = s.Server.db.QueryRow("SELECT rights FROM users u INNER JOIN characters c ON u.id = c.user_id WHERE c.id = $1", s.CharID).Scan(&s.Rights)
 
 	rights := make([]mhfpacket.ClientRight, 0)
 	tempRights := s.Rights
@@ -100,6 +100,7 @@ func updateRights(s *Session) {
 		UnkSize:             0,
 	}
 	s.QueueSendMHF(update)
+	return
 }
 
 func handleMsgHead(s *Session, p mhfpacket.MHFPacket) {}
@@ -208,7 +209,11 @@ func logoutPlayer(s *Session) {
 
 	var timePlayed int
 	var sessionTime int
-	_ = s.Server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.CharID).Scan(&timePlayed)
+	err = s.Server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.CharID).Scan(&timePlayed)
+	if err != nil {
+		panic(err)
+	}
+
 	sessionTime = int(Time_Current_Adjusted().Unix()) - int(s.SessionStart)
 	timePlayed += sessionTime
 
@@ -221,8 +226,15 @@ func logoutPlayer(s *Session) {
 		timePlayed = timePlayed % 1800
 	}
 
-	s.Server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.CharID)
-	s.Server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.CharID)
+	_, err = s.Server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.CharID)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.Server.db.Exec("UPDATE characters SET cafe_time=cafe_time+$1 WHERE id=$2", sessionTime, s.CharID)
+	if err != nil {
+		panic(err)
+	}
 
 	treasureHuntUnregister(s)
 
@@ -433,7 +445,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 							count++
 							hrp := uint16(1)
 							gr := uint16(0)
-							s.Server.db.QueryRow("SELECT hrp, gr FROM characters WHERE id=$1", session.CharID).Scan(&hrp, &gr)
+							_ = s.Server.db.QueryRow("SELECT hrp, gr FROM characters WHERE id=$1", session.CharID).Scan(&hrp, &gr)
 							sessionStage := stringsupport.UTF8ToSJIS(session.StageID)
 							sessionName := stringsupport.UTF8ToSJIS(session.Name)
 							resp.WriteUint32(binary.LittleEndian.Uint32(net.ParseIP(c.IP).To4()))
@@ -458,15 +470,18 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		bf := byteframe.NewByteFrameFromBytes(pkt.MessageData)
 		setting := bf.ReadUint8()
 		maxResults := bf.ReadUint16()
+		// nolint:errcheck
 		bf.Seek(2, 1)
 		partyType := bf.ReadUint16()
 		rankRestriction := uint16(0)
 		if setting >= 2 {
+			// nolint:errcheck
 			bf.Seek(2, 1)
 			rankRestriction = bf.ReadUint16()
 		}
 		targets := make([]uint16, 4)
 		if setting >= 3 {
+			// nolint:errcheck
 			bf.Seek(1, 1)
 			lenTargets := int(bf.ReadUint8())
 			for i := 0; i < lenTargets; i++ {
@@ -493,6 +508,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 				}
 				if strings.HasPrefix(stage.Id, stagePrefix) {
 					sb3 := byteframe.NewByteFrameFromBytes(stage.RawBinaryData[StageBinaryKey{1, 3}])
+					// nolint:errcheck
 					sb3.Seek(4, 0)
 					stageRankRestriction := sb3.ReadUint16()
 					stageTarget := sb3.ReadUint16()
@@ -527,6 +543,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
+	// nolint:errcheck
 	resp.Seek(0, io.SeekStart)
 	resp.WriteUint16(count)
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
@@ -685,7 +702,12 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	var nextClaim time.Time
 	err := s.Server.db.QueryRow(fmt.Sprintf("SELECT %s_next FROM stamps WHERE character_id=$1", pkt.StampType), s.CharID).Scan(&nextClaim)
 	if err != nil {
-		s.Server.db.Exec("INSERT INTO stamps (character_id, hl_next, ex_next) VALUES ($1, $2, $2)", s.CharID, weekNextStart)
+		_, err = s.Server.db.Exec("INSERT INTO stamps (character_id, hl_next, ex_next) VALUES ($1, $2, $2)", s.CharID, weekNextStart)
+		if err != nil {
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+
 		nextClaim = weekNextStart
 	}
 	if nextClaim.Before(weekCurrentStart) {
