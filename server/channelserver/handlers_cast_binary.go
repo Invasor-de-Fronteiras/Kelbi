@@ -190,6 +190,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 				temp = &mhfpacket.MsgSysDeleteUser{CharID: session.CharID}
 				// nolint:nocheck
 				deleteNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
 				temp.Build(deleteNotif, s.clientContext)
 			}
 			deleteNotif.WriteUint16(0x0010)
@@ -203,6 +204,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 				// nolint:errcheck
 				temp = &mhfpacket.MsgSysInsertUser{CharID: session.CharID}
 				reloadNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
 				temp.Build(reloadNotif, s.clientContext)
 				for i := 0; i < 3; i++ {
 					temp = &mhfpacket.MsgSysNotifyUserBinary{
@@ -210,6 +212,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						BinaryType: uint8(i + 1),
 					}
 					reloadNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
 					temp.Build(reloadNotif, s.clientContext)
 				}
 			}
@@ -226,6 +229,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					OwnerCharID: obj.OwnerCharID,
 				}
 				reloadNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
 				temp.Build(reloadNotif, s.clientContext)
 			}
 			reloadNotif.WriteUint16(0x0010)

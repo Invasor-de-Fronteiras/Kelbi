@@ -65,6 +65,7 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	id, start := uint32(0xCAFEBEEF), uint32(0)
 	rows, _ := s.Server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='diva'")
 	for rows.Next() {
+		// nolint:errcheck
 		rows.Scan(&id, &start)
 	}
 

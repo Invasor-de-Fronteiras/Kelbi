@@ -180,10 +180,20 @@ func handleMsgMhfPostCafeDurationBonusReceived(s *Session, p mhfpacket.MHFPacket
 		`, cbID).Scan(&cafeBonus.ID, &cafeBonus.ItemType, &cafeBonus.Quantity)
 		if err == nil {
 			if cafeBonus.ItemType == 17 {
-				s.Server.db.Exec("UPDATE characters SET netcafe_points=netcafe_points+$1 WHERE id=$2", cafeBonus.Quantity, s.CharID)
+				_, err = s.Server.db.Exec("UPDATE characters SET netcafe_points=netcafe_points+$1 WHERE id=$2", cafeBonus.Quantity, s.CharID)
+				if err != nil {
+					s.logger.Error("FAILED TO UPDATE netcafe_points", zap.Error(err))
+					doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+					return
+				}
 			}
 		}
-		s.Server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.CharID)
+		_, err = s.Server.db.Exec("INSERT INTO public.cafe_accepted VALUES ($1, $2)", cbID, s.CharID)
+		if err != nil {
+			s.logger.Error("FAILED TO Insert netcafe_points", zap.Error(err))
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

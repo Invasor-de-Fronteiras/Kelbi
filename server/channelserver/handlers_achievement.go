@@ -167,7 +167,10 @@ func handleMsgMhfAddAchievement(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	s.Server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.CharID)
+	_, err = s.Server.db.Exec(fmt.Sprintf("UPDATE achievements SET ach%d=ach%d+1 WHERE id=$1", pkt.AchievementID, pkt.AchievementID), s.CharID)
+	if err != nil {
+		s.logger.Error("FAILED TO UPDATE achivements on handleMsgMhfGetAchievement", zap.Error(err))
+	}
 }
 
 func handleMsgMhfPaymentAchievement(s *Session, p mhfpacket.MHFPacket) {}

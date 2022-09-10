@@ -736,7 +736,13 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 
 		updated = 1
 	}
-	s.Server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.CharID).Scan(&total, &redeemed)
+	err = s.Server.db.QueryRow(fmt.Sprintf("SELECT %s_total, %s_redeemed FROM stamps WHERE character_id=$1", pkt.StampType, pkt.StampType), s.CharID).Scan(&total, &redeemed)
+	if err != nil {
+		s.logger.Error("FAILED TO SELECT STAMPS ON handleMsgMhfCheckWeeklyStamp", zap.Error(err))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(total)
 	bf.WriteUint16(redeemed)
@@ -751,10 +757,20 @@ func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	var total, redeemed uint16
 	var tktStack mhfpacket.WarehouseStack
 	if pkt.Unk1 == 0xA { // Yearly Sub Ex
-		s.Server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.CharID).Scan(&total, &redeemed)
+		err := s.Server.db.QueryRow("UPDATE stamps SET hl_total=hl_total-48, hl_redeemed=hl_redeemed-48 WHERE character_id=$1 RETURNING hl_total, hl_redeemed", s.CharID).Scan(&total, &redeemed)
+		if err != nil {
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+
 		tktStack = mhfpacket.WarehouseStack{ItemID: 0x08A2, Quantity: 1}
 	} else {
-		s.Server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.CharID).Scan(&total, &redeemed)
+		err := s.Server.db.QueryRow(fmt.Sprintf("UPDATE stamps SET %s_redeemed=%s_redeemed+8 WHERE character_id=$1 RETURNING %s_total, %s_redeemed", pkt.StampType, pkt.StampType, pkt.StampType, pkt.StampType), s.CharID).Scan(&total, &redeemed)
+		if err != nil {
+			doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
+
 		if pkt.StampType == "hl" {
 			tktStack = mhfpacket.WarehouseStack{ItemID: 0x065E, Quantity: 5}
 		} else {
