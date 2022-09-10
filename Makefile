@@ -28,6 +28,10 @@ setup-migrations: install-migrations-deps
 run-migrations: setup-migrations
 	cd $(MIGRATION_FOLDER_PATH) && npx prisma migrate deploy
 
+
+update-migrations: install-migrations-deps
+	cd $(MIGRATION_FOLDER_PATH) && npx prisma db pull
+
 setup: run-db run-migrations build-launcher
 	cp config.example.json config.json
 

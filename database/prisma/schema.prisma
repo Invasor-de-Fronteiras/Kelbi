@@ -173,7 +173,7 @@ model guild_applications {
 model guild_characters {
   id               Int         @id @default(autoincrement())
   guild_id         Int?
-  character_id     Int?     @unique(map: "guild_character_unique_index")
+  character_id     Int?        @unique(map: "guild_character_unique_index")
   joined_at        DateTime?   @default(now()) @db.Timestamp(6)
   avoid_leadership Boolean     @default(false)
   order_index      Int         @default(1)
@@ -265,7 +265,7 @@ model mail {
   characters_charactersTomail_recipient_id characters @relation("charactersTomail_recipient_id", fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   characters_charactersTomail_sender_id    characters @relation("charactersTomail_sender_id", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([recipient_id, deleted, created_at, id], map: "mail_recipient_deleted_created_id_index")
+  @@index([recipient_id, deleted, created_at(sort: Desc), id(sort: Desc)], map: "mail_recipient_deleted_created_id_index")
 }
 
 model normal_shop_items {
@@ -374,7 +374,7 @@ model ravisupport {
 }
 
 model schema_migrations {
-  version Int  @id
+  version Int     @id
   dirty   Boolean
 }
 
@@ -399,12 +399,14 @@ model shop_item_state {
   @@ignore
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model sign_sessions {
-  id             Int     @id @default(autoincrement())
   user_id   Int
   char_id   Int?
   token     String @db.VarChar(16)
   server_id Int?
+
+  @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -427,6 +429,7 @@ model users {
   item_box         Bytes?
   last_character   Int?               @default(0)
   characters       characters[]
+  user_connections user_connections[]
 }
 
 model distribution {
@@ -502,6 +505,19 @@ model user_binaries {
   type3 Bytes?
 }
 
+model user_connections {
+  id          Int                 @id @default(autoincrement())
+  user_id     Int
+  provider    ConnectionProviders
+  provider_id String
+  created_at  DateTime            @default(now()) @db.Timestamp(6)
+  updated_at  DateTime            @default(now()) @db.Timestamp(6)
+  users       users               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, provider], map: "user_connections_id_provider")
+  @@unique([provider_id, provider], map: "user_connections_provider_id_provider")
+}
+
 enum festival_colour {
   none
   red
@@ -511,4 +527,8 @@ enum festival_colour {
 enum guild_application_type {
   applied
   invited
+}
+
+enum ConnectionProviders {
+  DISCORD
 }
