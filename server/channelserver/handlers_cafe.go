@@ -202,6 +202,7 @@ func handleMsgMhfStartBoostTime(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfStartBoostTime)
 	bf := byteframe.NewByteFrame()
 	boostLimit := Time_Current_Adjusted().Add(100 * time.Minute)
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE characters SET boost_time=$1 WHERE id=$2", boostLimit, s.CharID)
 	bf.WriteUint32(uint32(boostLimit.Unix()))
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())

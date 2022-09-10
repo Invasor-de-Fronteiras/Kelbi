@@ -710,6 +710,7 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint32(0x5dddcbb3) // Timestamp
 
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+		return
 	}
 
 	weekCurrentStart := TimeWeekStart()

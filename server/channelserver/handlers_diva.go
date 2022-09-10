@@ -10,6 +10,7 @@ import (
 )
 
 func cleanupDiva(s *Session) {
+	// nolint:errcheck
 	s.Server.db.Exec("DELETE FROM events WHERE event_type='diva'")
 }
 
@@ -47,6 +48,7 @@ func generateDivaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupDiva(s)
 		// Generate a new diva defense, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('diva', to_timestamp($1)::timestamp without time zone)", start)
 	}
 	timestamps[0] = start
