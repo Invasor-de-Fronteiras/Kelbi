@@ -58,7 +58,6 @@ func handleMsgSysDeleteObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysPositionObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysPositionObject)
-
 	if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.LogInboundMessages {
 		fmt.Printf("[%s - %s] with objectID [%d] move to (%f,%f,%f)\n\n", s.Name, s.StageID, pkt.ObjID, pkt.X, pkt.Y, pkt.Z)
 	}

@@ -42,7 +42,6 @@ func main() {
 
 	// Load the configuration.
 	erupeConfig, err = config.LoadConfig()
-
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
 	}
@@ -85,6 +84,7 @@ func main() {
 		}
 
 		discordBot = bot
+		logger.Info("Discord bot is enabled")
 	} else {
 		logger.Info("Discord bot is disabled")
 	}
@@ -113,9 +113,11 @@ func main() {
 	db.SetMaxOpenConns(50)
 	logger.Info("Connected to database")
 
-	// Clear existing tokens
+	// Clear stale data
 	_ = db.MustExec("DELETE FROM sign_sessions")
 	_ = db.MustExec("DELETE FROM servers")
+	_ = db.MustExec("DELETE FROM cafe_accepted")
+	_ = db.MustExec("UPDATE characters SET cafe_time=0")
 
 	// Clean the DB if the option is on.
 	if erupeConfig.DevMode && erupeConfig.DevModeOptions.CleanDB {
@@ -127,18 +129,21 @@ func main() {
 	// Now start our server(s).
 
 	// Launcher HTTP server.
-	launcherServer := launcherserver.NewServer(
-		&launcherserver.Config{
-			Logger:                   logger.Named("launcher"),
-			ErupeConfig:              erupeConfig,
-			DB:                       db,
-			UseOriginalLauncherFiles: erupeConfig.Launcher.UseOriginalLauncherFiles,
-		})
-	err = launcherServer.Start()
-	if err != nil {
-		preventClose(fmt.Sprintf("Failed to start launcher server: %s", err.Error()))
+	var launcherServer *launcherserver.Server
+	if erupeConfig.DevMode && erupeConfig.DevModeOptions.EnableLauncherServer {
+		launcherServer = launcherserver.NewServer(
+			&launcherserver.Config{
+				Logger:                   logger.Named("launcher"),
+				ErupeConfig:              erupeConfig,
+				DB:                       db,
+				UseOriginalLauncherFiles: erupeConfig.Launcher.UseOriginalLauncherFiles,
+			})
+		err = launcherServer.Start()
+		if err != nil {
+			preventClose(fmt.Sprintf("Failed to start launcher server: %s", err.Error()))
+		}
+		logger.Info("Started launcher server")
 	}
-	logger.Info("Started launcher server")
 
 	// Entrance server.
 	entranceServer := entranceserver.NewServer(
@@ -196,7 +201,7 @@ func main() {
 			if err != nil {
 				preventClose(fmt.Sprintf("Failed to start channel server: %s", err.Error()))
 			} else {
-				channelQuery += fmt.Sprintf("INSERT INTO servers (server_id, season, current_players) VALUES (%d, %d, 0);", sid, season)
+				channelQuery += fmt.Sprintf(`INSERT INTO servers (server_id, season, current_players, world_name, world_description, land) VALUES (%d, %d, 0, '%s', '%s', %d);`, sid, si%3, ee.Name, ee.Description, season)
 				channels = append(channels, &c)
 				logger.Info(fmt.Sprintf("Started channel server %d on port %d", count, ce.Port))
 				ci++
@@ -234,7 +239,9 @@ func main() {
 	}
 	signServer.Shutdown()
 	entranceServer.Shutdown()
-	launcherServer.Shutdown()
+	if erupeConfig.DevModeOptions.EnableLauncherServer {
+		launcherServer.Shutdown()
+	}
 
 	time.Sleep(1 * time.Second)
 }

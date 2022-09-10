@@ -318,6 +318,64 @@ func disconnectChar(server *Server, charName string) string {
 	return result
 }
 
+func listSession(server *Server) string {
+	infos := []CharInfo{}
+
+	for _, client := range server.Sessions {
+		infos = append(infos, CharInfo{
+			CharID:    client.CharID,
+			CharName:  client.Name,
+			StageId:   "",
+			StageName: "",
+			IP:        client.rawConn.RemoteAddr().String(),
+		})
+	}
+
+	if len(infos) == 0 {
+		return "No Sessions founded"
+	}
+
+	sort.SliceStable(infos, func(i, j int) bool {
+		return infos[i].CharName < infos[j].CharName
+	})
+
+	result := "Sessions:\n"
+	for _, info := range infos {
+		result += fmt.Sprintf("    CharName: %s\n    Id: %d\n    Ip: %s\n\n", info.CharName, info.CharID, info.IP)
+	}
+
+	return result
+}
+
+func removeSessionByIp(server *Server, ip string) string {
+	infos := []CharInfo{}
+
+	for _, client := range server.Sessions {
+		if cleanStr(client.rawConn.RemoteAddr().String()) == cleanStr(ip) {
+			infos = append(infos, CharInfo{
+				CharID:    client.CharID,
+				CharName:  client.Name,
+				StageId:   "",
+				StageName: "",
+				IP:        client.rawConn.RemoteAddr().String(),
+			})
+
+			logoutPlayer(client)
+		}
+	}
+
+	if len(infos) == 0 {
+		return "Sessions not found"
+	}
+
+	result := "Sessions:\n"
+	for _, info := range infos {
+		result += fmt.Sprintf("Disconnect Session:\n    Char: %s\n    Id: %d\n    Ip: %s\n\n", info.CharName, info.CharID, info.IP)
+	}
+
+	return result
+}
+
 func (s *Server) isDiscordAdmin(ds *discordgo.Session, m *discordgo.MessageCreate) bool {
 	for _, role := range m.Member.Roles {
 		for _, id := range s.erupeConfig.Discord.DevRoles {
@@ -394,6 +452,25 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 	if commandName == "!questlist" && s.isDiscordAdmin(ds, m) {
 		// nolint:errcheck
 		ds.ChannelMessageSend(m.ChannelID, questlist(s))
+		return
+	}
+
+	if commandName == "!sessions" && s.isDiscordAdmin(ds, m) {
+		// nolint:errcheck
+		ds.ChannelMessageSend(m.ChannelID, listSession(s))
+		return
+	}
+
+	if commandName == "!remove-session" && s.isDiscordAdmin(ds, m) {
+		if len(args) < 2 {
+			// nolint:errcheck
+			ds.ChannelMessageSend(m.ChannelID, "Usage: !remove-session <session ip>")
+			return
+		}
+
+		ip := strings.Join(args[1:], " ")
+		// nolint:errcheck
+		ds.ChannelMessageSend(m.ChannelID, removeSessionByIp(s, ip))
 		return
 	}
 

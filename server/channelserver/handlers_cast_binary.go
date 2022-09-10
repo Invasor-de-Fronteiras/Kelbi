@@ -16,6 +16,7 @@ import (
 const (
 	BinaryMessageTypeState      = 0
 	BinaryMessageTypeChat       = 1
+	BinaryMessageTypeData       = 3
 	BinaryMessageTypeMailNotify = 4
 	BinaryMessageTypeEmote      = 6
 )
@@ -168,6 +169,73 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 
 		fmt.Printf("Got chat message: %+v\n", chatMessage)
 
+		// Flush all objects and users and reload
+		if strings.HasPrefix(chatMessage.Message, "!reload") {
+			sendServerChatMessage(s, "Reloading players...")
+			var temp mhfpacket.MHFPacket
+			deleteNotif := byteframe.NewByteFrame()
+			for _, object := range s.Stage.Objects {
+				if object.OwnerCharID == s.CharID {
+					continue
+				}
+				temp = &mhfpacket.MsgSysDeleteObject{ObjID: object.Id}
+				deleteNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
+				temp.Build(deleteNotif, s.clientContext)
+			}
+			for _, session := range s.Server.Sessions {
+				if s == session {
+					continue
+				}
+				temp = &mhfpacket.MsgSysDeleteUser{CharID: session.CharID}
+				// nolint:nocheck
+				deleteNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
+				temp.Build(deleteNotif, s.clientContext)
+			}
+			deleteNotif.WriteUint16(0x0010)
+			s.QueueSend(deleteNotif.Data())
+			time.Sleep(500 * time.Millisecond)
+			reloadNotif := byteframe.NewByteFrame()
+			for _, session := range s.Server.Sessions {
+				if s == session {
+					continue
+				}
+				// nolint:errcheck
+				temp = &mhfpacket.MsgSysInsertUser{CharID: session.CharID}
+				reloadNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
+				temp.Build(reloadNotif, s.clientContext)
+				for i := 0; i < 3; i++ {
+					temp = &mhfpacket.MsgSysNotifyUserBinary{
+						CharID:     session.CharID,
+						BinaryType: uint8(i + 1),
+					}
+					reloadNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
+					temp.Build(reloadNotif, s.clientContext)
+				}
+			}
+			for _, obj := range s.Stage.Objects {
+				if obj.OwnerCharID == s.CharID {
+					continue
+				}
+				temp = &mhfpacket.MsgSysDuplicateObject{
+					ObjID:       obj.Id,
+					X:           obj.X,
+					Y:           obj.Y,
+					Z:           obj.Z,
+					Unk0:        0,
+					OwnerCharID: obj.OwnerCharID,
+				}
+				reloadNotif.WriteUint16(uint16(temp.Opcode()))
+				// nolint:errcheck
+				temp.Build(reloadNotif, s.clientContext)
+			}
+			reloadNotif.WriteUint16(0x0010)
+			s.QueueSend(reloadNotif.Data())
+		}
+
 		// Set account rights
 		// if strings.HasPrefix(chatMessage.Message, "!rights") {
 		// 	var v uint32
@@ -175,7 +243,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		// 	if err != nil || n != 1 {
 		// 		sendServerChatMessage(s, "Error in command. Format: !rights n")
 		// 	} else {
-		// 		_, err = s.server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", v, s.charID)
+		// 		_, err = s.Server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", v, s.CharID)
 		// 		if err == nil {
 		// 			sendServerChatMessage(s, fmt.Sprintf("Set rights integer: %d", v))
 		// 		}
@@ -183,7 +251,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		// }
 
 		// Discord integration
-		if chatMessage.Type == binpacket.ChatTypeLocal || chatMessage.Type == binpacket.ChatTypeParty {
+		if (pkt.BroadcastType == BroadcastTypeStage && s.Stage.Id == "sl1Ns200p0a0u0") || pkt.BroadcastType == BroadcastTypeWorld {
 			s.Server.DiscordChannelSend(chatMessage.SenderName, chatMessage.Message)
 		}
 		// RAVI COMMANDS V2
@@ -265,7 +333,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		// 		payloadBytes := payload.Data()
 
 		// 		s.QueueSendMHF(&mhfpacket.MsgSysCastedBinary{
-		// 			CharID:         s.charID,
+		// 			CharID:         s.CharID,
 		// 			MessageType:    BinaryMessageTypeState,
 		// 			RawDataPayload: payloadBytes,
 		// 		})
