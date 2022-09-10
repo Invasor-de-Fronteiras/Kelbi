@@ -361,8 +361,10 @@ func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {
 	var exists int
 	err := s.Server.db.QueryRow("SELECT count(*) FROM titles WHERE id=$1 AND char_id=$2", pkt.TitleID, s.CharID).Scan(&exists)
 	if err != nil || exists == 0 {
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO titles VALUES ($1, $2, now(), now())", pkt.TitleID, s.CharID)
 	} else {
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE titles SET updated_at=now()")
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
@@ -375,6 +377,7 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	var t int
 	err := s.Server.db.QueryRow("SELECT character_id FROM warehouse WHERE character_id=$1", s.CharID).Scan(&t)
 	if err != nil {
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO warehouse (character_id) VALUES ($1)", s.CharID)
 	}
 	bf := byteframe.NewByteFrame()
@@ -384,6 +387,7 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		var count uint8
 		itemNames := make([]string, 10)
 		equipNames := make([]string, 10)
+		// nolint:errcheck
 		s.Server.db.QueryRow(fmt.Sprintf("%s WHERE character_id=$1", warehouseNamesQuery), s.CharID).Scan(&itemNames[0],
 			&itemNames[1], &itemNames[2], &itemNames[3], &itemNames[4], &itemNames[5], &itemNames[6], &itemNames[7], &itemNames[8], &itemNames[9], &equipNames[0],
 			&equipNames[1], &equipNames[2], &equipNames[3], &equipNames[4], &equipNames[5], &equipNames[6], &equipNames[7], &equipNames[8], &equipNames[9])
@@ -411,6 +415,7 @@ func handleMsgMhfOperateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	case 1:
 		bf.WriteUint8(0)
 	case 2:
+		// nolint:errcheck
 		s.Server.db.Exec(fmt.Sprintf("UPDATE warehouse SET %s%dname=$1 WHERE character_id=$2", pkt.BoxType, pkt.BoxIndex), pkt.Name, s.CharID)
 	case 3:
 		bf.WriteUint32(0)     // Usage renewal time, >1 = disabled
@@ -446,11 +451,13 @@ func addWarehouseGift(s *Session, boxType string, giftStack mhfpacket.WarehouseS
 	} else {
 		giftBox = append(giftBox, giftStack)
 	}
+	// nolint:errcheck
 	s.Server.db.Exec(fmt.Sprintf("UPDATE warehouse SET %s10=$1 WHERE character_id=$2", boxType), boxToBytes(giftBox, boxType), s.CharID)
 }
 
 func getWarehouseBox(s *Session, boxType string, boxIndex uint8) []mhfpacket.WarehouseStack {
 	var data []byte
+	// nolint:errcheck
 	s.Server.db.QueryRow(fmt.Sprintf("SELECT %s%d FROM warehouse WHERE character_id=$1", boxType, boxIndex), s.CharID).Scan(&data)
 	if len(data) > 0 {
 		box := byteframe.NewByteFrameFromBytes(data)
@@ -538,9 +545,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 	// Append new stacks
-	for _, stack := range newStacks {
-		box = append(box, stack)
-	}
+	box = append(box, newStacks...)
 	// Slice empty stacks
 	var cleanedBox []mhfpacket.WarehouseStack
 	for _, stack := range box {
@@ -554,6 +559,7 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 			}
 		}
 	}
+	// nolint:errcheck
 	s.Server.db.Exec(fmt.Sprintf("UPDATE warehouse SET %s%d=$1 WHERE character_id=$2", pkt.BoxType, pkt.BoxIndex), boxToBytes(cleanedBox, pkt.BoxType), s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

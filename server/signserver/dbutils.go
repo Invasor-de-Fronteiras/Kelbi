@@ -97,17 +97,21 @@ func (s *Server) getCharactersForUser(uid int) ([]character, error) {
 
 func (s *Server) getReturnExpiry(uid int) time.Time {
 	var returnExpiry, lastLogin time.Time
+	// nolint:errcheck
 	s.db.Get(&lastLogin, "SELECT COALESCE(last_login, now()) FROM users WHERE id=$1", uid)
 	if time.Now().Add((time.Hour * 24) * -90).After(lastLogin) {
 		returnExpiry = time.Now().Add(time.Hour * 24 * 30)
+		// nolint:errcheck
 		s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
 	} else {
 		err := s.db.Get(&returnExpiry, "SELECT return_expires FROM users WHERE id=$1", uid)
 		if err != nil {
 			returnExpiry = time.Now()
+			// nolint:errcheck
 			s.db.Exec("UPDATE users SET return_expires=$1 WHERE id=$2", returnExpiry, uid)
 		}
 	}
+	// nolint:errcheck
 	s.db.Exec("UPDATE users SET last_login=$1 WHERE id=$2", time.Now(), uid)
 	return returnExpiry
 }

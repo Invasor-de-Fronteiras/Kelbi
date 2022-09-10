@@ -156,6 +156,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	var nextID uint32
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT nextval('rasta_id_seq')").Scan(&nextID)
 
 	bf.WriteUint32(nextID)     // New MercID
@@ -167,8 +168,10 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
 	if len(pkt.MercData) > 0 {
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", pkt.MercData, s.CharID)
 	}
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE characters SET gcp=$1 WHERE id=$2", pkt.GCP, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
@@ -181,7 +184,9 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 	}
 	var data []byte
 	var gcp uint32
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", s.CharID).Scan(&data)
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT COALESCE(gcp, 0) FROM characters WHERE id = $1", s.CharID).Scan(&gcp)
 
 	resp := byteframe.NewByteFrame()
@@ -198,6 +203,7 @@ func handleMsgMhfReadMercenaryW(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfReadMercenaryM(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfReadMercenaryM)
 	var data []byte
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT savemercenary FROM characters WHERE id = $1", pkt.CharID).Scan(&data)
 	resp := byteframe.NewByteFrame()
 	if len(data) == 0 {

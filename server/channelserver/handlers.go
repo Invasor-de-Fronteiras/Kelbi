@@ -102,7 +102,6 @@ func updateRights(s *Session) {
 		UnkSize:             0,
 	}
 	s.QueueSendMHF(update)
-	return
 }
 
 func handleMsgHead(s *Session, p mhfpacket.MHFPacket) {}
@@ -754,6 +753,10 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
+	if s.Server.erupeConfig.DevModeOptions.DisableStamps {
+		return
+	}
+
 	pkt := p.(*mhfpacket.MsgMhfExchangeWeeklyStamp)
 	var total, redeemed uint16
 	var tktStack mhfpacket.WarehouseStack

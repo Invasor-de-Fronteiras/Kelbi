@@ -130,6 +130,7 @@ func generateFestaTimestamps(s *Session, start uint32, debug bool) []uint32 {
 		cleanupFesta(s)
 		// Generate a new festa, starting midnight tomorrow
 		start = uint32(midnight.Add(24 * time.Hour).Unix())
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO events (event_type, start_time) VALUES ('festa', to_timestamp($1)::timestamp without time zone)", start)
 	}
 	timestamps[0] = start
@@ -157,6 +158,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	// nolint:errcheck
 	rows, _ := s.Server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='festa'")
 	for rows.Next() {
+		// nolint:errcheck
 		rows.Scan(&id, &start)
 	}
 
@@ -333,8 +335,10 @@ func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 	team := uint32(rand.Intn(2))
 	switch team {
 	case 0:
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'blue')", guild.ID)
 	case 1:
+		// nolint:errcheck
 		s.Server.db.Exec("INSERT INTO festa_registrations VALUES ($1, 'red')", guild.ID)
 	}
 	bf := byteframe.NewByteFrame()
@@ -344,6 +348,7 @@ func handleMsgMhfEntryFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfChargeFesta)
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE guild_characters SET souls=souls+$1 WHERE character_id=$2", pkt.Souls, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -355,12 +360,14 @@ func handleMsgMhfAcquireFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaPersonalPrize)
+	// nolint:errcheck
 	s.Server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfAcquireFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFestaIntermediatePrize)
+	// nolint:errcheck
 	s.Server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES ($1, $2)", pkt.PrizeID, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

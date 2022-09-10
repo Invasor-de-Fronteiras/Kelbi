@@ -170,6 +170,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 		if guild != nil {
 			rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s WHERE guild_id=$1 ORDER BY max_stages_mp DESC", rengokuScoreQuery), guild.ID)
 			for rows.Next() {
+				// nolint:errcheck
 				rows.StructScan(&score)
 				if score.Name == s.Name {
 					bf.WriteUint32(i)
@@ -190,6 +191,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 		if guild != nil {
 			rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s WHERE guild_id=$1 ORDER BY max_points_mp DESC", rengokuScoreQuery), guild.ID)
 			for rows.Next() {
+				// nolint:errcheck
 				rows.StructScan(&score)
 				if score.Name == s.Name {
 					bf.WriteUint32(i)
@@ -209,6 +211,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	case 4: // Max stage overall SP
 		rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s ORDER BY max_stages_sp DESC", rengokuScoreQuery))
 		for rows.Next() {
+			// nolint:errcheck
 			rows.StructScan(&score)
 			if score.Name == s.Name {
 				bf.WriteUint32(i)
@@ -225,6 +228,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	case 5: // Max RdP overall SP
 		rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s ORDER BY max_points_sp DESC", rengokuScoreQuery))
 		for rows.Next() {
+			// nolint:errcheck
 			rows.StructScan(&score)
 			if score.Name == s.Name {
 				bf.WriteUint32(i)
@@ -242,6 +246,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 		if guild != nil {
 			rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s WHERE guild_id=$1 ORDER BY max_stages_sp DESC", rengokuScoreQuery), guild.ID)
 			for rows.Next() {
+				// nolint:errcheck
 				rows.StructScan(&score)
 				if score.Name == s.Name {
 					bf.WriteUint32(i)
@@ -262,6 +267,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 		if guild != nil {
 			rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s WHERE guild_id=$1 ORDER BY max_points_sp DESC", rengokuScoreQuery), guild.ID)
 			for rows.Next() {
+				// nolint:errcheck
 				rows.StructScan(&score)
 				if score.Name == s.Name {
 					bf.WriteUint32(i)
