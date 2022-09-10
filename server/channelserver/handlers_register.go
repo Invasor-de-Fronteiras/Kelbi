@@ -252,6 +252,7 @@ func (s *Session) notifyRavi() {
 	temp.Build(raviNotif, s.clientContext)
 	temp = &mhfpacket.MsgSysNotifyRegister{RegisterID: 6}
 	raviNotif.WriteUint16(uint16(temp.Opcode()))
+	// nolint:errcheck
 	temp.Build(raviNotif, s.clientContext)
 	raviNotif.WriteUint16(0x0010) // End it.
 	sema := getRaviSemaphore(s)

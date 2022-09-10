@@ -152,6 +152,7 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	case 1: // Max RdP overall MP
 		rows, _ := s.Server.db.Queryx(fmt.Sprintf("%s ORDER BY max_points_mp DESC", rengokuScoreQuery))
 		for rows.Next() {
+			// nolint:errcheck
 			rows.StructScan(&score)
 			if score.Name == s.Name {
 				bf.WriteUint32(i)

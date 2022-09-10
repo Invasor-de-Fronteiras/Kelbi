@@ -699,6 +699,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 				Body:            fmt.Sprintf("You have withdrawn from 「%s」.", guild.Name),
 				IsSystemMessage: true,
 			}
+			// nolint:errcheck
 			mail.Send(s, nil)
 		}
 

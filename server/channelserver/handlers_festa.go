@@ -89,9 +89,13 @@ func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func cleanupFesta(s *Session) {
+	// nolint:errcheck
 	s.Server.db.Exec("DELETE FROM events WHERE event_type='festa'")
+	// nolint:errcheck
 	s.Server.db.Exec("DELETE FROM festa_registrations")
+	// nolint:errcheck
 	s.Server.db.Exec("DELETE FROM festa_prizes_accepted")
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE guild_characters SET souls=0")
 }
 
@@ -150,6 +154,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	id, start := uint32(0xDEADBEEF), uint32(0)
+	// nolint:errcheck
 	rows, _ := s.Server.db.Queryx("SELECT id, (EXTRACT(epoch FROM start_time)::int) as start_time FROM events WHERE event_type='festa'")
 	for rows.Next() {
 		rows.Scan(&id, &start)
@@ -172,7 +177,9 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var blueSouls, redSouls uint32
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT SUM(gc.souls) FROM guild_characters gc INNER JOIN festa_registrations fr ON fr.guild_id = gc.guild_id WHERE fr.team = 'blue'").Scan(&blueSouls)
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT SUM(gc.souls) FROM guild_characters gc INNER JOIN festa_registrations fr ON fr.guild_id = gc.guild_id WHERE fr.team = 'red'").Scan(&redSouls)
 
 	bf.WriteUint32(id)
@@ -254,6 +261,7 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var souls uint32
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT souls FROM guild_characters WHERE character_id=$1", s.CharID).Scan(&souls)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(souls)
