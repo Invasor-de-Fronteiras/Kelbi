@@ -117,9 +117,11 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateRengokuRanking)
 
 	guild, _ := GetGuildInfoByCharacterId(s, s.CharID)
-	isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
-	if isApplicant {
-		guild = nil
+	if guild != nil {
+		isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
+		if isApplicant {
+			guild = nil
+		}
 	}
 
 	var score RengokuScore

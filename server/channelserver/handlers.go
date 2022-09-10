@@ -9,7 +9,6 @@ import (
 	"math"
 	"net"
 	"strings"
-
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -700,6 +699,19 @@ func handleMsgMhfGetCogInfo(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCheckWeeklyStamp)
+
+	if s.Server.erupeConfig.DevModeOptions.DisableStamps {
+		resp := byteframe.NewByteFrame()
+		resp.WriteUint16(0x000E)
+		resp.WriteUint16(0x0001)
+		resp.WriteUint16(0x0000)
+		resp.WriteUint16(0x0000) // 0x0000 stops the vaguely annoying log in pop up
+		resp.WriteUint32(0)
+		resp.WriteUint32(0x5dddcbb3) // Timestamp
+
+		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+	}
+
 	weekCurrentStart := TimeWeekStart()
 	weekNextStart := TimeWeekNext()
 	var total, redeemed, updated uint16
