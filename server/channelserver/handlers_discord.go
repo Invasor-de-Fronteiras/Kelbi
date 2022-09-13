@@ -444,7 +444,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 
 	if commandName == "!kill" && s.isDiscordAdmin(ds, m) {
 		// nolint:errcheck
-		ds.ChannelMessageSend(m.ChannelID, "Dizimando aldeia em 3..2..1")
+		ds.ChannelMessageSend(m.ChannelID, "Afundando a arca em 3..2..1")
 		os.Exit(1)
 		return
 	}
