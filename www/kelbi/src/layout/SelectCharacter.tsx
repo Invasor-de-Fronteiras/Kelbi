@@ -55,7 +55,7 @@ export function SelectCharacter() {
             Discord
           </span>{' '}
           para ajudar no que for possível, então qualquer dúvida ou sugestão entre em contato.
-          <br />~ Grato Invasores
+          <br />~ Grato Arca
         </h4>
         <div className='flex items-center justify-center flex-col'>
           <Button onClick={handleStartGame}>Entrar</Button>
