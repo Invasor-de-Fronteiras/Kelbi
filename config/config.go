@@ -17,6 +17,7 @@ type Config struct {
 	DevModeOptions DevModeOptions
 	Discord        Discord
 	Database       Database
+	ServerHttp     ServerHttp
 	Launcher       Launcher
 	Sign           Sign
 	Entrance       Entrance
@@ -67,6 +68,12 @@ type Database struct {
 	User     string
 	Password string
 	Database string
+}
+
+// Server Http.
+type ServerHttp struct {
+	Port  int
+	Token string
 }
 
 // Launcher holds the launcher server config.

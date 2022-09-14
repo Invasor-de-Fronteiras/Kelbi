@@ -218,7 +218,8 @@ func main() {
 	httpContext := httpserver.HttpServerContext{
 		Servers:     channels,
 		ErupeConfig: erupeConfig,
-		Address:     "0.0.0.0:3333",
+		Address:     fmt.Sprintf("0.0.0.0:%d", erupeConfig.ServerHttp.Port),
+		Token:       erupeConfig.ServerHttp.Token,
 	}
 
 	go httpserver.RunHttpServer(&httpContext)

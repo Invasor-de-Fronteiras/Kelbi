@@ -34,6 +34,10 @@
         "realtimeChannelID": "",
         "devRoles": []
     },
+    "serverhttp": {
+        "port": 4000,
+        "token": ""
+    },
     "database": {
         "host": "localhost",
         "port": 5432,

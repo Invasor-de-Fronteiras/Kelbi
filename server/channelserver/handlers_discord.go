@@ -301,7 +301,7 @@ func disconnectChar(server *Server, charName string) string {
 					StageName: stage.GetName(),
 				})
 
-				logoutPlayer(client)
+				LogoutPlayer(client)
 			}
 		}
 	}
@@ -360,7 +360,7 @@ func removeSessionByIp(server *Server, ip string) string {
 				IP:        client.rawConn.RemoteAddr().String(),
 			})
 
-			logoutPlayer(client)
+			LogoutPlayer(client)
 		}
 	}
 

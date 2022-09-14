@@ -188,10 +188,10 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
-	logoutPlayer(s)
+	LogoutPlayer(s)
 }
 
-func logoutPlayer(s *Session) {
+func LogoutPlayer(s *Session) {
 	if _, exists := s.Server.Sessions[s.rawConn]; exists {
 		delete(s.Server.Sessions, s.rawConn)
 		s.rawConn.Close()

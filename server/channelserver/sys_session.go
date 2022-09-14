@@ -180,12 +180,12 @@ func (s *Session) recvLoop() {
 
 		if err == io.EOF {
 			s.logger.Info(fmt.Sprintf("[%s] Disconnected", s.Name))
-			logoutPlayer(s)
+			LogoutPlayer(s)
 			return
 		}
 		if err != nil {
 			s.logger.Warn("Error on ReadPacket, exiting recv loop", zap.Error(err))
-			logoutPlayer(s)
+			LogoutPlayer(s)
 			return
 		}
 		s.handlePacketGroup(pkt)
