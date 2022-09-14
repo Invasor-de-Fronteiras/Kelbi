@@ -118,7 +118,12 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	bf.WriteUint8(0x00)
 	bf.WriteUint32(0xCA110001)
 	bf.WriteUint32(0x4E200000)
-	bf.WriteUint32(uint32(returnExpiry.Unix()))
+
+	if s.server.erupeConfig.DevModeOptions.DisableReturnBoost {
+		bf.WriteUint32(0)
+	} else {
+		bf.WriteUint32(uint32(returnExpiry.Unix()))
+	}
 	bf.WriteUint32(0x00000000)
 	bf.WriteUint32(0x0A5197DF)
 

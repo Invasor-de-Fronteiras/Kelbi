@@ -42,7 +42,7 @@ type DevModeOptions struct {
 	MezFesAlt            bool   // Swaps out Volpakkun for Tokotoko
 	DisableTokenCheck    bool   // Disables checking login token exists in the DB (security risk!)
 	DisableMailItems     bool   // Hack to prevent english versions of MHF from crashing
-	DisableStamps        bool
+	DisableReturnBoost   bool
 	SaveDumps            SaveDumpOptions
 }
 

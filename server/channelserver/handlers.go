@@ -699,19 +699,6 @@ func handleMsgMhfGetCogInfo(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCheckWeeklyStamp)
 
-	if s.Server.erupeConfig.DevModeOptions.DisableStamps {
-		resp := byteframe.NewByteFrame()
-		resp.WriteUint16(0x000E)
-		resp.WriteUint16(0x0001)
-		resp.WriteUint16(0x0000)
-		resp.WriteUint16(0x0000) // 0x0000 stops the vaguely annoying log in pop up
-		resp.WriteUint32(0)
-		resp.WriteUint32(0x5dddcbb3) // Timestamp
-
-		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
-		return
-	}
-
 	weekCurrentStart := TimeWeekStart()
 	weekNextStart := TimeWeekNext()
 	var total, redeemed, updated uint16
@@ -753,10 +740,6 @@ func handleMsgMhfCheckWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfExchangeWeeklyStamp(s *Session, p mhfpacket.MHFPacket) {
-	if s.Server.erupeConfig.DevModeOptions.DisableStamps {
-		return
-	}
-
 	pkt := p.(*mhfpacket.MsgMhfExchangeWeeklyStamp)
 	var total, redeemed uint16
 	var tktStack mhfpacket.WarehouseStack
