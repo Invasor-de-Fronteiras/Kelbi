@@ -60,6 +60,10 @@ func RunHttpServer(context *HttpServerContext) {
 
 	router.Use(authMiddleware(context.Token))
 
+	router.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, nil)
+	})
+
 	router.GET("/servers", func(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, context.Servers)
 	})
