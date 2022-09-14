@@ -184,7 +184,10 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	delete(s.Stage.ReservedClientSlots, s.CharID)
-	delete(s.Server.Stages[backStage].ReservedClientSlots, s.CharID)
+
+	if s.Server.Stages[backStage] != nil {
+		delete(s.Server.Stages[backStage].ReservedClientSlots, s.CharID)
+	}
 
 	doStageTransfer(s, pkt.AckHandle, backStage)
 }
