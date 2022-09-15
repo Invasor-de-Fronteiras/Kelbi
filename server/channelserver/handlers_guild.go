@@ -888,7 +888,9 @@ func handleMsgMhfOperateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		mail.Send(s, nil)
 
 		session := s.Server.FindSessionByCharID(pkt.CharID)
-		SendMailNotification(s, &mail, session)
+		if session != nil {
+			SendMailNotification(s, &mail, session)
+		}
 
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
@@ -1404,15 +1406,6 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildManageRight)
 
 	guild, err := GetGuildInfoByCharacterId(s, s.CharID)
-
-	if guild == nil && s.PrevGuildID != 0 {
-		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
-		s.PrevGuildID = 0
-		if guild == nil || err != nil {
-			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		}
-	}
 
 	if guild == nil && s.PrevGuildID != 0 {
 		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
