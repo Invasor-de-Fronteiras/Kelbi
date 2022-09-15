@@ -1055,8 +1055,10 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint8(0)  // Unk, read if count == 0.
 
 			doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+			return
 		}
-		if err != nil || characterGuildData.IsApplicant {
+
+		if err != nil || characterGuildData == nil || characterGuildData.IsApplicant {
 			bf.WriteUint16(0)
 		} else {
 			bf.WriteUint16(uint16(len(applicants)))
