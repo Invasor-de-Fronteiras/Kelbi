@@ -33,7 +33,7 @@ func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 
 	// If we can't get the real data, fail.
 	if !ok {
-		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		doAckBufFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	}
