@@ -32,10 +32,10 @@ type Session struct {
 	UserEnteredStage bool     `json:"userEnteredStage"` // If the user has entered a stage before
 	MySeries         MySeries `json:"mySeries"`
 	StageID          string   `json:"stageID"`
-	Stage            *Stage   `json:"stage"`
-	ReservationStage *Stage   `json:"reservationStage"` // Required for the stateful MsgSysUnreserveStage packet.
-	StagePass        string   `json:"stagePass"`        // Temporary storage
-	PrevGuildID      uint32   `json:"prevGuildID"`      // Stores the last GuildID used in InfoGuild
+	Stage            *Stage   `json:"-"`
+	ReservationStage *Stage   `json:"-"`           // Required for the stateful MsgSysUnreserveStage packet.
+	StagePass        string   `json:"stagePass"`   // Temporary storage
+	PrevGuildID      uint32   `json:"prevGuildID"` // Stores the last GuildID used in InfoGuild
 	CharID           uint32   `json:"charID"`
 	LogKey           []byte   `json:"logKey"`
 	SessionStart     int64    `json:"sessionStart"`
@@ -55,7 +55,7 @@ type Session struct {
 	MailList []int `json:"mailList"`
 
 	// For Debuging
-	Name string `json:"Name"`
+	Name string `json:"name"`
 }
 
 type MySeries struct {
