@@ -51,7 +51,7 @@ func (s *Server) getCharacterForUser(uid int) (*Character, error) {
 func CountChars(s *Server) string {
 	count := 0
 	for _, stage := range s.Stages {
-		count += len(stage.Clients)
+		count += len(stage.Sessions)
 	}
 
 	message := fmt.Sprintf("Server [%s]: %d players;", s.Name, count)
@@ -105,7 +105,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 	bigNameLen := 0
 
 	for _, stage := range s.Stages {
-		if len(stage.Clients) == 0 {
+		if len(stage.Sessions) == 0 {
 			continue
 		}
 
@@ -117,7 +117,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		isQuest := stage.isQuest()
-		for client := range stage.Clients {
+		for _, client := range stage.Sessions {
 			char, err := s.getCharacterForUser(int(client.CharID))
 			if err == nil {
 				if len(char.Name) > bigNameLen {
@@ -178,7 +178,7 @@ func debug(s *Server) string {
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
 		if stage.isQuest() {
-			if len(stage.Clients) > 0 {
+			if len(stage.Sessions) > 0 {
 				hasDeparted = "true"
 			}
 
@@ -215,7 +215,7 @@ func questlist(s *Server) string {
 		}
 
 		hasDeparted := ""
-		if len(stage.Clients) > 0 {
+		if len(stage.Sessions) > 0 {
 			hasDeparted = " - departed"
 		}
 		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.Id, len(stage.ReservedClientSlots), stage.MaxPlayers, hasDeparted, stage.CreatedAt)
@@ -251,7 +251,7 @@ func getCharInfo(server *Server, charName string) string {
 	infos := []CharInfo{}
 
 	for _, stage := range server.Stages {
-		for client := range stage.Clients {
+		for _, client := range stage.Sessions {
 
 			if client.Name == "" {
 				continue
@@ -287,7 +287,7 @@ func disconnectChar(server *Server, charName string) string {
 	infos := []CharInfo{}
 
 	for _, stage := range server.Stages {
-		for client := range stage.Clients {
+		for _, client := range stage.Sessions {
 
 			if client.Name == "" {
 				continue
