@@ -443,7 +443,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 						if count == maxResults {
 							break
 						}
-						for session := range stage.Clients {
+						for _, session := range stage.Sessions {
 							count++
 							hrp := uint16(1)
 							gr := uint16(0)
@@ -523,7 +523,7 @@ func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
 					resp.WriteUint16(c.Port)
 					resp.WriteUint16(0) // Static?
 					resp.WriteUint16(0) // Unk
-					resp.WriteUint16(uint16(len(stage.Clients)))
+					resp.WriteUint16(uint16(len(stage.Sessions)))
 					resp.WriteUint16(stage.MaxPlayers)
 					resp.WriteUint16(0) // Num clients entered from stage
 					resp.WriteUint16(stage.MaxPlayers)

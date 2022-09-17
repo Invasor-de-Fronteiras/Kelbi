@@ -35,7 +35,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 
 	if exists {
 		stage.Lock()
-		stage.Clients[s] = s.CharID
+		stage.Sessions[s.CharID] = s
 		stage.Unlock()
 	} else { // Create new stage object
 		s.Server.Lock()
@@ -43,7 +43,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		stage = s.Server.Stages[stageID]
 		s.Server.Unlock()
 		stage.Lock()
-		stage.Clients[s] = s.CharID
+		stage.Sessions[s.CharID] = s
 		stage.Unlock()
 	}
 
@@ -127,7 +127,7 @@ func destructEmptyStages(s *Session) {
 	for _, stage := range s.Server.Stages {
 		// Destroy empty Quest/My series/Guild stages.
 		if stage.Id[3:5] == "Qs" || stage.Id[3:5] == "Ms" || stage.Id[3:5] == "Gs" || stage.Id[3:5] == "Ls" {
-			if len(stage.ReservedClientSlots) == 0 && len(stage.Clients) == 0 {
+			if len(stage.ReservedClientSlots) == 0 && len(stage.Sessions) == 0 {
 				delete(s.Server.Stages, stage.Id)
 				s.logger.Debug("Destructed stage", zap.String("stage.id", stage.Id))
 			}
@@ -138,7 +138,7 @@ func destructEmptyStages(s *Session) {
 func removeSessionFromStage(s *Session) {
 	// Remove client from old stage.
 	s.Stage.Lock()
-	delete(s.Stage.Clients, s)
+	delete(s.Stage.Sessions, s.CharID)
 
 	// Delete old stage objects owned by the client.
 	s.logger.Info("Sending notification to old stage clients")
@@ -375,7 +375,7 @@ func handleMsgSysEnumerateStage(s *Session, p mhfpacket.MHFPacket) {
 		stage.RLock()
 		defer stage.RUnlock()
 
-		if len(stage.ReservedClientSlots) == 0 && len(stage.Clients) == 0 {
+		if len(stage.ReservedClientSlots) == 0 && len(stage.Sessions) == 0 {
 			continue
 		}
 
@@ -388,7 +388,7 @@ func handleMsgSysEnumerateStage(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint16(uint16(len(stage.ReservedClientSlots))) // Reserved players.
 		resp.WriteUint16(0)                                      // Unk
 		resp.WriteUint8(0)                                       // Unk
-		resp.WriteBool(len(stage.Clients) > 0)                   // Has departed.
+		resp.WriteBool(len(stage.Sessions) > 0)                  // Has departed.
 		resp.WriteUint16(stage.MaxPlayers)                       // Max players.
 		if len(stage.Password) > 0 {
 			// This byte has also been seen as 1
