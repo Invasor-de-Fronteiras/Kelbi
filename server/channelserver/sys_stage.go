@@ -37,8 +37,8 @@ type Stage struct {
 	ObjectIndex uint8              `json:"objectIndex"`
 
 	// Map of session -> charID.
-	// These are Clients that are CURRENTLY in the stage
-	Clients map[*Session]uint32 `json:"-"`
+	// These are Sessions that are CURRENTLY in the stage
+	Sessions map[uint32]*Session `json:"sessions"`
 
 	// Map of charID -> bool, key represents whether they are ready
 	// These are clients that aren't in the stage, but have reserved a slot (for quests, etc).
@@ -57,7 +57,7 @@ type Stage struct {
 func NewStage(ID string) *Stage {
 	s := &Stage{
 		Id:                  ID,
-		Clients:             make(map[*Session]uint32),
+		Sessions:            make(map[uint32]*Session),
 		ReservedClientSlots: make(map[uint32]bool),
 		Objects:             make(map[uint32]*Object),
 		ObjectIndex:         0,
@@ -71,7 +71,7 @@ func NewStage(ID string) *Stage {
 // BroadcastMHF queues a MHFPacket to be sent to all sessions in the stage.
 func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
 	// Broadcast the data.
-	for session := range s.Clients {
+	for _, session := range s.Sessions {
 		if session == ignoredSession {
 			continue
 		}
