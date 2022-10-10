@@ -32,7 +32,7 @@ func handleMsgMhfLoadMezfesData(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateRanking)
 	bf := byteframe.NewByteFrame()
-	state := s.Server.erupeConfig.DevModeOptions.TournamentEvent
+	state := s.Server.Config.DevModeOptions.TournamentEvent
 	// Unk
 	// Unk
 	// Start?
@@ -163,12 +163,12 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var timestamps []uint32
-	if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.FestaEvent >= 0 {
-		if s.Server.erupeConfig.DevModeOptions.FestaEvent == 0 {
+	if s.Server.Config.DevMode && s.Server.Config.DevModeOptions.FestaEvent >= 0 {
+		if s.Server.Config.DevModeOptions.FestaEvent == 0 {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
 		}
-		timestamps = generateFestaTimestamps(s, uint32(s.Server.erupeConfig.DevModeOptions.FestaEvent), true)
+		timestamps = generateFestaTimestamps(s, uint32(s.Server.Config.DevModeOptions.FestaEvent), true)
 	} else {
 		timestamps = generateFestaTimestamps(s, start, false)
 	}

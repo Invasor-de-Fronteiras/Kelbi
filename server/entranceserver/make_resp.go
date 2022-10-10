@@ -17,7 +17,7 @@ var season uint8
 // Server Channels
 var currentplayers uint16
 
-func encodeServerInfo(config *config.Config, s *Server) []byte {
+func encodeServerInfo(config *config.ChannelServerConfig, s *Server) []byte {
 	serverInfos := config.Entrance.Entries
 	bf := byteframe.NewByteFrame()
 
@@ -85,7 +85,7 @@ func makeHeader(data []byte, respType string, entryCount uint16, key byte) []byt
 	return bf.Data()
 }
 
-func makeSv2Resp(config *config.Config, s *Server) []byte {
+func makeSv2Resp(config *config.ChannelServerConfig, s *Server) []byte {
 	serverInfos := config.Entrance.Entries
 	rawServerData := encodeServerInfo(config, s)
 	bf := byteframe.NewByteFrame()

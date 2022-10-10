@@ -288,11 +288,11 @@ func grpToGR(n uint32) uint16 {
 }
 
 func dumpSaveData(s *Session, data []byte, suffix string) {
-	if !s.Server.erupeConfig.DevModeOptions.SaveDumps.Enabled {
+	if !s.Server.Config.DevModeOptions.SaveDumps.Enabled {
 		return
 	} else {
-		dir := filepath.Join(s.Server.erupeConfig.DevModeOptions.SaveDumps.OutputDir, fmt.Sprintf("%d_%s", s.CharID, s.Name))
-		path := filepath.Join(s.Server.erupeConfig.DevModeOptions.SaveDumps.OutputDir, fmt.Sprintf("%d_%s", s.CharID, s.Name), fmt.Sprintf("%d_%s_%s.bin", s.CharID, s.Name, suffix))
+		dir := filepath.Join(s.Server.Config.DevModeOptions.SaveDumps.OutputDir, fmt.Sprintf("%d_%s", s.CharID, s.Name))
+		path := filepath.Join(s.Server.Config.DevModeOptions.SaveDumps.OutputDir, fmt.Sprintf("%d_%s", s.CharID, s.Name), fmt.Sprintf("%d_%s_%s.bin", s.CharID, s.Name, suffix))
 
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			// nolint:errcheck // Error return value of `.` is not checked
@@ -307,8 +307,8 @@ func dumpSaveData(s *Session, data []byte, suffix string) {
 
 func handleMsgMhfLoaddata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoaddata)
-	if _, err := os.Stat(filepath.Join(s.Server.erupeConfig.BinPath, "save_override.bin")); err == nil {
-		data, _ := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, "save_override.bin"))
+	if _, err := os.Stat(filepath.Join(s.Server.Config.BinPath, "save_override.bin")); err == nil {
+		data, _ := ioutil.ReadFile(filepath.Join(s.Server.Config.BinPath, "save_override.bin"))
 		doAckBufSucceed(s, pkt.AckHandle, data)
 		return
 	}

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net"
 
@@ -15,8 +17,8 @@ type Config struct {
 	DevMode          bool
 
 	DevModeOptions DevModeOptions
-	Discord        Discord
-	Database       Database
+	Discord        DiscordConfig
+	Database       DatabaseConfig
 	ServerHttp     ServerHttp
 	Launcher       Launcher
 	Sign           Sign
@@ -52,7 +54,7 @@ type SaveDumpOptions struct {
 }
 
 // Discord holds the discord integration config.
-type Discord struct {
+type DiscordConfig struct {
 	Enabled           bool
 	BotToken          string
 	ServerID          string
@@ -61,8 +63,8 @@ type Discord struct {
 	DevMode           bool
 }
 
-// Database holds the postgres database config.
-type Database struct {
+// DatabaseConfig holds the postgres database config.
+type DatabaseConfig struct {
 	Host     string
 	Port     int
 	User     string
@@ -131,7 +133,7 @@ func getOutboundIP4() net.IP {
 }
 
 // LoadConfig loads the given config toml file.
-func LoadConfig() (*Config, error) {
+func LoadConfig() (erupeConfig *Config, err error) {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 
@@ -140,20 +142,52 @@ func LoadConfig() (*Config, error) {
 		OutputDir: "savedata",
 	})
 
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	c := &Config{}
-	err = viper.Unmarshal(c)
+	erupeConfig = &Config{}
+	err = viper.Unmarshal(erupeConfig)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	if c.Host == "" {
-		c.Host = getOutboundIP4().To4().String()
+	if erupeConfig.Host == "" {
+		erupeConfig.Host = getOutboundIP4().To4().String()
 	}
 
-	return c, nil
+	if erupeConfig.Database.Password == "" {
+		err = errors.New("DATABASE PASSWORD IS BLACK")
+		return
+	}
+
+	if net.ParseIP(erupeConfig.Host) == nil {
+		ips, _ := net.LookupIP(erupeConfig.Host)
+
+		for _, ip := range ips {
+			if ip != nil {
+				erupeConfig.Host = ip.String()
+				break
+			}
+		}
+
+		if net.ParseIP(erupeConfig.Host) == nil {
+			err = errors.New("INVALID HOST ADDRESS")
+			return
+		}
+	}
+
+	return
+}
+
+func (database *DatabaseConfig) ConnectionString() string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname= %s sslmode=disable",
+		database.Host,
+		database.Port,
+		database.User,
+		database.Password,
+		database.Database,
+	)
 }

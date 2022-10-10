@@ -19,14 +19,14 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 		fmt.Printf("%+v\n", pkt.ScenarioIdentifer)
 		filename := fmt.Sprintf("%d_0_0_0_S%d_T%d_C%d", pkt.ScenarioIdentifer.CategoryID, pkt.ScenarioIdentifer.MainID, pkt.ScenarioIdentifer.Flags, pkt.ScenarioIdentifer.ChapterID)
 		// Read the scenario file.
-		data, err := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
+		data, err := ioutil.ReadFile(filepath.Join(s.Server.config.BinPath, fmt.Sprintf("scenarios/%s.bin", filename)))
 		if err != nil {
 			panic(err)
 		}
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
-		if _, err := os.Stat(filepath.Join(s.Server.erupeConfig.BinPath, "quest_override.bin")); err == nil {
-			data, err := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, "quest_override.bin"))
+		if _, err := os.Stat(filepath.Join(s.Server.config.BinPath, "quest_override.bin")); err == nil {
+			data, err := ioutil.ReadFile(filepath.Join(s.Server.config.BinPath, "quest_override.bin"))
 			if err != nil {
 				panic(err)
 			}
@@ -35,7 +35,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Info(fmt.Sprintf("Started quest %s", pkt.Filename))
 
 			// Get quest file.
-			data, err := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
+			data, err := ioutil.ReadFile(filepath.Join(s.Server.config.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename)))
 			if err != nil {
 				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename))
 			}
@@ -65,7 +65,7 @@ func handleMsgMhfSaveFavoriteQuest(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	// local files are easier for now, probably best would be to generate dynamically
 	pkt := p.(*mhfpacket.MsgMhfEnumerateQuest)
-	data, err := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("questlists/list_%d.bin", pkt.QuestList)))
+	data, err := ioutil.ReadFile(filepath.Join(s.Server.config.BinPath, fmt.Sprintf("questlists/list_%d.bin", pkt.QuestList)))
 	if err != nil {
 		fmt.Printf("questlists/list_%d.bin", pkt.QuestList)
 		stubEnumerateNoResults(s, pkt.AckHandle)

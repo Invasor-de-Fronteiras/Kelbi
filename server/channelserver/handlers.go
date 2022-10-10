@@ -131,7 +131,7 @@ func handleMsgSysTerminalLog(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysLogin)
 
-	if !s.Server.erupeConfig.DevModeOptions.DisableTokenCheck {
+	if !s.Server.Config.DevModeOptions.DisableTokenCheck {
 		var token string
 		err := s.Server.db.QueryRow("SELECT token FROM sign_sessions WHERE token=$1", pkt.LoginTokenString).Scan(&token)
 		if err != nil {
@@ -150,22 +150,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(uint32(Time_Current_Adjusted().Unix())) // Unix timestamp
 
-	_, err := s.Server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.Server.Sessions), s.Server.ID)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = s.Server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.Server.ID, s.CharID, s.Token)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = s.Server.db.Exec("UPDATE sign_sessions SET server_id=$1, char_id=$2 WHERE token=$3", s.Server.ID, s.CharID, s.Token)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = s.Server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.CharID)
+	_, err := s.Server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -204,10 +189,10 @@ func LogoutPlayer(s *Session) {
 		panic(err)
 	}
 
-	_, err = s.Server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.Server.Sessions), s.Server.ID)
-	if err != nil {
-		panic(err)
-	}
+	// _, err = s.Server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_id=$2", len(s.Server.Sessions), s.Server.ID)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	var timePlayed int
 	var sessionTime int

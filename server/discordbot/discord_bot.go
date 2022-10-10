@@ -10,33 +10,33 @@ import (
 
 type DiscordBot struct {
 	Session         *discordgo.Session
-	config          *config.Config
+	config          *config.DiscordConfig
 	logger          *zap.Logger
 	MainGuild       *discordgo.Guild
 	RealtimeChannel *discordgo.Channel
 }
 
 type DiscordBotOptions struct {
-	Config *config.Config
+	Config *config.DiscordConfig
 	Logger *zap.Logger
 }
 
 func NewDiscordBot(options DiscordBotOptions) (discordBot *DiscordBot, err error) {
-	session, err := discordgo.New("Bot " + options.Config.Discord.BotToken)
+	session, err := discordgo.New("Bot " + options.Config.BotToken)
 
 	if err != nil {
 		options.Logger.Fatal("Discord failed", zap.Error(err))
 		return nil, err
 	}
 
-	mainGuild, err := session.Guild(options.Config.Discord.ServerID)
+	mainGuild, err := session.Guild(options.Config.ServerID)
 
 	if err != nil {
 		options.Logger.Fatal("Discord failed to get main guild", zap.Error(err))
 		return nil, err
 	}
 
-	realtimeChannel, err := session.Channel(options.Config.Discord.RealtimeChannelID)
+	realtimeChannel, err := session.Channel(options.Config.RealtimeChannelID)
 
 	if err != nil {
 		options.Logger.Fatal("Discord failed to create realtimeChannel", zap.Error(err))

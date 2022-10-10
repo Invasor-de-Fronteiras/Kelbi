@@ -13,7 +13,7 @@ import (
 
 type HttpServerContext struct {
 	Servers     []*channelserver.Server
-	ErupeConfig *config.Config
+	ErupeConfig *config.ChannelServerConfig
 	Address     string
 	Token       string
 }
@@ -22,7 +22,7 @@ type HttpServerGinContext struct {
 	*gin.Context
 
 	Servers     []*channelserver.Server
-	ErupeConfig *config.Config
+	ErupeConfig *config.ChannelServerConfig
 	Address     string
 	Token       string
 }

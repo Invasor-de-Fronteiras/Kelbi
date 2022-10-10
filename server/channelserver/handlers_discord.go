@@ -378,7 +378,7 @@ func removeSessionByIp(server *Server, ip string) string {
 
 func (s *Server) isDiscordAdmin(ds *discordgo.Session, m *discordgo.MessageCreate) bool {
 	for _, role := range m.Member.Roles {
-		for _, id := range s.erupeConfig.Discord.DevRoles {
+		for _, id := range s.Config.Discord.DevRoles {
 			if id == role {
 				return true
 			}
@@ -396,7 +396,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 	}
 
 	// Ignore other channels in devMode
-	if s.erupeConfig.Discord.DevMode && m.ChannelID != s.erupeConfig.Discord.RealtimeChannelID {
+	if s.Config.Discord.DevMode && m.ChannelID != s.Config.Discord.RealtimeChannelID {
 		return
 	}
 
@@ -487,7 +487,7 @@ func (s *Server) onDiscordMessage(ds *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
-	if m.ChannelID == s.erupeConfig.Discord.RealtimeChannelID {
+	if m.ChannelID == s.Config.Discord.RealtimeChannelID {
 		message := fmt.Sprintf("[DISCORD] %s: %s", m.Author.Username, m.Content)
 		s.BroadcastChatMessage(s.discordBot.NormalizeDiscordMessage(message))
 	}

@@ -8,6 +8,7 @@ import (
 
 	"erupe-ce/config"
 	"erupe-ce/network"
+
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -16,14 +17,14 @@ import (
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
-	ErupeConfig *config.Config
+	ErupeConfig *config.ChannelServerConfig
 }
 
 // Server is a MHF sign server.
 type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
-	erupeConfig    *config.Config
+	erupeConfig    *config.ChannelServerConfig
 	sid            int
 	sessions       map[int]*Session
 	db             *sqlx.DB

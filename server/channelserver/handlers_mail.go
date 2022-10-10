@@ -329,7 +329,7 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 		}
 
 		// Workaround until EN mail items are patched
-		if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.DisableMailItems {
+		if s.Server.Config.DevMode && s.Server.Config.DevModeOptions.DisableMailItems {
 			if itemAttached {
 				flags |= 0x08
 			}

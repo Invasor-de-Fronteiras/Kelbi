@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,7 +21,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var erupeConfig *config.Config
+var erupeConfig *config.ChannelServerConfig
 
 // Temporary DB auto clean on startup for quick development & testing.
 func cleanDB(db *sqlx.DB) {
@@ -44,23 +43,6 @@ func main() {
 	erupeConfig, err = config.LoadConfig()
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
-	}
-
-	if erupeConfig.Database.Password == "" {
-		preventClose("Database password is blank")
-	}
-
-	if net.ParseIP(erupeConfig.Host) == nil {
-		ips, _ := net.LookupIP(erupeConfig.Host)
-		for _, ip := range ips {
-			if ip != nil {
-				erupeConfig.Host = ip.String()
-				break
-			}
-		}
-		if net.ParseIP(erupeConfig.Host) == nil {
-			preventClose("Invalid host address")
-		}
 	}
 
 	// Discord bot
@@ -89,17 +71,7 @@ func main() {
 		logger.Info("Discord bot is disabled")
 	}
 
-	// Create the postgres DB pool.
-	connectString := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname= %s sslmode=disable",
-		erupeConfig.Database.Host,
-		erupeConfig.Database.Port,
-		erupeConfig.Database.User,
-		erupeConfig.Database.Password,
-		erupeConfig.Database.Database,
-	)
-
-	db, err := sqlx.Open("postgres", connectString)
+	db, err := sqlx.Open("postgres", erupeConfig.DatabaseConnectionURI())
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to open SQL database: %s", err.Error()))
 	}
@@ -110,7 +82,6 @@ func main() {
 		preventClose(fmt.Sprintf("Failed to ping database: %s", err.Error()))
 	}
 
-	db.SetMaxOpenConns(50)
 	logger.Info("Connected to database")
 
 	// Clear stale data
@@ -182,7 +153,7 @@ func main() {
 		season := rand.Intn(3) + 1
 		for _, ce := range ee.Channels {
 			sid := (4096 + si*256) + (16 + ci)
-			c := *channelserver.NewServer(&channelserver.Config{
+			c := *channelserver.NewServer(&channelserver.ChannelServerOptions{
 				ID:          uint16(sid),
 				Logger:      logger.Named("channel-" + fmt.Sprint(count)),
 				ErupeConfig: erupeConfig,

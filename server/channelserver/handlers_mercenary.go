@@ -285,8 +285,8 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateAiroulist)
 	resp := byteframe.NewByteFrame()
-	if _, err := os.Stat(filepath.Join(s.Server.erupeConfig.BinPath, "airoulist.bin")); err == nil {
-		data, _ := ioutil.ReadFile(filepath.Join(s.Server.erupeConfig.BinPath, "airoulist.bin"))
+	if _, err := os.Stat(filepath.Join(s.Server.config.BinPath, "airoulist.bin")); err == nil {
+		data, _ := ioutil.ReadFile(filepath.Join(s.Server.config.BinPath, "airoulist.bin"))
 		resp.WriteBytes(data)
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 		return

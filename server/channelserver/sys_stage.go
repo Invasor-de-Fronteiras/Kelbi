@@ -131,7 +131,7 @@ func (s *Stage) GetName() string {
 	}
 }
 
-func (s *Stage) NextObjectID() uint32 {
+func (s *Stage) nextObjectID() uint32 {
 	s.ObjectIndex = s.ObjectIndex + 1
 	// Objects beyond 127 do not duplicate correctly
 	// Indexes 0 and 127 does not update position correctly
@@ -144,4 +144,22 @@ func (s *Stage) NextObjectID() uint32 {
 	bf.WriteUint16(0)
 	obj := uint32(bf.Data()[3]) | uint32(bf.Data()[2])<<8 | uint32(bf.Data()[1])<<16 | uint32(bf.Data()[0])<<24
 	return obj
+}
+
+func (s *Stage) NextObjectID() (nextID uint32) {
+	for {
+		exists := false
+		nextID = s.NextObjectID()
+		for _, object := range s.Objects {
+			if object.Id == nextID {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			break
+		}
+	}
+
+	return
 }

@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -33,15 +34,12 @@ const (
 	MezFesStageId         StageIdType = "sl1Ns462p0a0u0"
 )
 
-// Config struct allows configuring the server.
-type Config struct {
-	ID          uint16
-	Logger      *zap.Logger
-	DB          *sqlx.DB
-	DiscordBot  *discordbot.DiscordBot
-	ErupeConfig *config.Config
-	Name        string
-	Enable      bool
+// ChannelServerOptions struct allows configuring the server.
+type ChannelServerOptions struct {
+	Logger     *zap.Logger
+	DB         *sqlx.DB
+	DiscordBot *discordbot.DiscordBot
+	Config     *config.ChannelServerConfig
 }
 
 // Map key type for a user binary part.
@@ -50,16 +48,49 @@ type userBinaryPartID struct {
 	index  uint8
 }
 
+type StageManager struct {
+	mu     sync.Mutex
+	stages map[string]*Stage
+}
+
+func NewStageManager() (sm *StageManager) {
+	sm = &StageManager{}
+
+	sm.NewStage("sl1Ns200p0a0u0", 4) // Mezeporta
+	sm.NewStage("sl1Ns211p0a0u0", 4) // Rasta bar stage
+	sm.NewStage("sl1Ns260p0a0u0", 4) // Pallone Carvan
+	sm.NewStage("sl1Ns262p0a0u0", 4) // Pallone Guest House 1st Floor
+	sm.NewStage("sl1Ns263p0a0u0", 4) // Pallone Guest House 2st Floor
+	sm.NewStage("sl2Ns379p0a0u0", 4) // Diva fountain / prayer fountain.
+	sm.NewStage("sl1Ns462p0a0u0", 4) // MezFes
+
+	return
+}
+
+func (sm *StageManager) NewStage(id string, playerCount uint8) (stage *Stage, err error) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	if _, exists := sm.stages[id]; exists {
+		err = errors.New("STAGE ALREADY EXISTS")
+		return
+	}
+
+	stage = NewStage(id)
+	stage.MaxPlayers = uint16(playerCount)
+	sm.stages[stage.Id] = stage
+	return
+}
+
 // Server is a MHF channel server.
 type Server struct {
 	sync.Mutex
 	Channels       []*Server `json:"-"`
-	ID             uint16    `json:"id"`
 	IP             string    `json:"ip"`
 	Port           uint16    `json:"port"`
 	logger         *zap.Logger
 	db             *sqlx.DB
-	erupeConfig    *config.Config
+	Config         *config.ChannelServerConfig
 	acceptConns    chan net.Conn
 	deleteConns    chan net.Conn
 	Sessions       map[net.Conn]*Session `json:"-"`
@@ -143,12 +174,10 @@ func NewRaviente() *Raviente {
 }
 
 // NewServer creates a new Server type.
-func NewServer(config *Config) *Server {
+func NewServer(config *ChannelServerOptions) *Server {
 	s := &Server{
-		ID:              config.ID,
 		logger:          config.Logger,
 		db:              config.DB,
-		erupeConfig:     config.ErupeConfig,
 		acceptConns:     make(chan net.Conn),
 		deleteConns:     make(chan net.Conn),
 		Sessions:        make(map[net.Conn]*Session),
@@ -157,8 +186,6 @@ func NewServer(config *Config) *Server {
 		Semaphore:       make(map[string]*Semaphore),
 		SemaphoreIndex:  7,
 		discordBot:      config.DiscordBot,
-		Name:            config.Name,
-		Enable:          config.Enable,
 		raviente:        NewRaviente(),
 	}
 
@@ -198,7 +225,7 @@ func (s *Server) Start() error {
 	go s.manageSessions()
 
 	// Start the discord bot for chat integration.
-	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
+	if s.Config.Discord.Enabled && s.discordBot != nil {
 		s.discordBot.Session.AddHandler(s.onDiscordMessage)
 	}
 
@@ -358,7 +385,7 @@ func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type u
 }
 
 func (s *Server) DiscordChannelSend(charName string, content string) {
-	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
+	if s.Config.Discord.Enabled && s.discordBot != nil {
 		message := fmt.Sprintf("**%s**: %s", charName, content)
 		// nolint:errcheck // rror return value of `s.discordBot.RealtimeChannelSend` is not checked (errcheck)
 		s.discordBot.RealtimeChannelSend(message)

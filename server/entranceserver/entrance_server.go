@@ -18,7 +18,7 @@ import (
 type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
-	erupeConfig    *config.Config
+	erupeConfig    *config.ChannelServerConfig
 	db             *sqlx.DB
 	listener       net.Listener
 	isShuttingDown bool
@@ -28,7 +28,7 @@ type Server struct {
 type Config struct {
 	Logger      *zap.Logger
 	DB          *sqlx.DB
-	ErupeConfig *config.Config
+	ErupeConfig *config.ChannelServerConfig
 }
 
 // NewServer creates a new Server type.
