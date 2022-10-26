@@ -1,10 +1,8 @@
 package httpserver
 
 import (
-	"encoding/hex"
 	"erupe-ce/config"
 	"erupe-ce/server/channelserver"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -77,8 +75,6 @@ func RunHttpServer(context *HttpServerContext) {
 				binariesKeys := []RawBinaryKeyValue{}
 
 				for key, value := range stage.RawBinaryData {
-					fmt.Printf("key: %d,%d", key.Id0, key.Id1)
-					fmt.Printf("value [%d bytes]:\n%s\n", len(data), hex.Dump(value))
 					binariesKeys = append(binariesKeys, RawBinaryKeyValue{
 						Key:   key,
 						Value: value,
