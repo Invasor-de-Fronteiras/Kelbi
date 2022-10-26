@@ -58,6 +58,18 @@ func RunHttpServer(context *HttpServerContext) {
 
 	router.Use(authMiddleware(context.Token))
 
+	router.GET("/current-chars", func(c *gin.Context) {
+		charIds := []uint32{}
+
+		for _, server := range context.Servers {
+			for _, session := range server.Sessions {
+				charIds = append(charIds, session.CharID)
+			}
+		}
+
+		c.JSON(http.StatusOK, charIds)
+	})
+
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, nil)
 	})
