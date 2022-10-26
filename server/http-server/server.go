@@ -1,10 +1,8 @@
 package httpserver
 
 import (
-	"encoding/hex"
 	"erupe-ce/config"
 	"erupe-ce/server/channelserver"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -60,6 +58,18 @@ func RunHttpServer(context *HttpServerContext) {
 
 	router.Use(authMiddleware(context.Token))
 
+	router.GET("/current-chars", func(c *gin.Context) {
+		charIds := []uint32{}
+
+		for _, server := range context.Servers {
+			for _, session := range server.Sessions {
+				charIds = append(charIds, session.CharID)
+			}
+		}
+
+		c.JSON(http.StatusOK, charIds)
+	})
+
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, nil)
 	})
@@ -77,8 +87,6 @@ func RunHttpServer(context *HttpServerContext) {
 				binariesKeys := []RawBinaryKeyValue{}
 
 				for key, value := range stage.RawBinaryData {
-					fmt.Printf("key: %d,%d", key.Id0, key.Id1)
-					fmt.Printf("value [%d bytes]:\n%s\n", len(data), hex.Dump(value))
 					binariesKeys = append(binariesKeys, RawBinaryKeyValue{
 						Key:   key,
 						Value: value,
