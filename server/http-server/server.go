@@ -53,6 +53,11 @@ func authMiddleware(token string) gin.HandlerFunc {
 	}
 }
 
+type NewMessage struct {
+	Content    string `json:"content" binding:"required"`
+	SenderName string `json:"sender_name" binding:"required"`
+}
+
 func RunHttpServer(context *HttpServerContext) {
 	router := gin.Default()
 
@@ -76,6 +81,50 @@ func RunHttpServer(context *HttpServerContext) {
 
 	router.GET("/servers", func(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, context.Servers)
+	})
+
+	router.POST("/send-message", func(c *gin.Context) {
+		var message NewMessage
+
+		if err := c.BindJSON((&message)); err != nil {
+			return
+		}
+
+		for _, server := range context.Servers {
+			server.BroadcastChatMessageWithCustomName(message.SenderName, message.Content)
+		}
+
+		c.JSON(http.StatusOK, nil)
+	})
+
+	router.POST("/send-message/:char_id", func(c *gin.Context) {
+		id64, err := strconv.ParseUint(c.Param("char_id"), 10, 32)
+
+		if err != nil {
+			c.JSON(400, gin.H{"error": "ID SHOULD BE NUMBER"})
+			return
+		}
+
+		id := uint32(id64)
+
+		var message NewMessage
+
+		if err := c.BindJSON((&message)); err != nil {
+			return
+		}
+
+		for _, server := range context.Servers {
+			for _, session := range server.Sessions {
+				if session.CharID == id {
+					session.SendMessage(message.SenderName, message.Content)
+					c.JSON(http.StatusOK, nil)
+					return
+				}
+
+			}
+		}
+
+		c.JSON(404, gin.H{"error": "NOT FOUND"})
 	})
 
 	router.GET("/raw-binary-data", func(c *gin.Context) {

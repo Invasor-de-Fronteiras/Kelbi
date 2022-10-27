@@ -11,6 +11,7 @@ import (
 	"erupe-ce/common/stringstack"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network"
+	"erupe-ce/network/binpacket"
 	"erupe-ce/network/clientctx"
 	"erupe-ce/network/mhfpacket"
 
@@ -274,4 +275,28 @@ func (s *Session) logMessage(opcode uint16, data []byte, sender string, recipien
 	} else {
 		fmt.Printf("Data [%d bytes]:\n(Too long!)\n\n", len(data))
 	}
+}
+
+// BroadcastChatMessage broadcasts a simple chat message to all the sessions.
+func (s *Session) SendMessage(SenderName string, message string) {
+	// Make the inside of the casted binary
+	bf := byteframe.NewByteFrame()
+	bf.SetLE()
+	msgBinChat := &binpacket.MsgBinChat{
+		Unk0:       0,
+		Type:       5,
+		Flags:      0x80,
+		Message:    message,
+		SenderName: SenderName,
+	}
+	// nolint:errcheck // Error return value of `.` is not checked
+	msgBinChat.Build(bf)
+
+	castedBin := &mhfpacket.MsgSysCastedBinary{
+		CharID:         s.CharID,
+		MessageType:    BinaryMessageTypeChat,
+		RawDataPayload: bf.Data(),
+	}
+
+	s.QueueSendMHF(castedBin)
 }

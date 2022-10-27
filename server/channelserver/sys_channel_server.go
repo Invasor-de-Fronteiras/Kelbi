@@ -307,6 +307,10 @@ func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, 
 
 // BroadcastChatMessage broadcasts a simple chat message to all the sessions.
 func (s *Server) BroadcastChatMessage(message string) {
+	s.BroadcastChatMessageWithCustomName(s.Name, message)
+}
+
+func (s *Server) BroadcastChatMessageWithCustomName(senderName string, message string) {
 	bf := byteframe.NewByteFrame()
 	bf.SetLE()
 	msgBinChat := &binpacket.MsgBinChat{
@@ -314,7 +318,7 @@ func (s *Server) BroadcastChatMessage(message string) {
 		Type:       5,
 		Flags:      0x80,
 		Message:    message,
-		SenderName: s.Name,
+		SenderName: senderName,
 	}
 	// nolint:errcheck //  Error return value of `msgBinChat.Build` is not checked
 	msgBinChat.Build(bf)
