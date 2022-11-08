@@ -9,7 +9,6 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
-	"erupe-ce/server/channelserver/adapters"
 )
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -36,8 +35,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Info(fmt.Sprintf("Started quest %s", pkt.Filename))
 
 			// Get quest file.
-			questLoader := adapters.QuestLoaderAdapter(*s.Server.erupeConfig)
-			data, err := questLoader.QuestBinById(pkt.Filename)
+			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
 			if err != nil {
 				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename))
@@ -69,8 +67,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	// local files are easier for now, probably best would be to generate dynamically
 	pkt := p.(*mhfpacket.MsgMhfEnumerateQuest)
 
-	questLoader := adapters.QuestLoaderAdapter(*s.Server.erupeConfig)
-	data, err := questLoader.Quests(pkt.Take, pkt.Skip)
+	data, err := s.Server.questLoader.Quests(pkt.Take, pkt.Skip)
 
 	if err != nil {
 		fmt.Printf("questlists/list_%d.bin", pkt.Skip)

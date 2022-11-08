@@ -11,6 +11,14 @@ type QuestLoaderErupeV9 struct {
 	erupeConfig *config.Config
 }
 
+func NewQuestLoaderErupeV9(erupeConfig *config.Config) QuestLoader {
+	var questLoader = &QuestLoaderErupeV9{
+		erupeConfig: erupeConfig,
+	}
+
+	return questLoader
+}
+
 func (ql *QuestLoaderErupeV9) QuestBinById(id string) (quest []byte, err error) {
 	filepath := filepath.Join(ql.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", id))
 	quest, err = ioutil.ReadFile(filepath)
