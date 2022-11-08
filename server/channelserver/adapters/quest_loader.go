@@ -15,5 +15,7 @@ type QuestLoader interface {
 }
 
 func QuestLoaderAdapter(erupeConfig config.Config) QuestLoader {
-	return &QuestLoaderErupeV9{}
+	return &QuestLoaderErupeV9{
+		erupeConfig: &erupeConfig,
+	}
 }
