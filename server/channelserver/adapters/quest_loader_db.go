@@ -2,6 +2,8 @@ package adapters
 
 import (
 	"erupe-ce/common/byteframe"
+	"fmt"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -15,12 +17,18 @@ func NewQuestLoaderInDb(db *sqlx.DB) QuestLoader {
 }
 
 func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) {
-	err = ql.db.QueryRow("SELECT quest_bin FROM quests WHERE id = $1", id).Scan(&questBin)
+	questId, _ := strconv.ParseUint(id[0:5], 10, 32)
+	period := string(id[5])
+	season, _ := strconv.ParseUint(string(id[6]), 10, 32)
+	err = ql.db.QueryRow("SELECT quest_bin FROM quests WHERE quest_id = $1 AND period = $2 AND season = $3", questId, period, season).Scan(&questBin)
 	return
 }
 
 func (ql *QuestLoaderInDb) QuestListBinById(id string) (questListBin []byte, err error) {
-	err = ql.db.QueryRow("SELECT quest_list_bin FROM quests WHERE id = $1", id).Scan(&questListBin)
+	questId, _ := strconv.ParseUint(id[0:5], 10, 32)
+	period := string(id[5])
+	season, _ := strconv.ParseUint(string(id[6]), 10, 32)
+	err = ql.db.QueryRow("SELECT quest_list_bin FROM quests WHERE quest_id = $1 AND period = $2 AND season = $3", questId, period, season).Scan(&questListBin)
 	return
 }
 
@@ -52,7 +60,7 @@ func (ql *QuestLoaderInDb) Quests(take uint16, skip uint16) (questList []byte, e
 	bf.WriteUint32(0) // Unk
 	bf.WriteUint16(0) // Unk
 	bf.WriteUint16(totalCount)
-	bf.WriteUint16(take)
+	bf.WriteUint16(skip)
 
 	questList = bf.Data()
 
@@ -60,13 +68,15 @@ func (ql *QuestLoaderInDb) Quests(take uint16, skip uint16) (questList []byte, e
 }
 
 type IteratorQuest struct {
-	Id            string `db:"id"`
+	QuestId       uint32 `db:"quest_id"`
+	Period        string `db:"period"`
+	Season        uint8  `db:"season"`
 	QuestListSize uint16 `db:"quest_list_bin_size"`
 }
 
-func (ql *QuestLoaderInDb) NextQuest(skip uint16) (iter IteratorQuest, err error) {
-	iter = IteratorQuest{}
-	err = ql.db.Get(iter, "SELECT id,quest_list_bin_size FROM quests LIMIT 1 OFFSET $1", skip)
+func (ql *QuestLoaderInDb) NextQuest(skip uint16) (iter *IteratorQuest, err error) {
+	iter = &IteratorQuest{}
+	err = ql.db.Get(iter, "SELECT quest_id, period, season, quest_list_bin_size FROM quests WHERE enabled = true LIMIT 1 OFFSET $1", skip)
 	return
 }
 
@@ -78,14 +88,11 @@ func (ql *QuestLoaderInDb) NextQuests(take uint16, skip uint16) (buffer *bytefra
 	var maxBufferSize uint16 = 64_000
 
 	for bufferSize <= maxBufferSize {
-		if count >= take {
-			break
-		}
 
 		iter, err := ql.NextQuest(skip)
 
 		if err != nil {
-			return nil, 0, err
+			break
 		}
 
 		if (iter.QuestListSize + bufferSize) > maxBufferSize {
@@ -94,13 +101,14 @@ func (ql *QuestLoaderInDb) NextQuests(take uint16, skip uint16) (buffer *bytefra
 
 		skip++
 
-		questListBin, err := ql.QuestListBinById(iter.Id)
+		questListBin, err := ql.QuestListBinById(fmt.Sprintf("%d%s%d", iter.QuestId, iter.Period, iter.Season))
 
 		if err != nil {
 			return nil, 0, err
 		}
 
 		buffer.WriteBytes(questListBin)
+		count++
 	}
 
 	return

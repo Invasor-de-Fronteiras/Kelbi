@@ -70,7 +70,8 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	data, err := s.Server.questLoader.Quests(pkt.Take, pkt.Skip)
 
 	if err != nil {
-		fmt.Printf("questlists/list_%d.bin", pkt.Skip)
+		fmt.Printf("questlists/list_%d.bin\n", pkt.Skip)
+		fmt.Printf("Failed to load quest: %s\n", err.Error())
 		stubEnumerateNoResults(s, pkt.AckHandle)
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, data)
