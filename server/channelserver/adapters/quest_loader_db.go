@@ -60,12 +60,13 @@ func (ql *QuestLoaderInDb) Quests(take uint16, skip uint16) (questList []byte, e
 }
 
 type IteratorQuest struct {
-	Id            string
-	QuestListSize uint16
+	Id            string `db:"id"`
+	QuestListSize uint16 `db:"quest_list_size"`
 }
 
 func (ql *QuestLoaderInDb) NextQuest(skip uint16) (iter IteratorQuest, err error) {
-
+	iter = IteratorQuest{}
+	err = ql.db.Get(iter, "SELECT quest_list_bin FROM quests LIMIT 1 OFFSET $1", skip)
 	return
 }
 
