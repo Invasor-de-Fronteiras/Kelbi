@@ -555,3 +555,22 @@ model RequestImportSave {
 
   @@map("request_import_save")
 }
+
+model Quests {
+  id       Int @id @default(autoincrement())
+  quest_id Int @default(autoincrement())
+
+  period         String @db.VarChar(1)
+  season         Int    @db.SmallInt
+  objective      String @default("")
+  category       Int    @default(0)
+  metadata       Json?
+  quest_bin      Bytes
+  quest_list_bin Bytes
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([quest_id, period, season])
+  @@map("quests")
+}
