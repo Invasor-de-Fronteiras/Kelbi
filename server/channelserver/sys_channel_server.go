@@ -10,6 +10,7 @@ import (
 	"erupe-ce/config"
 	"erupe-ce/network/binpacket"
 	"erupe-ce/network/mhfpacket"
+	"erupe-ce/server/channelserver/adapters"
 	"erupe-ce/server/discordbot"
 
 	"github.com/jmoiron/sqlx"
@@ -85,6 +86,8 @@ type Server struct {
 	Enable bool   `json:"enable"`
 
 	raviente *Raviente
+
+	questLoader adapters.QuestLoader
 }
 
 type Raviente struct {
@@ -144,7 +147,12 @@ func NewRaviente() *Raviente {
 
 // NewServer creates a new Server type.
 func NewServer(config *Config) *Server {
+
+	// Logic to change adapter from config
+	questLoader := adapters.NewQuestLoaderErupeV9(config.ErupeConfig)
+
 	s := &Server{
+		questLoader:     questLoader,
 		ID:              config.ID,
 		logger:          config.Logger,
 		db:              config.DB,
