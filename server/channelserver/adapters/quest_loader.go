@@ -7,16 +7,16 @@ const (
 )
 
 type Quest struct {
-	Id            string // auto incriment
-	Name          string
-	Objective     string
-	Category      QuestCategory
-	Enabled       bool
-	Metadata      string //
-	QuestBinSize  int32
-	QuestListSize int32
-	QuestListBin  string
-	QuestBin      string
+	Id               string        `db:"id"`
+	Name             string        `db:"name"`
+	Objective        string        `db:"objective"`
+	Category         QuestCategory `db:"category"`
+	Enabled          bool          `db:"enabled"`
+	Metadata         string        `db:"metadata"`
+	QuestBin         string        `db:"quest_bin"`
+	QuestBinSize     int32         `db:"quest_bin_size"`
+	QuestListBin     string        `db:"quest_list_bin"`
+	QuestListBinSize int32         `db:"quest_list_bin_size"`
 }
 
 type QuestLoader interface {
