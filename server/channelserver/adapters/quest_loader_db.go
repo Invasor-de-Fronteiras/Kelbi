@@ -10,6 +10,10 @@ type QuestLoaderInDb struct {
 	db *sqlx.DB
 }
 
+func NewQuestLoaderInDb(db *sqlx.DB) QuestLoader {
+	return &QuestLoaderInDb{db: db}
+}
+
 func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) {
 	err = ql.db.QueryRow("SELECT quest_bin FROM quests WHERE id = $1", id).Scan(&questBin)
 	return

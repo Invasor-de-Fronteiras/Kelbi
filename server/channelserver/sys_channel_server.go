@@ -149,7 +149,7 @@ func NewRaviente() *Raviente {
 func NewServer(config *Config) *Server {
 
 	// Logic to change adapter from config
-	questLoader := adapters.NewQuestLoaderErupeV9(config.ErupeConfig)
+	questLoader := adapters.NewQuestLoaderInDb(config.DB)
 
 	s := &Server{
 		questLoader:     questLoader,
