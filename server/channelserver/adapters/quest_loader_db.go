@@ -29,13 +29,6 @@ func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) 
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestListBinById(id string) (questListBin []byte, err error) {
-	questId, period, season, _ := ql.IdFromFilename(id)
-	query := "SELECT quest_list_bin FROM quests WHERE quest_id = $1 AND period = $2 AND season = $3"
-	err = ql.db.QueryRow(query, questId, period, season).Scan(&questListBin)
-	return
-}
-
 func (ql *QuestLoaderInDb) QuestCount() (count uint16, err error) {
 	err = ql.db.QueryRow("SELECT COUNT(*) FROM quests WHERE enabled = true").Scan(&count)
 	return
