@@ -556,14 +556,26 @@ model RequestImportSave {
   @@map("request_import_save")
 }
 
-model Quests {
-  id       Int @id @default(autoincrement())
-  quest_id Int @default(autoincrement())
+enum QuestSeason {
+  WARm
+  COLD
+  BREED
+}
 
-  period         String @db.VarChar(1)
-  season         Int    @db.SmallInt
-  objective      String @default("")
-  category       Int    @default(0)
+enum QuestPeriod {
+  DAY
+  NIGHT
+}
+
+model Quests {
+  id             Int         @id @default(autoincrement())
+  quest_id       Int         @default(autoincrement())
+  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
+  period         String      @db.VarChar(1)
+  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
+  season         QuestSeason
+  objective      String      @default("")
+  category       Int         @default(0)
   metadata       Json?
   quest_bin      Bytes
   quest_list_bin Bytes

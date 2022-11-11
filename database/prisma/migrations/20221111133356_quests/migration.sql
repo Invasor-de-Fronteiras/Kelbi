@@ -1,3 +1,11 @@
+-- CreateEnum
+
+CREATE TYPE "QuestSeason" AS ENUM ('WARM', 'COLD', 'BREED');
+
+-- CreateEnum
+
+CREATE TYPE "QuestPeriod" AS ENUM ('DAY', 'NIGHT');
+
 -- CreateTable
 
 CREATE TABLE
@@ -5,7 +13,7 @@ CREATE TABLE
         "id" SERIAL NOT NULL,
         "quest_id" SERIAL NOT NULL,
         "period" VARCHAR(1) NOT NULL,
-        "season" SMALLINT NOT NULL,
+        "season" "QuestSeason" NOT NULL,
         "objective" TEXT NOT NULL DEFAULT '',
         "category" INTEGER NOT NULL DEFAULT 0,
         "metadata" JSONB,
@@ -15,7 +23,3 @@ CREATE TABLE
         "updated_at" TIMESTAMP(3) NOT NULL,
         CONSTRAINT "quests_pkey" PRIMARY KEY ("id")
     );
-
--- CreateIndex
-
-CREATE UNIQUE INDEX "quests_quest_id_period_season_key" ON "quests"("quest_id", "period", "season");
