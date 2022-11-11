@@ -159,12 +159,14 @@ model gacha_shop_items {
 }
 
 model gook {
-  id    Int    @id @default(autoincrement())
-  gook0 Bytes?
-  gook1 Bytes?
-  gook2 Bytes?
-  gook3 Bytes?
-  gook4 Bytes?
+  id         Int      @id @default(autoincrement())
+  gook0      Bytes?
+  gook1      Bytes?
+  gook2      Bytes?
+  gook3      Bytes?
+  gook4      Bytes?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
 }
 
 model guild_applications {
@@ -442,8 +444,7 @@ model sign_sessions {
   server_id  Int?
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
-
-  @@ignore
+  id         Int      @id @default(autoincrement())
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -574,104 +575,119 @@ model user_binaries {
 }
 
 model achievements {
-  id    Int  @id
-  ach0  Int? @default(0)
-  ach1  Int? @default(0)
-  ach2  Int? @default(0)
-  ach3  Int? @default(0)
-  ach4  Int? @default(0)
-  ach5  Int? @default(0)
-  ach6  Int? @default(0)
-  ach7  Int? @default(0)
-  ach8  Int? @default(0)
-  ach9  Int? @default(0)
-  ach10 Int? @default(0)
-  ach11 Int? @default(0)
-  ach12 Int? @default(0)
-  ach13 Int? @default(0)
-  ach14 Int? @default(0)
-  ach15 Int? @default(0)
-  ach16 Int? @default(0)
-  ach17 Int? @default(0)
-  ach18 Int? @default(0)
-  ach19 Int? @default(0)
-  ach20 Int? @default(0)
-  ach21 Int? @default(0)
-  ach22 Int? @default(0)
-  ach23 Int? @default(0)
-  ach24 Int? @default(0)
-  ach25 Int? @default(0)
-  ach26 Int? @default(0)
-  ach27 Int? @default(0)
-  ach28 Int? @default(0)
-  ach29 Int? @default(0)
-  ach30 Int? @default(0)
-  ach31 Int? @default(0)
-  ach32 Int? @default(0)
+  id         Int      @id
+  ach0       Int?     @default(0)
+  ach1       Int?     @default(0)
+  ach2       Int?     @default(0)
+  ach3       Int?     @default(0)
+  ach4       Int?     @default(0)
+  ach5       Int?     @default(0)
+  ach6       Int?     @default(0)
+  ach7       Int?     @default(0)
+  ach8       Int?     @default(0)
+  ach9       Int?     @default(0)
+  ach10      Int?     @default(0)
+  ach11      Int?     @default(0)
+  ach12      Int?     @default(0)
+  ach13      Int?     @default(0)
+  ach14      Int?     @default(0)
+  ach15      Int?     @default(0)
+  ach16      Int?     @default(0)
+  ach17      Int?     @default(0)
+  ach18      Int?     @default(0)
+  ach19      Int?     @default(0)
+  ach20      Int?     @default(0)
+  ach21      Int?     @default(0)
+  ach22      Int?     @default(0)
+  ach23      Int?     @default(0)
+  ach24      Int?     @default(0)
+  ach25      Int?     @default(0)
+  ach26      Int?     @default(0)
+  ach27      Int?     @default(0)
+  ach28      Int?     @default(0)
+  ach29      Int?     @default(0)
+  ach30      Int?     @default(0)
+  ach31      Int?     @default(0)
+  ach32      Int?     @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model cafe_accepted {
   cafe_id      Int
   character_id Int
-
-  @@ignore
+  created_at   DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  updated_at   DateTime @default(now()) @updatedAt
 }
 
 model cafebonus {
-  id        Int @id @default(autoincrement())
-  time_req  Int
-  item_type Int
-  item_id   Int
-  quantity  Int
+  id         Int      @id @default(autoincrement())
+  time_req   Int
+  item_type  Int
+  item_id    Int
+  quantity   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 model events {
   id         Int        @id @default(autoincrement())
-  event_type event_type
   start_time DateTime   @default(now()) @db.Timestamp(6)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @default(now()) @updatedAt
+  event_type event_type
 }
 
 model festa_prizes {
-  id        Int        @id @default(autoincrement())
-  type      prize_type
-  tier      Int
-  souls_req Int
-  item_id   Int
-  num_item  Int
+  id         Int        @id @default(autoincrement())
+  type       prize_type
+  tier       Int
+  souls_req  Int
+  item_id    Int
+  num_item   Int
+  created_at DateTime   @default(now())
+  updated_at DateTime   @default(now()) @updatedAt
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model festa_prizes_accepted {
   prize_id     Int
   character_id Int
-
-  @@ignore
+  created_at   DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  updated_at   DateTime @default(now()) @updatedAt
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model festa_registrations {
-  guild_id Int
-  team     festival_colour
-
-  @@ignore
+  guild_id   Int
+  created_at DateTime        @default(now())
+  id         Int             @id @default(autoincrement())
+  updated_at DateTime        @default(now()) @updatedAt
+  team       festival_colour
 }
 
 model festa_trials {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   objective  Int
   goal_id    Int
   times_req  Int
-  locale_req Int @default(0)
+  locale_req Int      @default(0)
   reward     Int
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 model rengoku_score {
-  character_id  Int  @id
+  character_id  Int      @id
   max_stages_mp Int?
   max_points_mp Int?
   max_stages_sp Int?
   max_points_sp Int?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
 }
 
 model schema_migrations {
@@ -687,6 +703,8 @@ model stamps {
   ex_total     Int?      @default(0)
   ex_redeemed  Int?      @default(0)
   ex_next      DateTime? @db.Timestamp(6)
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @default(now()) @updatedAt
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -694,13 +712,14 @@ model titles {
   id          Int
   char_id     Int
   unlocked_at DateTime? @db.Timestamp(6)
-  updated_at  DateTime? @db.Timestamp(6)
+  updated_at  DateTime  @default(now()) @updatedAt
+  created_at  DateTime  @default(now())
 
   @@ignore
 }
 
 model warehouse {
-  character_id Int     @id
+  character_id Int      @id
   item0        Bytes?
   item1        Bytes?
   item2        Bytes?
@@ -743,6 +762,8 @@ model warehouse {
   equip7name   String?
   equip8name   String?
   equip9name   String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
 }
 
 enum festival_colour {

@@ -2,8 +2,6 @@
   Warnings:
 
   - You are about to drop the column `festival_colour` on the `guilds` table. All the data in the column will be lost.
-  - The primary key for the `sign_sessions` table will be changed. If it partially fails, the table could be left without primary key constraint.
-  - You are about to drop the column `id` on the `sign_sessions` table. All the data in the column will be lost.
   - You are about to drop the `event_week` table. If the table is not empty, all the data it contains will be lost.
   - You are about to drop the `request_import_save` table. If the table is not empty, all the data it contains will be lost.
   - Changed the type of `application_type` on the `guild_applications` table. No cast exists, the column would be dropped and recreated, which cannot be done if there is data, since the column is required.
@@ -74,6 +72,10 @@ ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
 ALTER TABLE "gacha_shop_items" ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "gook" ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
@@ -168,9 +170,7 @@ ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD CONSTRAINT "shop_item_state_pkey" PRIMARY KEY ("id");
 
 -- AlterTable
-ALTER TABLE "sign_sessions" DROP CONSTRAINT "sign_sessions_pkey",
-DROP COLUMN "id",
-ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ALTER TABLE "sign_sessions" ADD COLUMN     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
@@ -238,6 +238,8 @@ CREATE TABLE "achievements" (
     "ach30" INTEGER DEFAULT 0,
     "ach31" INTEGER DEFAULT 0,
     "ach32" INTEGER DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "achievements_pkey" PRIMARY KEY ("id")
 );
@@ -245,7 +247,12 @@ CREATE TABLE "achievements" (
 -- CreateTable
 CREATE TABLE "cafe_accepted" (
     "cafe_id" INTEGER NOT NULL,
-    "character_id" INTEGER NOT NULL
+    "character_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "id" SERIAL NOT NULL,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "cafe_accepted_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -255,6 +262,8 @@ CREATE TABLE "cafebonus" (
     "item_type" INTEGER NOT NULL,
     "item_id" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "cafebonus_pkey" PRIMARY KEY ("id")
 );
@@ -262,8 +271,10 @@ CREATE TABLE "cafebonus" (
 -- CreateTable
 CREATE TABLE "events" (
     "id" SERIAL NOT NULL,
-    "event_type" "event_type" NOT NULL,
     "start_time" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "event_type" "event_type" NOT NULL,
 
     CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
@@ -276,6 +287,8 @@ CREATE TABLE "festa_prizes" (
     "souls_req" INTEGER NOT NULL,
     "item_id" INTEGER NOT NULL,
     "num_item" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "festa_prizes_pkey" PRIMARY KEY ("id")
 );
@@ -283,13 +296,23 @@ CREATE TABLE "festa_prizes" (
 -- CreateTable
 CREATE TABLE "festa_prizes_accepted" (
     "prize_id" INTEGER NOT NULL,
-    "character_id" INTEGER NOT NULL
+    "character_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "id" SERIAL NOT NULL,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "festa_prizes_accepted_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "festa_registrations" (
     "guild_id" INTEGER NOT NULL,
-    "team" "festival_colour" NOT NULL
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "id" SERIAL NOT NULL,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "team" "festival_colour" NOT NULL,
+
+    CONSTRAINT "festa_registrations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -300,6 +323,8 @@ CREATE TABLE "festa_trials" (
     "times_req" INTEGER NOT NULL,
     "locale_req" INTEGER NOT NULL DEFAULT 0,
     "reward" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "festa_trials_pkey" PRIMARY KEY ("id")
 );
@@ -311,6 +336,8 @@ CREATE TABLE "rengoku_score" (
     "max_points_mp" INTEGER,
     "max_stages_sp" INTEGER,
     "max_points_sp" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "rengoku_score_pkey" PRIMARY KEY ("character_id")
 );
@@ -324,6 +351,8 @@ CREATE TABLE "stamps" (
     "ex_total" INTEGER DEFAULT 0,
     "ex_redeemed" INTEGER DEFAULT 0,
     "ex_next" TIMESTAMP(6),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "stamps_pkey" PRIMARY KEY ("character_id")
 );
@@ -333,7 +362,8 @@ CREATE TABLE "titles" (
     "id" INTEGER NOT NULL,
     "char_id" INTEGER NOT NULL,
     "unlocked_at" TIMESTAMP(6),
-    "updated_at" TIMESTAMP(6)
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -381,6 +411,8 @@ CREATE TABLE "warehouse" (
     "equip7name" TEXT,
     "equip8name" TEXT,
     "equip9name" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "warehouse_pkey" PRIMARY KEY ("character_id")
 );
