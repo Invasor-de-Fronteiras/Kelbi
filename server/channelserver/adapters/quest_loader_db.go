@@ -15,10 +15,26 @@ func NewQuestLoaderInDb(db *sqlx.DB) QuestLoader {
 	return &QuestLoaderInDb{db: db}
 }
 
-func (_ *QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string, season uint64, err error) {
+func (_ *QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string, season string, err error) {
 	questId, _ = strconv.ParseUint(id[0:5], 10, 32)
-	period = string(id[5])
-	season, _ = strconv.ParseUint(string(id[6]), 10, 32)
+
+	if string(id[5]) == "0" {
+		period = "DAY"
+	} else {
+		period = "NIGHT"
+	}
+
+	seasonId, _ := strconv.ParseUint(string(id[6]), 10, 32)
+
+	switch seasonId {
+	case 0:
+		season = "WARM"
+	case 1:
+		season = "COLD"
+	default:
+		season = "BREED"
+	}
+
 	return
 }
 
