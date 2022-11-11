@@ -9,6 +9,8 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+
+	"go.uber.org/zap"
 )
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -38,7 +40,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
 			if err != nil {
-				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename))
+				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename), zap.Error(err))
 			}
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		}

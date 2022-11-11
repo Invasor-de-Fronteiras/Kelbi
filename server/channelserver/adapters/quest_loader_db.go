@@ -77,8 +77,8 @@ type QuestListBin struct {
 
 func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16) (quests []QuestListBin, err error) {
 	quests = []QuestListBin{}
-	query := "SELECT quest_list_bin FROM quests WHERE enabled = true LIMIT $1 OFFSET $2"
-	err = ql.db.Select(quests, query, take, skip)
+	query := "SELECT quest_list_bin FROM quests WHERE enabled = true LIMIT 100 OFFSET $1"
+	err = ql.db.Select(&quests, query, skip)
 	return
 }
 
@@ -97,10 +97,15 @@ func (ql *QuestLoaderInDb) QuestListBuffer(take uint16, skip uint16) (buffer *by
 			break
 		}
 
+		if len(quests) == 0 {
+			break
+		}
+
 		for _, quest := range quests {
 			size := len(quest.QuestList)
+			bufferSize += size
 
-			if (size + bufferSize) > maxBufferSize {
+			if bufferSize > maxBufferSize {
 				break
 			}
 
