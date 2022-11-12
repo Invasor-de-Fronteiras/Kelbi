@@ -115,17 +115,17 @@ const guildInfoSelectQuery = `
 SELECT
 	g.id,
 	g.name,
-	rank_rp,
-	event_rp,
-	main_motto,
-	sub_motto,
-	created_at,
-	leader_id,
+	g.rank_rp,
+	g.event_rp,
+	g.main_motto,
+	g.sub_motto,
+	g.created_at,
+	g.leader_id,
 	lc.name as leader_name,
-	comment,
-	COALESCE(pugi_name_1, '') AS pugi_name_1,
-	COALESCE(pugi_name_2, '') AS pugi_name_2,
-	COALESCE(pugi_name_3, '') AS pugi_name_3,
+	g.comment,
+	COALESCE(g.pugi_name_1, '') AS pugi_name_1,
+	COALESCE(g.pugi_name_2, '') AS pugi_name_2,
+	COALESCE(g.pugi_name_3, '') AS pugi_name_3,
 	recruiting,
 	COALESCE((SELECT team FROM festa_registrations fr WHERE fr.guild_id = g.id), 'none') AS festival_colour,
 	(SELECT SUM(souls) FROM guild_characters gc WHERE gc.guild_id = g.id) AS souls,
@@ -384,13 +384,13 @@ func (guild *Guild) ArrangeCharacters(s *Session, charIDs []uint32) error {
 }
 
 func (guild *Guild) GetApplicationForCharID(s *Session, charID uint32, applicationType GuildApplicationType) (*GuildApplication, error) {
-	row := s.Server.db.QueryRowx(`
-		SELECT * from guild_applications WHERE character_id = $1 AND guild_id = $2 AND application_type = $3
-	`, charID, guild.ID, applicationType)
-
 	application := &GuildApplication{}
+	query := `
+        SELECT * from guild_applications
+        WHERE character_id = $1 AND guild_id = $2 AND application_type = $3
+    `
 
-	err := row.StructScan(application)
+	err := s.Server.db.Get(&application, query, charID, guild.ID, applicationType)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
