@@ -195,7 +195,7 @@ func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteUint32(blueSouls)
 	bf.WriteUint32(redSouls)
 
-	rows, _ = s.Server.db.Queryx("SELECT * FROM festa_trials")
+	rows, _ = s.Server.db.Queryx("SELECT id, objective, goal_id, times_req, locale_req, reward FROM festa_trials")
 	trialData := byteframe.NewByteFrame()
 	var count uint16
 	for rows.Next() {
