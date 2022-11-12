@@ -101,12 +101,49 @@ func handleMsgMhfGetAchievement(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var scores [33]int32
-	err = s.Server.db.QueryRow("SELECT * FROM achievements WHERE id=$1", pkt.CharID).Scan(&scores[0],
+	err = s.Server.db.QueryRow(`
+	SELECT 
+		id,
+		ach0,
+		ach1,
+		ach2,
+		ach3,
+		ach4,
+		ach5,
+		ach6,
+		ach7,
+		ach8,
+		ach9,
+		ach10,
+		ach11,
+		ach12,
+		ach13,
+		ach14,
+		ach15,
+		ach16,
+		ach17,
+		ach18,
+		ach19,
+		ach20,
+		ach21,
+		ach22,
+		ach23,
+		ach24,
+		ach25,
+		ach26,
+		ach27,
+		ach28,
+		ach29,
+		ach30,
+		ach31,
+		ach32
+	FROM achievements WHERE id=$1`, pkt.CharID).Scan(&scores[0],
 		&scores[0], &scores[1], &scores[2], &scores[3], &scores[4], &scores[5], &scores[6], &scores[7], &scores[8],
 		&scores[9], &scores[10], &scores[11], &scores[12], &scores[13], &scores[14], &scores[15], &scores[16],
 		&scores[17], &scores[18], &scores[19], &scores[20], &scores[21], &scores[22], &scores[23], &scores[24],
 		&scores[25], &scores[26], &scores[27], &scores[28], &scores[29], &scores[30], &scores[31], &scores[32])
 	if err != nil {
+		s.logger.Error("Failed to load achievements: ", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 20))
 		return
 	}
