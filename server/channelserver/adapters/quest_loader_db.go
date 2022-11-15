@@ -15,10 +15,10 @@ func NewQuestLoaderInDb(db *sqlx.DB) QuestLoader {
 	return &QuestLoaderInDb{db: db}
 }
 
-func (_ *QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string, season string, err error) {
+func (*QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string, season string, err error) {
 	questId, _ = strconv.ParseUint(id[0:5], 10, 32)
 
-	if string(id[5]) == "0" {
+	if string(id[5]) == "d" {
 		period = "DAY"
 	} else {
 		period = "NIGHT"
@@ -46,7 +46,7 @@ func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) 
 }
 
 func (ql *QuestLoaderInDb) QuestCount() (count uint16, err error) {
-	err = ql.db.QueryRow("SELECT COUNT(*) FROM quests WHERE enabled = true").Scan(&count)
+	err = ql.db.QueryRow("SELECT COUNT(*) FROM quests WHERE enable = true").Scan(&count)
 	return
 }
 
@@ -86,7 +86,7 @@ type QuestListBin struct {
 
 func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16) (quests []QuestListBin, err error) {
 	quests = []QuestListBin{}
-	query := "SELECT quest_list_bin FROM quests WHERE enabled = true LIMIT $1 OFFSET $2"
+	query := "SELECT quest_list_bin FROM quests WHERE enable = true LIMIT $1 OFFSET $2"
 	err = ql.db.Select(&quests, query, take, skip)
 	return
 }

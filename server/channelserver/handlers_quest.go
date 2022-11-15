@@ -40,8 +40,16 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
 			if err != nil {
-				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename), zap.Error(err))
+				filepath := filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename))
+				quest, err_bin := ioutil.ReadFile(filepath)
+
+				if err_bin != nil {
+					s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename), zap.Error(err_bin))
+				}
+				doAckBufSucceed(s, pkt.AckHandle, quest)
+				return
 			}
+
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		}
 	}
