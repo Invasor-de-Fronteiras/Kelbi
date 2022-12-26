@@ -792,3 +792,36 @@ enum prize_type {
   personal
   guild
 }
+
+enum QuestSeason {
+  WARM
+  COLD
+  BREED
+}
+
+enum QuestPeriod {
+  DAY
+  NIGHT
+}
+
+model Quests {
+  id             Int         @id @default(autoincrement())
+  quest_id       Int         @default(autoincrement())
+  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
+  period         QuestPeriod
+  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
+  season         QuestSeason
+  name           String
+  objective      String      @default("")
+  category       Int         @default(0)
+  enable         Boolean     @default(false)
+  metadata       Json?
+  quest_bin      Bytes?
+  quest_list_bin Bytes
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt @default(now())
+
+  @@unique([quest_id, period, season])
+  @@map("quests")
+}

@@ -9,6 +9,8 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+
+	"go.uber.org/zap"
 )
 
 func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
@@ -38,8 +40,16 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
 			if err != nil {
-				s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename))
+				filepath := filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename))
+				quest, err_bin := ioutil.ReadFile(filepath)
+
+				if err_bin != nil {
+					s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename), zap.Error(err_bin))
+				}
+				doAckBufSucceed(s, pkt.AckHandle, quest)
+				return
 			}
+
 			doAckBufSucceed(s, pkt.AckHandle, data)
 		}
 	}
@@ -70,7 +80,8 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	data, err := s.Server.questLoader.Quests(pkt.Take, pkt.Skip)
 
 	if err != nil {
-		fmt.Printf("questlists/list_%d.bin", pkt.Skip)
+		fmt.Printf("questlists/list_%d.bin\n", pkt.Skip)
+		fmt.Printf("Failed to load quest: %s\n", err.Error())
 		stubEnumerateNoResults(s, pkt.AckHandle)
 	} else {
 		doAckBufSucceed(s, pkt.AckHandle, data)
