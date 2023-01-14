@@ -28,9 +28,13 @@ const (
 	OPERATE_GUILD_CHANGE_PUGI_1              = 0x0f
 	OPERATE_GUILD_CHANGE_PUGI_2              = 0x10
 	OPERATE_GUILD_CHANGE_PUGI_3              = 0x11
-	// pugi something
-	OPERATE_GUILD_DONATE_EVENT = 0x15
-	// pugi something
+	OPERATE_GUILD_UNLOCK_OUTFIT              = 0x12
+	// 0x13 Unk
+	// 0x14 Unk
+	OPERATE_GUILD_DONATE_EVENT   = 0x15
+	OPERATE_GUILD_EVENT_EXCHANGE = 0x16
+	// 0x17 Unk
+	// 0x18 Unk
 	OPERATE_GUILD_CHANGE_DIVA_PUGI_1 = 0x19
 	OPERATE_GUILD_CHANGE_DIVA_PUGI_2 = 0x1a
 	OPERATE_GUILD_CHANGE_DIVA_PUGI_3 = 0x1b
@@ -41,7 +45,8 @@ type MsgMhfOperateGuild struct {
 	AckHandle uint32
 	GuildID   uint32
 	Action    OperateGuildAction
-	UnkData   []byte
+	Data1     *byteframe.ByteFrame
+	Data2     *byteframe.ByteFrame
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -54,9 +59,9 @@ func (m *MsgMhfOperateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.AckHandle = bf.ReadUint32()
 	m.GuildID = bf.ReadUint32()
 	m.Action = OperateGuildAction(bf.ReadUint8())
-	m.UnkData = bf.DataFromCurrent()
-	// nolint:errcheck
-	bf.Seek(int64(len(bf.Data())-2), 0)
+	dataLen := uint(bf.ReadUint8())
+	m.Data1 = byteframe.NewByteFrameFromBytes(bf.ReadBytes(4))
+	m.Data2 = byteframe.NewByteFrameFromBytes(bf.ReadBytes(dataLen))
 	return nil
 }
 

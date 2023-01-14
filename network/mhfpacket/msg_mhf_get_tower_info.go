@@ -13,7 +13,7 @@ const (
 	TowerInfoTypeUnk0 = iota
 	TowerInfoTypeTowerRankPoint
 	TowerInfoTypeGetOwnTowerSkill
-	TowerInfoTypeUnk3
+	TowerInfoTypeGetOwnTowerLevelV3
 	TowerInfoTypeTowerTouhaHistory
 	TowerInfoTypeUnk5
 )

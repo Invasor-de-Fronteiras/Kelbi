@@ -8,8 +8,6 @@ import (
 	"erupe-ce/server/channelserver/compression/nullcomp"
 
 	"io"
-
-	//nolint:staticcheck
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -108,6 +106,7 @@ func handleMsgMhfSaveHunterNavi(s *Session, p mhfpacket.MHFPacket) {
 
 		s.logger.Info("Wrote recompressed hunternavi back to DB.")
 	} else {
+		dumpSaveData(s, pkt.RawDataPayload, "hunternavi")
 		// simply update database, no extra processing
 		_, err := s.Server.db.Exec("UPDATE characters SET hunternavi=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 		if err != nil {
@@ -167,6 +166,7 @@ func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfSaveMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSaveMercenary)
+	dumpSaveData(s, pkt.MercData, "mercenary")
 	if len(pkt.MercData) > 0 {
 		// nolint:errcheck
 		s.Server.db.Exec("UPDATE characters SET savemercenary=$1 WHERE id=$2", pkt.MercData, s.CharID)

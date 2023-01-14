@@ -39,7 +39,7 @@ FROM warehouse
 
 func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
-	_, err := s.Server.db.Exec("UPDATE characters SET house=$1 WHERE id=$2", pkt.InteriorData, s.CharID)
+	_, err := s.Server.db.Exec(`UPDATE user_binary SET house_furniture=$1 WHERE id=$2`, pkt.InteriorData, s.CharID)
 	if err != nil {
 		panic(err)
 	}
@@ -47,35 +47,37 @@ func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
 }
 
 type HouseData struct {
-	CharID uint32 `db:"id"`
-	HRP    uint16 `db:"hrp"`
-	GR     uint16 `db:"gr"`
-	Name   string `db:"name"`
+	CharID        uint32 `db:"id"`
+	HRP           uint16 `db:"hrp"`
+	GR            uint16 `db:"gr"`
+	Name          string `db:"name"`
+	HouseState    uint8  `db:"house_state"`
+	HousePassword string `db:"house_password"`
 }
 
 func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateHouse)
 	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(0)
 	var houses []HouseData
+	houseQuery := `SELECT c.id, hrp, gr, name, COALESCE(ub.house_state, 2) as house_state, COALESCE(ub.house_password, '') as house_password
+		FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE c.id=$1`
 	switch pkt.Method {
 	case 1:
 		var friendsList string
-		// nolint:errcheck // Error return value of `` is not checked
 		s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&friendsList)
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
 			house := HouseData{}
-			row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", cid)
+			row := s.Server.db.QueryRowx(houseQuery, cid)
 			err := row.StructScan(&house)
-			if err != nil {
-				panic(err)
-			} else {
+			if err == nil {
 				houses = append(houses, house)
 			}
 		}
 	case 2:
 		guild, err := GetGuildInfoByCharacterId(s, s.CharID)
-		if err != nil {
+		if err != nil || guild == nil {
 			break
 		}
 		guildMembers, err := GetGuildMembers(s, guild.ID, false)
@@ -84,58 +86,48 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		}
 		for _, member := range guildMembers {
 			house := HouseData{}
-			row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", member.CharID)
-			err := row.StructScan(&house)
-			if err != nil {
-				panic(err)
-			} else {
+			row := s.Server.db.QueryRowx(houseQuery, member.CharID)
+			err = row.StructScan(&house)
+			if err == nil {
 				houses = append(houses, house)
 			}
 		}
 	case 3:
+		houseQuery = `SELECT c.id, hrp, gr, name, COALESCE(ub.house_state, 2) as house_state, COALESCE(ub.house_password, '') as house_password
+			FROM characters c LEFT JOIN user_binary ub ON ub.id = c.id WHERE name ILIKE $1`
 		house := HouseData{}
-		row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE name ILIKE $1", fmt.Sprintf(`%%%s%%`, pkt.Name))
-		err := row.StructScan(&house)
-		if err != nil {
-			panic(err)
-		} else {
-			houses = append(houses, house)
+		rows, _ := s.Server.db.Queryx(houseQuery, fmt.Sprintf(`%%%s%%`, pkt.Name))
+		for rows.Next() {
+			err := rows.StructScan(&house)
+			if err == nil {
+				houses = append(houses, house)
+			}
 		}
 	case 4:
 		house := HouseData{}
-		row := s.Server.db.QueryRowx("SELECT id, hrp, gr, name FROM characters WHERE id=$1", pkt.CharID)
+		row := s.Server.db.QueryRowx(houseQuery, pkt.CharID)
 		err := row.StructScan(&house)
-		if err != nil {
-			panic(err)
-		} else {
+		if err == nil {
 			houses = append(houses, house)
 		}
 	case 5: // Recent visitors
 		break
 	}
-	var exists int
 	for _, house := range houses {
-		for _, session := range s.Server.Sessions {
-			if session.CharID == house.CharID {
-				exists++
-				bf.WriteUint32(house.CharID)
-				bf.WriteUint8(session.MySeries.State)
-				if len(session.MySeries.Password) > 0 {
-					bf.WriteUint8(3)
-				} else {
-					bf.WriteUint8(0)
-				}
-				bf.WriteUint16(house.HRP)
-				bf.WriteUint16(house.GR)
-				ps.Uint8(bf, house.Name, true)
-				break
-			}
+		bf.WriteUint32(house.CharID)
+		bf.WriteUint8(house.HouseState)
+		if len(house.HousePassword) > 0 {
+			bf.WriteUint8(3)
+		} else {
+			bf.WriteUint8(0)
 		}
+		bf.WriteUint16(house.HRP)
+		bf.WriteUint16(house.GR)
+		ps.Uint8(bf, house.Name, true)
 	}
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint16(uint16(exists))
-	resp.WriteBytes(bf.Data())
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+	bf.Seek(0, 0)
+	bf.WriteUint16(uint16(len(houses)))
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
@@ -145,72 +137,89 @@ func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
 	// 03 = open friends
 	// 04 = open guild
 	// 05 = open friends+guild
-	s.MySeries.State = pkt.State
-	s.MySeries.Password = pkt.Password
+	s.Server.db.Exec(`UPDATE user_binary SET house_state=$1, house_password=$2 WHERE id=$3`, pkt.State, pkt.Password, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadHouse)
 	bf := byteframe.NewByteFrame()
+
+	var state uint8
+	var password string
+	s.Server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
+	`, pkt.CharID).Scan(&state, &password)
+
 	if pkt.Destination != 9 && len(pkt.Password) > 0 && pkt.CheckPass {
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID && pkt.Password != session.MySeries.Password {
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-				return
-			}
+		if pkt.Password != password {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
 		}
 	}
 
-	var furniture []byte
-	err := s.Server.db.QueryRow("SELECT house FROM characters WHERE id=$1", pkt.CharID).Scan(&furniture)
-	if err != nil {
-		panic(err)
+	if pkt.Destination != 9 && state > 2 {
+		allowed := false
+
+		// Friends list verification
+		if state == 3 || state == 5 {
+			var friendsList string
+			s.Server.db.QueryRow(`SELECT friends FROM characters WHERE id=$1`, pkt.CharID).Scan(&friendsList)
+			cids := stringsupport.CSVElems(friendsList)
+			for _, cid := range cids {
+				if uint32(cid) == s.CharID {
+					allowed = true
+					break
+				}
+			}
+		}
+
+		// Guild verification
+		if state > 3 {
+			ownGuild, err := GetGuildInfoByCharacterId(s, s.CharID)
+			isApplicant, _ := ownGuild.HasApplicationForCharID(s, s.CharID)
+			if err == nil && ownGuild != nil {
+				othersGuild, err := GetGuildInfoByCharacterId(s, pkt.CharID)
+				if err == nil && othersGuild != nil {
+					if othersGuild.ID == ownGuild.ID && !isApplicant {
+						allowed = true
+					}
+				}
+			}
+		}
+
+		if !allowed {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
 	}
-	if furniture == nil {
-		furniture = make([]byte, 20)
+
+	var houseTier, houseData, houseFurniture, bookshelf, gallery, tore, garden []byte
+	s.Server.db.QueryRow(`SELECT house_tier, house_data, house_furniture, bookshelf, gallery, tore, garden FROM user_binary WHERE id=$1
+	`, pkt.CharID).Scan(&houseTier, &houseData, &houseFurniture, &bookshelf, &gallery, &tore, &garden)
+	if houseFurniture == nil {
+		houseFurniture = make([]byte, 20)
 	}
 
 	switch pkt.Destination {
 	case 3: // Others house
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID {
-				bf.WriteBytes(session.MySeries.HouseTier)
-				bf.WriteBytes(session.MySeries.HouseData)
-				bf.WriteBytes(make([]byte, 19)) // Padding?
-				bf.WriteBytes(furniture)
-			}
-		}
+		bf.WriteBytes(houseTier)
+		bf.WriteBytes(houseData)
+		bf.WriteBytes(make([]byte, 19)) // Padding?
+		bf.WriteBytes(houseFurniture)
 	case 4: // Bookshelf
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID {
-				bf.WriteBytes(session.MySeries.BookshelfData)
-			}
-		}
+		bf.WriteBytes(bookshelf)
 	case 5: // Gallery
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID {
-				bf.WriteBytes(session.MySeries.GalleryData)
-			}
-		}
+		bf.WriteBytes(gallery)
 	case 8: // Tore
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID {
-				bf.WriteBytes(session.MySeries.ToreData)
-			}
-		}
+		bf.WriteBytes(tore)
 	case 9: // Own house
-		bf.WriteBytes(furniture)
+		bf.WriteBytes(houseFurniture)
 	case 10: // Garden
-		for _, session := range s.Server.Sessions {
-			if session.CharID == pkt.CharID {
-				bf.WriteBytes(session.MySeries.GardenData)
-				c, d := getGookData(s, pkt.CharID)
-				bf.WriteUint16(c)
-				bf.WriteUint16(0)
-				bf.WriteBytes(d)
-			}
-		}
+		bf.WriteBytes(garden)
+		c, d := getGookData(s, pkt.CharID)
+		bf.WriteUint16(c)
+		bf.WriteUint16(0)
+		bf.WriteBytes(d)
 	}
 	if len(bf.Data()) == 0 {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
@@ -221,26 +230,18 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetMyhouseInfo)
-
 	var data []byte
-	err := s.Server.db.QueryRow("SELECT trophy FROM characters WHERE id = $1", s.CharID).Scan(&data)
-	if err != nil {
-		panic(err)
-	}
+	s.Server.db.QueryRow(`SELECT mission FROM user_binary WHERE id=$1`, s.CharID).Scan(&data)
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 9))
 	}
 }
 
 func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateMyhouseInfo)
-
-	_, err := s.Server.db.Exec("UPDATE characters SET trophy=$1 WHERE id=$2", pkt.Unk0, s.CharID)
-	if err != nil {
-		panic(err)
-	}
+	s.Server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Unk0, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 

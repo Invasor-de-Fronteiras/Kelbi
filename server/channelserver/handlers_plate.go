@@ -13,20 +13,20 @@ func handleMsgMhfLoadPlateData(s *Session, p mhfpacket.MHFPacket) {
 	var data []byte
 	err := s.Server.db.QueryRow("SELECT platedata FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
-		s.logger.Fatal("Failed to get plate data savedata from db", zap.Error(err))
+		s.logger.Error("Failed to get plate data savedata from db", zap.Error(err))
 	}
 
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{})
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 }
 
 func handleMsgMhfSavePlateData(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateData)
 
-	dumpSaveData(s, pkt.RawDataPayload, "_platedata")
+	dumpSaveData(s, pkt.RawDataPayload, "platedata")
 
 	if pkt.IsDataDiff {
 		var data []byte
@@ -78,20 +78,20 @@ func handleMsgMhfLoadPlateBox(s *Session, p mhfpacket.MHFPacket) {
 	var data []byte
 	err := s.Server.db.QueryRow("SELECT platebox FROM characters WHERE id = $1", s.CharID).Scan(&data)
 	if err != nil {
-		s.logger.Fatal("Failed to get sigil box savedata from db", zap.Error(err))
+		s.logger.Error("Failed to get sigil box savedata from db", zap.Error(err))
 	}
 
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
 	} else {
-		doAckBufSucceed(s, pkt.AckHandle, []byte{})
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
 }
 
 func handleMsgMhfSavePlateBox(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateBox)
 
-	dumpSaveData(s, pkt.RawDataPayload, "_platebox")
+	dumpSaveData(s, pkt.RawDataPayload, "platebox")
 
 	if pkt.IsDataDiff {
 		var data []byte
@@ -157,7 +157,7 @@ func handleMsgMhfLoadPlateMyset(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSavePlateMyset(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSavePlateMyset)
 	// looks to always return the full thing, simply update database, no extra processing
-
+	dumpSaveData(s, pkt.RawDataPayload, "platemyset")
 	_, err := s.Server.db.Exec("UPDATE characters SET platemyset=$1 WHERE id=$2", pkt.RawDataPayload, s.CharID)
 	if err != nil {
 		s.logger.Fatal("Failed to update platemyset savedata in db", zap.Error(err))

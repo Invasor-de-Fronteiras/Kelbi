@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"erupe-ce/network/mhfpacket"
+	"fmt"
 )
 
 func handleMsgSysInsertUser(s *Session, p mhfpacket.MHFPacket) {}
@@ -13,6 +14,14 @@ func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	s.Server.userBinaryPartsLock.Lock()
 	s.Server.userBinaryParts[userBinaryPartID{charID: s.CharID, index: pkt.BinaryType}] = pkt.RawDataPayload
 	s.Server.userBinaryPartsLock.Unlock()
+
+	var exists []byte
+	err := s.Server.db.QueryRow("SELECT type2 FROM user_binary WHERE id=$1", s.CharID).Scan(&exists)
+	if err != nil {
+		s.Server.db.Exec("INSERT INTO user_binary (id) VALUES ($1)", s.CharID)
+	}
+
+	s.Server.db.Exec(fmt.Sprintf("UPDATE user_binary SET type%d=$1 WHERE id=$2", pkt.BinaryType), pkt.RawDataPayload, s.CharID)
 
 	msg := &mhfpacket.MsgSysNotifyUserBinary{
 		CharID:     s.CharID,
@@ -40,5 +49,3 @@ func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgSysNotifyUserBinary(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfGetBbsUserStatus(s *Session, p mhfpacket.MHFPacket) {}

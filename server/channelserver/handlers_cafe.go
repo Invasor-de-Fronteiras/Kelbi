@@ -4,6 +4,7 @@ import (
 	"erupe-ce/common/byteframe"
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
+	"fmt"
 	"io"
 	"time"
 
@@ -72,15 +73,30 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetCafeDuration)
 	bf := byteframe.NewByteFrame()
 
+	var cafeReset time.Time
+	err := s.Server.db.QueryRow(`SELECT cafe_reset FROM characters WHERE id=$1`, s.CharID).Scan(&cafeReset)
+	if err != nil {
+		cafeReset = TimeWeekNext()
+		s.Server.db.Exec(`UPDATE characters SET cafe_reset=$1 WHERE id=$2`, cafeReset, s.CharID)
+	}
+	if Time_Current_Adjusted().After(cafeReset) {
+		cafeReset = TimeWeekNext()
+		s.Server.db.Exec(`UPDATE characters SET cafe_time=0, cafe_reset=$1 WHERE id=$2`, cafeReset, s.CharID)
+		s.Server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.CharID)
+	}
+
 	var cafeTime uint32
-	err := s.Server.db.QueryRow("SELECT cafe_time FROM characters WHERE id = $1", s.CharID).Scan(&cafeTime)
+	err = s.Server.db.QueryRow("SELECT cafe_time FROM characters WHERE id = $1", s.CharID).Scan(&cafeTime)
 	if err != nil {
 		panic(err)
 	}
-	cafeTime = uint32(Time_Current_Adjusted().Unix()) - uint32(s.SessionStart) + cafeTime
+	if s.FindCourse("NetCafe").ID != 0 || s.FindCourse("N").ID != 0 {
+		cafeTime = uint32(Time_Current_Adjusted().Unix()) - uint32(s.SessionStart) + cafeTime
+	}
 	bf.WriteUint32(cafeTime) // Total cafe time
 	bf.WriteUint16(0)
-	ps.Uint16(bf, "Resets at next maintenance", true)
+	ps.Uint16(bf, fmt.Sprintf(s.Server.dict["cafeReset"], int(cafeReset.Month()), cafeReset.Day()), true)
+
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 

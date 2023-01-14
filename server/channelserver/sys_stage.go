@@ -48,6 +48,7 @@ type Stage struct {
 	// other clients expect the server to echo them back in the exact same format.
 	RawBinaryData map[StageBinaryKey][]byte `json:"-"`
 
+	host       *Session
 	MaxPlayers uint16 `json:"maxPlayers"`
 	Password   string `json:"password"`
 	CreatedAt  string `json:"createdAt"`

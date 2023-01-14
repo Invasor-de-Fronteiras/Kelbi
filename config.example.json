@@ -1,145 +1,147 @@
 {
     "Host": "localhost",
     "BinPath": "bin",
+    "Language": "en",
     "DisableSoftCrash": false,
-    "devmode": true,
-    "devmodeoptions": {
-        "serverName": "",
-        "EnableLauncherServer": true,
-        "hideLoginNotice": false,
-        "loginNotice": "<BODY><CENTER><SIZE_3><C_4>Welcome to Erupe SU9 (Patch 1)!<BR><BODY><LEFT><SIZE_2><C_5>Erupe is experimental software<C_7>, we are not liable for any<BR><BODY>issues caused by installing the software!<BR><BODY><BR><BODY><C_4>■Report bugs on Discord!<C_7><BR><BODY><BR><BODY><C_4>■Test everything!<C_7><BR><BODY><BR><BODY><C_4>■Don't talk to softlocking NPCs!<C_7><BR><BODY><BR><BODY><C_4>■Fork the code on GitHub!<C_7><BR><BODY><BR><BODY>Thank you to all of the contributors,<BR><BODY><BR><BODY>this wouldn't exist without you.",
-        "cleandb": false,
-        "maxlauncherhr": false,
-        "LogInboundMessages": false,
-        "LogOutboundMessages": false,
-        "MaxHexdumpLength": 256,
-        "Event": 0,
-        "DivaEvent": 0,
-        "FestaEvent": 0,
-        "TournamentEvent": 0,
-        "MezFesEvent": true,
-        "MezFesAlt": false,
-        "DisableMailItems": true,
-        "DisableTokenCheck": false,
-        "SaveDumps": {
-            "Enabled": true,
-            "OutputDir": "savedata"
+    "FeaturedWeapons": 1,
+    "HideLoginNotice": true,
+    "LoginNotice": "<BODY><CENTER><SIZE_3><C_4>Welcome to Erupe SU9.1!<BR><BODY><LEFT><SIZE_2><C_5>Erupe is experimental software<C_7>, we are not liable for any<BR><BODY>issues caused by installing the software!<BR><BODY><BR><BODY><C_4>■Report bugs on Discord!<C_7><BR><BODY><BR><BODY><C_4>■Test everything!<C_7><BR><BODY><BR><BODY><C_4>■Don't talk to softlocking NPCs!<C_7><BR><BODY><BR><BODY><C_4>■Fork the code on GitHub!<C_7><BR><BODY><BR><BODY>Thank you to all of the contributors,<BR><BODY><BR><BODY>this wouldn't exist without you.",
+    "PatchServerManifest": "",
+    "PatchServerFile": "",
+    "ScreenshotAPIURL": "",
+    "DeleteOnSaveCorruption": false,
+    "DevMode": true,
+    "DevModeOptions": {
+      "AutoCreateAccount": true,
+      "CleanDB": false,
+      "MaxLauncherHR": false,
+      "LogInboundMessages": false,
+      "LogOutboundMessages": false,
+      "MaxHexdumpLength": 256,
+      "DivaEvent": 0,
+      "FestaEvent": -1,
+      "TournamentEvent": 0,
+      "MezFesEvent": true,
+      "MezFesAlt": false,
+      "DisableMailItems": true,
+      "DisableTokenCheck": false,
+      "QuestDebugTools": false,
+      "SaveDumps": {
+        "Enabled": true,
+        "OutputDir": "savedata"
+      }
+    },
+    "Discord": {
+      "Enabled": false,
+      "BotToken": "",
+      "ServerId": "",
+      "DevMode": true,
+      "RealtimeChannelID": "",
+      "DevRoles": []
+    },
+    "Commands": [
+      {
+        "Name": "Rights",
+        "Enabled": false,
+        "Prefix": "!rights"
+      }, {
+        "Name": "Raviente",
+        "Enabled": true,
+        "Prefix": "!ravi"
+      }, {
+        "Name": "Teleport",
+        "Enabled": false,
+        "Prefix": "!tele"
+      }, {
+        "Name": "Reload",
+        "Enabled": true,
+        "Prefix": "!reload"
+      }, {
+        "Name": "KeyQuest",
+        "Enabled": false,
+        "Prefix": "!kqf"
+      }, {
+        "Name": "Course",
+        "Enabled": true,
+        "Prefix": "!course"
+      }
+    ],
+    "Courses": [
+      {"Name": "HunterLife", "Enabled": true},
+      {"Name": "Extra", "Enabled": true},
+      {"Name": "Premium", "Enabled": true},
+      {"Name": "Assist", "Enabled": false},
+      {"Name": "N", "Enabled": false},
+      {"Name": "Hiden", "Enabled": false},
+      {"Name": "HunterSupport", "Enabled": false},
+      {"Name": "NBoost", "Enabled": false},
+      {"Name": "NetCafe", "Enabled": true},
+      {"Name": "HLRenewing", "Enabled": true},
+      {"Name": "EXRenewing", "Enabled": true}
+    ],
+    "Database": {
+      "Host": "localhost",
+      "Port": 5432,
+      "User": "postgres",
+      "Password": "password",
+      "Database": "erupe"
+    },
+    "Launcher": {
+      "Path": "./www/kelbi/build",
+      "Enabled": true,
+      "Port": 80,
+      "UseOriginalLauncherFiles": false
+    },
+    "Sign": {
+      "Enabled": true,
+      "Port": 53312
+    },
+    "SignV2": {
+      "Enabled": false,
+      "Port": 8080
+    },
+    "Channel": {
+      "Enabled": true
+    },
+    "Entrance": {
+      "Enabled": true,
+      "Port": 53310,
+      "Entries": [
+        {
+          "Name": "Newbie", "Description": "", "IP": "", "Type": 3, "Recommended": 2, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54001, "MaxPlayers": 100 },
+            { "Port": 54002, "MaxPlayers": 100 }
+          ]
+        }, {
+          "Name": "Normal", "Description": "", "IP": "", "Type": 1, "Recommended": 0, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54003, "MaxPlayers": 100 },
+            { "Port": 54004, "MaxPlayers": 100 }
+          ]
+        }, {
+          "Name": "Cities", "Description": "", "IP": "", "Type": 2, "Recommended": 0, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54005, "MaxPlayers": 100 }
+          ]
+        }, {
+          "Name": "Tavern", "Description": "", "IP": "", "Type": 4, "Recommended": 0, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54006, "MaxPlayers": 100 }
+          ]
+        }, {
+          "Name": "Return", "Description": "", "IP": "", "Type": 5, "Recommended": 0, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54007, "MaxPlayers": 100 }
+          ]
+        }, {
+          "Name": "MezFes", "Description": "", "IP": "", "Type": 6, "Recommended": 6, "AllowedClientFlags": 0,
+          "Channels": [
+            { "Port": 54008, "MaxPlayers": 100 }
+          ]
         }
-    },
-    "discord": {
-        "enabled": true,
-        "devMode": true,
-        "serverId": "",
-        "bottoken": "",
-        "realtimeChannelID": "",
-        "devRoles": []
-    },
-    "serverhttp": {
-        "port": 4000,
-        "token": ""
-    },
-    "database": {
-        "host": "localhost",
-        "port": 5432,
-        "user": "postgres",
-        "password": "password",
-        "database": "erupe"
-    },
-    "launcher": {
-        "path": "./www/kelbi/build",
-        "port": 80,
-        "UseOriginalLauncherFiles": false
-    },
-    "sign": {
-        "port": 53312
-    },
-    "entrance": {
-        "port": 53310,
-        "entries": [
-            {
-                "name": "Newbie",
-                "description": "",
-                "ip": "",
-                "type": 3,
-                "recommended": 2,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54001,
-                        "MaxPlayers": 0
-                    }
-                ]
-            },
-            {
-                "name": "Normal",
-                "description": "",
-                "ip": "",
-                "type": 1,
-                "recommended": 0,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54003,
-                        "MaxPlayers": 100
-                    }
-                ]
-            },
-            {
-                "name": "Cities",
-                "description": "",
-                "ip": "",
-                "type": 2,
-                "recommended": 0,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54005,
-                        "MaxPlayers": 0
-                    }
-                ]
-            },
-            {
-                "name": "Tavern",
-                "description": "",
-                "ip": "",
-                "type": 4,
-                "recommended": 0,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54006,
-                        "MaxPlayers": 0
-                    }
-                ]
-            },
-            {
-                "name": "Return",
-                "description": "",
-                "ip": "",
-                "type": 5,
-                "recommended": 0,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54007,
-                        "MaxPlayers": 0
-                    }
-                ]
-            },
-            {
-                "name": "MezFes",
-                "description": "",
-                "ip": "",
-                "type": 6,
-                "recommended": 6,
-                "allowedclientflags": 0,
-                "channels": [
-                    {
-                        "port": 54008,
-                        "MaxPlayers": 100
-                    }
-                ]
-            }
-        ]
+      ]
     }
-}
+  }
+
+  

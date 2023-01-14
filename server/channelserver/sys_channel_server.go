@@ -70,6 +70,9 @@ type Server struct {
 	stagesLock sync.RWMutex
 	Stages     map[string]*Stage
 
+	// Used to map different languages
+	dict map[string]string
+
 	// UserBinary
 	userBinaryPartsLock sync.RWMutex
 	userBinaryParts     map[userBinaryPartID][]byte
@@ -191,6 +194,8 @@ func NewServer(config *Config) *Server {
 	// MezFes
 	s.Stages["sl1Ns462p0a0u0"] = NewStage("sl1Ns462p0a0u0")
 
+	s.dict = getLangStrings(s)
+
 	return s
 }
 
@@ -308,6 +313,7 @@ func (s *Server) WorldcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session, 
 			bf.WriteUint16(uint16(pkt.Opcode()))
 			// nolint:errcheck // Error return value of `pkt.Build` is not checked
 			pkt.Build(bf, session.clientContext)
+			bf.WriteUint16(0x0010)
 			session.QueueSendNonBlocking(bf.Data())
 		}
 	}
@@ -347,15 +353,17 @@ func (s *Server) BroadcastRaviente(ip uint32, port uint16, stage []byte, _type u
 	var text string
 	switch _type {
 	case 2:
-		text = "<Great Slaying: Berserk> is being held!"
+		text = s.dict["ravienteBerserk"]
+	case 3:
+		text = s.dict["ravienteExtreme"]
 	case 4:
-		text = "<Great Slaying: Extreme> is being held!"
+		text = s.dict["ravienteExtremeLimited"]
 	case 5:
-		text = "<Great Slaying: Berserk Practice> is being held!"
+		text = s.dict["ravienteBerserkSmall"]
 	default:
 		s.logger.Error("Unk raviente type", zap.Uint8("_type", _type))
 	}
-	ps.Uint16(bf, text, false)
+	ps.Uint16(bf, text, true)
 	bf.WriteBytes([]byte{0x5F, 0x53, 0x00})
 	bf.WriteUint32(ip)   // IP address
 	bf.WriteUint16(port) // Port
