@@ -1,3 +1,11 @@
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[quest_id,period,season]` on the table `quests` will be added. If there are existing duplicate values, this will fail.
+
+*/
+-- CreateIndex
+CREATE UNIQUE INDEX "quests_quest_id_period_season_key" ON "quests"("quest_id", "period", "season");
 
 DROP TABLE IF EXISTS public.raviregister;
 DROP TABLE IF EXISTS public.ravistate;
@@ -345,3 +353,4 @@ VALUES
     (4,675,1,0,1),
     (4,673,1,0,1),
     (4,674,1,0,1);
+

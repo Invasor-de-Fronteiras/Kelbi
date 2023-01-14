@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "db:push": "prisma db push",
-    "migrate:new": "prisma migrate dev --create-only"
+    "migrate:new": "prisma migrate dev --create-only",
+    "prisma": "prisma"
   },
   "keywords": [],
   "author": "",

@@ -78,6 +78,7 @@ model characters {
   gacha_items                                                    Bytes?
   daily_time                                                     DateTime?            @db.Timestamp(6)
   frontier_points                                                Int?
+  netcafe_points                                                 Int?                 @default(0)
   house_info                                                     Bytes?
   login_boost                                                    Bytes?
   skin_hist                                                      Bytes?
@@ -86,18 +87,17 @@ model characters {
   guild_post_checked                                             DateTime             @default(now()) @db.Timestamp(6)
   time_played                                                    Int                  @default(0)
   weapon_id                                                      Int                  @default(0)
-  scenariodata                                                   Bytes?
-  house                                                          Bytes?
-  savefavoritequest                                              Bytes?
-  friends                                                        String               @default("")
   blocked                                                        String               @default("")
   deleted                                                        Boolean              @default(false)
-  cafe_time                                                      Int?                 @default(0)
-  netcafe_points                                                 Int?                 @default(0)
+  friends                                                        String               @default("")
+  savefavoritequest                                              Bytes?
+  scenariodata                                                   Bytes?
   boost_time                                                     DateTime?            @db.Timestamp(6)
-  trophy                                                         Bytes?
+  cafe_time                                                      Int?                 @default(0)
   created_at                                                     DateTime             @default(now())
   updated_at                                                     DateTime             @default(now()) @updatedAt
+  house                                                          Bytes?
+  trophy                                                         Bytes?
   users                                                          users?               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   guild_applications_charactersToguild_applications_actor_id     guild_applications[] @relation("charactersToguild_applications_actor_id")
   guild_applications_charactersToguild_applications_character_id guild_applications[] @relation("charactersToguild_applications_character_id")
@@ -174,9 +174,9 @@ model guild_applications {
   guild_id                                               Int
   character_id                                           Int
   actor_id                                               Int
-  application_type                                       guild_application_type
   created_at                                             DateTime               @default(now())
   updated_at                                             DateTime               @default(now()) @updatedAt
+  application_type                                       guild_application_type
   characters_charactersToguild_applications_actor_id     characters             @relation("charactersToguild_applications_actor_id", fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   characters_charactersToguild_applications_character_id characters             @relation("charactersToguild_applications_character_id", fields: [character_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   guilds                                                 guilds                 @relation(fields: [guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -193,8 +193,8 @@ model guild_characters {
   avoid_leadership Boolean     @default(false)
   order_index      Int         @default(1)
   recruiter        Boolean     @default(false)
-  souls            Int?        @default(0)
   created_at       DateTime    @default(now())
+  souls            Int?        @default(0)
   updated_at       DateTime    @default(now()) @updatedAt
   characters       characters? @relation(fields: [character_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   guilds           guilds?     @relation(fields: [guild_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -414,11 +414,11 @@ model servers {
   server_id         Int
   season            Int
   current_players   Int
-  land              Int?
-  world_name        String?
   world_description String?
+  world_name        String?
   created_at        DateTime @default(now())
   id                Int      @id @default(autoincrement())
+  land              Int?
   updated_at        DateTime @default(now()) @updatedAt
 }
 
@@ -440,11 +440,11 @@ model shop_item_state {
 model sign_sessions {
   user_id    Int
   char_id    Int?
-  token      String   @db.VarChar(16)
   server_id  Int?
+  token      String   @db.VarChar(16)
+  id         Int      @id @default(autoincrement())
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
-  id         Int      @id @default(autoincrement())
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -465,12 +465,12 @@ model users {
   id               Int                @id @default(autoincrement())
   username         String             @unique
   password         String
-  rights           Int                @default(846)
   item_box         Bytes?
+  rights           Int                @default(846)
   last_character   Int?               @default(0)
+  created_at       DateTime           @default(now())
   last_login       DateTime?          @db.Timestamp(6)
   return_expires   DateTime?          @db.Timestamp(6)
-  created_at       DateTime           @default(now())
   updated_at       DateTime           @default(now()) @updatedAt
   characters       characters[]
   user_connections user_connections[]
@@ -507,10 +507,10 @@ model distributions_accepted {
 model user_connections {
   id          Int                 @id @default(autoincrement())
   user_id     Int
-  provider    ConnectionProviders
   provider_id String
   created_at  DateTime            @default(now()) @db.Timestamp(6)
   updated_at  DateTime            @default(now()) @db.Timestamp(6)
+  provider    ConnectionProviders
   user        users               @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, provider], map: "user_connections_id_provider")
@@ -766,6 +766,25 @@ model warehouse {
   updated_at   DateTime @default(now()) @updatedAt
 }
 
+model Quests {
+  id             Int         @id @default(autoincrement())
+  quest_id       Int         @default(autoincrement())
+  period         QuestPeriod
+  season         QuestSeason
+  name           String
+  objective      String      @default("")
+  category       Int         @default(0)
+  enable         Boolean     @default(false)
+  metadata       Json?
+  quest_bin      Bytes?
+  quest_list_bin Bytes
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @default(now()) @updatedAt
+
+  @@unique([quest_id, period, season])
+  @@map("quests")
+}
+
 enum festival_colour {
   none
   red
@@ -802,26 +821,4 @@ enum QuestSeason {
 enum QuestPeriod {
   DAY
   NIGHT
-}
-
-model Quests {
-  id             Int         @id @default(autoincrement())
-  quest_id       Int         @default(autoincrement())
-  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
-  period         QuestPeriod
-  // Change this value don't change it in the quest, the value must be changed in the quest_bin and questlist_bin too
-  season         QuestSeason
-  name           String
-  objective      String      @default("")
-  category       Int         @default(0)
-  enable         Boolean     @default(false)
-  metadata       Json?
-  quest_bin      Bytes?
-  quest_list_bin Bytes
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
-
-  @@unique([quest_id, period, season])
-  @@map("quests")
 }

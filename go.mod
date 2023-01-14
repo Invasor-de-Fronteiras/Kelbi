@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.7
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/sachaos/lottery v0.0.0-20180520074626-61949d99bd96
 	github.com/spf13/viper v1.14.0
 	go.uber.org/zap v1.24.0
