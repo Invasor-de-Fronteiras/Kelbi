@@ -143,6 +143,8 @@ func generateFeatureWeapons(count int, startTime time.Time) activeFeature {
 		if !exist {
 			nums = append(nums, weapon.id)
 		}
+
+		weaponIndex++
 	}
 
 	for _, num := range nums {
