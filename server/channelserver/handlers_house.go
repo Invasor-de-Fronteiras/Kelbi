@@ -65,6 +65,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.Method {
 	case 1:
 		var friendsList string
+		// nolint:errcheck
 		s.Server.db.QueryRow("SELECT friends FROM characters WHERE id=$1", s.CharID).Scan(&friendsList)
 		cids := stringsupport.CSVElems(friendsList)
 		for _, cid := range cids {
@@ -125,6 +126,7 @@ func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(house.GR)
 		ps.Uint8(bf, house.Name, true)
 	}
+	// nolint:errcheck
 	bf.Seek(0, 0)
 	bf.WriteUint16(uint16(len(houses)))
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -137,6 +139,7 @@ func handleMsgMhfUpdateHouse(s *Session, p mhfpacket.MHFPacket) {
 	// 03 = open friends
 	// 04 = open guild
 	// 05 = open friends+guild
+	// nolint:errcheck
 	s.Server.db.Exec(`UPDATE user_binary SET house_state=$1, house_password=$2 WHERE id=$3`, pkt.State, pkt.Password, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
@@ -147,6 +150,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 
 	var state uint8
 	var password string
+	// nolint:errcheck
 	s.Server.db.QueryRow(`SELECT COALESCE(house_state, 2) as house_state, COALESCE(house_password, '') as house_password FROM user_binary WHERE id=$1
 	`, pkt.CharID).Scan(&state, &password)
 
@@ -163,6 +167,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 		// Friends list verification
 		if state == 3 || state == 5 {
 			var friendsList string
+			// nolint:errcheck
 			s.Server.db.QueryRow(`SELECT friends FROM characters WHERE id=$1`, pkt.CharID).Scan(&friendsList)
 			cids := stringsupport.CSVElems(friendsList)
 			for _, cid := range cids {
@@ -194,6 +199,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	var houseTier, houseData, houseFurniture, bookshelf, gallery, tore, garden []byte
+	// nolint:errcheck
 	s.Server.db.QueryRow(`SELECT house_tier, house_data, house_furniture, bookshelf, gallery, tore, garden FROM user_binary WHERE id=$1
 	`, pkt.CharID).Scan(&houseTier, &houseData, &houseFurniture, &bookshelf, &gallery, &tore, &garden)
 	if houseFurniture == nil {
@@ -231,6 +237,7 @@ func handleMsgMhfLoadHouse(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetMyhouseInfo)
 	var data []byte
+	// nolint:errcheck
 	s.Server.db.QueryRow(`SELECT mission FROM user_binary WHERE id=$1`, s.CharID).Scan(&data)
 	if len(data) > 0 {
 		doAckBufSucceed(s, pkt.AckHandle, data)
@@ -241,6 +248,7 @@ func handleMsgMhfGetMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfUpdateMyhouseInfo(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateMyhouseInfo)
+	// nolint:errcheck
 	s.Server.db.Exec("UPDATE user_binary SET mission=$1 WHERE id=$2", pkt.Unk0, s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }

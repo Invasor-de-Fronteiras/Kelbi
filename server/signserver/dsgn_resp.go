@@ -30,6 +30,7 @@ func (s *Session) makeSignInResp(uid int) []byte {
 
 	rand.Seed(time.Now().UnixNano())
 	sessToken := token.Generate(16)
+	// nolint:errcheck
 	s.server.registerToken(uid, sessToken)
 
 	bf := byteframe.NewByteFrame()

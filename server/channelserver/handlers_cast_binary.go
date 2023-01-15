@@ -40,6 +40,7 @@ var commands map[string]config.Command
 func init() {
 	commands = make(map[string]config.Command)
 	zapLogger, _ := zap.NewDevelopment()
+	// nolint:errcheck
 	defer zapLogger.Sync()
 	logger := zapLogger.Named("commands")
 	cmds := config.ErupeConfig.Commands
@@ -93,7 +94,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	if s.Server.erupeConfig.DevModeOptions.QuestDebugTools == true && s.Server.erupeConfig.DevMode {
+	if s.Server.erupeConfig.DevModeOptions.QuestDebugTools && s.Server.erupeConfig.DevMode {
 		if pkt.BroadcastType == 0x03 && pkt.MessageType == 0x02 && len(pkt.RawDataPayload) > 32 {
 			// This is only correct most of the time
 			tmp.ReadBytes(20)
@@ -226,6 +227,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					}
 					temp = &mhfpacket.MsgSysDeleteObject{ObjID: object.Id}
 					deleteNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
 					temp.Build(deleteNotif, s.clientContext)
 				}
 				for _, session := range s.Server.Sessions {
@@ -234,6 +236,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					}
 					temp = &mhfpacket.MsgSysDeleteUser{CharID: session.CharID}
 					deleteNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
 					temp.Build(deleteNotif, s.clientContext)
 				}
 				deleteNotif.WriteUint16(0x0010)
@@ -246,6 +249,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					}
 					temp = &mhfpacket.MsgSysInsertUser{CharID: session.CharID}
 					reloadNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
 					temp.Build(reloadNotif, s.clientContext)
 					for i := 0; i < 3; i++ {
 						temp = &mhfpacket.MsgSysNotifyUserBinary{
@@ -253,6 +257,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 							BinaryType: uint8(i + 1),
 						}
 						reloadNotif.WriteUint16(uint16(temp.Opcode()))
+						// nolint:errcheck
 						temp.Build(reloadNotif, s.clientContext)
 					}
 				}
@@ -269,6 +274,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 						OwnerCharID: obj.OwnerCharID,
 					}
 					reloadNotif.WriteUint16(uint16(temp.Opcode()))
+					// nolint:errcheck
 					temp.Build(reloadNotif, s.clientContext)
 				}
 				reloadNotif.WriteUint16(0x0010)
@@ -327,12 +333,12 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 					name = strings.ToLower(name)
 					for _, course := range mhfpacket.Courses() {
 						for _, alias := range course.Aliases {
-							if strings.ToLower(name) == strings.ToLower(alias) {
+							if strings.EqualFold(strings.ToLower(name), strings.ToLower(alias)) {
 								if slices.Contains(s.Server.erupeConfig.Courses, config.Course{Name: course.Aliases[0], Enabled: true}) {
 									if s.FindCourse(name).ID != 0 {
 										ei := slices.IndexFunc(s.courses, func(c mhfpacket.Course) bool {
 											for _, alias := range c.Aliases {
-												if strings.ToLower(name) == strings.ToLower(alias) {
+												if strings.EqualFold(strings.ToLower(name), strings.ToLower(alias)) {
 													return true
 												}
 											}
@@ -350,6 +356,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 									for _, course := range s.courses {
 										newInt += uint32(math.Pow(2, float64(course.ID)))
 									}
+									// nolint:errcheck
 									s.Server.db.Exec("UPDATE users u SET rights=$1 WHERE u.id=(SELECT c.user_id FROM characters c WHERE c.id=$2)", newInt, s.CharID)
 									updateRights(s)
 								} else {

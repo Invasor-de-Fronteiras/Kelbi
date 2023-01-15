@@ -55,6 +55,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		s.rawConn.Close()
 		s.logger.Warn("Save cancelled due to corruption.")
 		if s.Server.erupeConfig.DeleteOnSaveCorruption {
+			// nolint:errcheck
 			s.Server.db.Exec("UPDATE characters SET deleted=true WHERE id=$1", s.CharID)
 		}
 		return

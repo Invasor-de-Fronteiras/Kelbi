@@ -96,6 +96,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(gacha.Type)
 			count++
 		}
+		// nolint:errcheck
 		resp.Seek(0, 0)
 		resp.WriteUint16(count)
 		resp.WriteUint16(count)
@@ -218,6 +219,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint16(shopItem.RoadFatalis)
 			count++
 		}
+		// nolint:errcheck
 		resp.Seek(0, 0)
 		resp.WriteUint16(count)
 		resp.WriteUint16(count)
@@ -374,6 +376,7 @@ func handleMsgMhfExchangeFpoint2Item(s *Session, p mhfpacket.MHFPacket) {
 	var itemValue, quantity int
 	_ = s.Server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue)
 	cost := (int(pkt.Quantity) * quantity) * itemValue
+	// nolint:errcheck
 	s.Server.db.QueryRow("UPDATE characters SET frontier_points=frontier_points::int - $1 WHERE id=$2 RETURNING frontier_points", cost, s.CharID).Scan(&balance)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(balance)
@@ -384,8 +387,10 @@ func handleMsgMhfExchangeItem2Fpoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeItem2Fpoint)
 	var balance uint32
 	var itemValue, quantity int
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT quantity, fpoints FROM fpoint_items WHERE id=$1", pkt.TradeID).Scan(&quantity, &itemValue)
 	cost := (int(pkt.Quantity) / quantity) * itemValue
+	// nolint:errcheck
 	s.Server.db.QueryRow("UPDATE characters SET frontier_points=COALESCE(frontier_points::int + $1, $1) WHERE id=$2 RETURNING frontier_points", cost, s.CharID).Scan(&balance)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(balance)

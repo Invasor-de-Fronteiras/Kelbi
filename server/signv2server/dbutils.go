@@ -74,6 +74,7 @@ func (s *Server) deleteCharacter(ctx context.Context, userID int, charID int) er
 	if err != nil {
 		return err
 	}
+	// nolint:errcheck
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(

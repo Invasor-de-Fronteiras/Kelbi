@@ -264,6 +264,7 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	var souls, exists uint32
+	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT souls FROM guild_characters WHERE character_id=$1", s.CharID).Scan(&souls)
 	err = s.Server.db.QueryRow("SELECT prize_id FROM festa_prizes_accepted WHERE prize_id=0 AND character_id=$1", s.CharID).Scan(&exists)
 	bf := byteframe.NewByteFrame()
@@ -366,6 +367,7 @@ func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFesta)
+	// nolint:errcheck
 	s.Server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }

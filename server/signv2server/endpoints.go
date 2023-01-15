@@ -59,6 +59,7 @@ func (s *Server) Launcher(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(200)
 	w.Header().Add("Content-Type", "application/json")
+	// nolint:errcheck
 	json.NewEncoder(w).Encode(respData)
 }
 
@@ -71,6 +72,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Invalid data received"))
 		return
 	}
@@ -81,6 +83,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	err := s.db.QueryRow("SELECT id, password FROM users WHERE username = $1", reqData.Username).Scan(&userID, &password)
 	if err == sql.ErrNoRows {
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Username does not exist"))
 		return
 	} else if err != nil {
@@ -90,6 +93,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if bcrypt.CompareHashAndPassword([]byte(password), []byte(reqData.Password)) != nil {
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Your password is incorrect"))
 		return
 	}
@@ -112,6 +116,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(200)
 	w.Header().Add("Content-Type", "application/json")
+	// nolint:errcheck
 	json.NewEncoder(w).Encode(respData)
 }
 
@@ -124,6 +129,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Invalid data received"))
 		return
 	}
@@ -133,6 +139,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Constraint == "users_username_key" {
 			w.WriteHeader(400)
+			// nolint:errcheck
 			w.Write([]byte("User already exists"))
 			return
 		}
@@ -150,6 +157,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+	// nolint:errcheck
 	json.NewEncoder(w).Encode(respData)
 }
 
@@ -161,6 +169,7 @@ func (s *Server) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Invalid data received"))
 		return
 	}
@@ -179,6 +188,7 @@ func (s *Server) CreateCharacter(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+	// nolint:errcheck
 	json.NewEncoder(w).Encode(respData)
 }
 
@@ -191,6 +201,7 @@ func (s *Server) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
 		s.logger.Error("JSON decode error", zap.Error(err))
 		w.WriteHeader(400)
+		// nolint:errcheck
 		w.Write([]byte("Invalid data received"))
 		return
 	}
@@ -204,5 +215,6 @@ func (s *Server) DeleteCharacter(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+	// nolint:errcheck
 	json.NewEncoder(w).Encode(struct{}{})
 }

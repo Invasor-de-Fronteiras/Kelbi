@@ -16,8 +16,6 @@ type Semaphore struct {
 
 	Id uint32 `json:"id"`
 
-	id uint32
-
 	// Map of session -> charID.
 	// These are clients that are CURRENTLY in the stage
 	clients map[*Session]uint32

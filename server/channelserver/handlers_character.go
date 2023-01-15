@@ -106,6 +106,7 @@ func (save *CharacterSaveData) Save(s *Session) {
 		s.logger.Error("Failed to update savedata", zap.Error(err), zap.Uint32("charID", save.CharID))
 	}
 
+	// nolint:errcheck
 	s.Server.db.Exec(`UPDATE user_binary SET house_tier=$1, house_data=$2, bookshelf=$3, gallery=$4, tore=$5, garden=$6 WHERE id=$7
 	`, save.HouseTier, save.HouseData, save.BookshelfData, save.GalleryData, save.ToreData, save.GardenData, s.CharID)
 }
@@ -160,7 +161,6 @@ func (save *CharacterSaveData) updateStructWithSaveData() {
 		}
 		save.KQF = save.decompSave[pointerKQF : pointerKQF+8]
 	}
-	return
 }
 
 func handleMsgMhfSexChanger(s *Session, p mhfpacket.MHFPacket) {

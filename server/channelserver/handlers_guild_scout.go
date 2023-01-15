@@ -195,18 +195,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildScoutList)
 	guildInfo, err := GetGuildInfoByCharacterId(s, s.CharID)
 
-	if guildInfo == nil && s.PrevGuildID == 0 {
-		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-		return
-	} else {
-		guildInfo, err = GetGuildInfoByID(s, s.PrevGuildID)
-		if guildInfo == nil || err != nil {
-			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		}
-	}
-
-	if guildInfo == nil && s.PrevGuildID == 0 {
+	if (guildInfo == nil || err != nil) && s.PrevGuildID == 0 {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	} else {

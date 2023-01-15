@@ -321,7 +321,7 @@ func (s *Session) SendMessage(SenderName string, message string) {
 func (s *Session) FindCourse(name string) mhfpacket.Course {
 	for _, course := range s.courses {
 		for _, alias := range course.Aliases {
-			if strings.ToLower(name) == strings.ToLower(alias) {
+			if strings.EqualFold(strings.ToLower(name), strings.ToLower(alias)) {
 				return course
 			}
 		}

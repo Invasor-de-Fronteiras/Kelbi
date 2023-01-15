@@ -37,6 +37,7 @@ func (m *MsgMhfOperateJoint) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.GuildID = bf.ReadUint32()
 	m.Action = OperateJointAction(bf.ReadUint8())
 	m.UnkData = byteframe.NewByteFrameFromBytes(bf.DataFromCurrent())
+	// nolint:errcheck
 	bf.Seek(int64(len(bf.Data())-2), 0)
 	return nil
 }

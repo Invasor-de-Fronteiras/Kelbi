@@ -707,8 +707,10 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	case mhfpacket.OPERATE_GUILD_DONATE_RANK:
 		bf.WriteBytes(handleDonateRP(s, uint16(pkt.Data1.ReadUint32()), guild, false))
 	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_DENY:
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guilds SET recruiting=false WHERE id=$1", guild.ID)
 	case mhfpacket.OPERATE_GUILD_SET_APPLICATION_ALLOW:
+		// nolint:errcheck
 		s.Server.db.Exec("UPDATE guilds SET recruiting=true WHERE id=$1", guild.ID)
 	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
 		handleAvoidLeadershipUpdate(s, pkt, true)
@@ -730,6 +732,7 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		_ = pkt.Data1.ReadUint16()
 		guild.SubMotto = pkt.Data1.ReadUint8()
 		guild.MainMotto = pkt.Data1.ReadUint8()
+		// nolint:errcheck
 		guild.Save(s)
 	case mhfpacket.OPERATE_GUILD_RENAME_PUGI_1:
 		handleRenamePugi(s, pkt.Data2, guild, 1)
@@ -745,12 +748,14 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 		handleChangePugi(s, uint8(pkt.Data1.ReadUint32()), guild, 3)
 	case mhfpacket.OPERATE_GUILD_UNLOCK_OUTFIT:
 		// TODO: This doesn't implement blocking, if someone unlocked the same outfit at the same time
+		// nolint:errcheck
 		s.Server.db.Exec(`UPDATE guilds SET pugi_outfits=pugi_outfits+$1 WHERE id=$2`, int(math.Pow(float64(pkt.Data1.ReadUint32()), 2)), guild.ID)
 	case mhfpacket.OPERATE_GUILD_DONATE_EVENT:
 		bf.WriteBytes(handleDonateRP(s, uint16(pkt.Data1.ReadUint32()), guild, true))
 	case mhfpacket.OPERATE_GUILD_EVENT_EXCHANGE:
 		rp := uint16(pkt.Data1.ReadUint32())
 		var balance uint32
+		// nolint:errcheck
 		s.Server.db.QueryRow(`UPDATE guilds SET event_rp=event_rp-$1 WHERE id=$2 RETURNING event_rp`, rp, guild.ID).Scan(&balance)
 		bf.WriteUint32(balance)
 	default:
@@ -787,6 +792,7 @@ func handleChangePugi(s *Session, outfit uint8, guild *Guild, num int) {
 	case 3:
 		guild.PugiOutfit3 = outfit
 	}
+	// nolint:errcheck
 	guild.Save(s)
 }
 
@@ -803,7 +809,9 @@ func handleDonateRP(s *Session, amount uint16, guild *Guild, isEvent bool) []byt
 	if isEvent {
 		updateSQL = "UPDATE guilds SET event_rp = event_rp + $1 WHERE id = $2"
 	}
+	// nolint:errcheck
 	s.Server.db.Exec(updateSQL, amount, guild.ID)
+	// nolint:errcheck
 	bf.Seek(0, 0)
 	bf.WriteUint32(uint32(saveData.RP))
 	return bf.Data()

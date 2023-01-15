@@ -185,11 +185,9 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
-	if _, exists := s.Stage.ReservedClientSlots[s.CharID]; exists {
-		delete(s.Stage.ReservedClientSlots, s.CharID)
-	}
+	delete(s.Stage.ReservedClientSlots, s.CharID)
 
-	if _, exists := s.Server.Stages[backStage].ReservedClientSlots[s.CharID]; exists {
+	if _, exists := s.Server.Stages[backStage]; exists {
 		delete(s.Server.Stages[backStage].ReservedClientSlots, s.CharID)
 	}
 

@@ -64,6 +64,7 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	rows, _ := s.Server.db.Queryx(`SELECT start_time, featured FROM feature_weapon WHERE start_time=$1 OR start_time=$2`, Time_Current_Midnight().Add(-24*time.Hour), Time_Current_Midnight())
 	for rows.Next() {
 		var feature activeFeature
+		// nolint:errcheck
 		rows.StructScan(&feature)
 		features = append(features, feature)
 	}
@@ -73,11 +74,13 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 			feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons)
 			feature.StartTime = Time_Current_Midnight().Add(-24 * time.Hour)
 			features = append(features, feature)
+			// nolint:errcheck
 			s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 		}
 		feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons)
 		feature.StartTime = Time_Current_Midnight()
 		features = append(features, feature)
+		// nolint:errcheck
 		s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 	}
 

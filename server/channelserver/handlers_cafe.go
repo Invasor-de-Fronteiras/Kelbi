@@ -77,11 +77,14 @@ func handleMsgMhfGetCafeDuration(s *Session, p mhfpacket.MHFPacket) {
 	err := s.Server.db.QueryRow(`SELECT cafe_reset FROM characters WHERE id=$1`, s.CharID).Scan(&cafeReset)
 	if err != nil {
 		cafeReset = TimeWeekNext()
+		// nolint:errcheck
 		s.Server.db.Exec(`UPDATE characters SET cafe_reset=$1 WHERE id=$2`, cafeReset, s.CharID)
 	}
 	if Time_Current_Adjusted().After(cafeReset) {
 		cafeReset = TimeWeekNext()
+		// nolint:errcheck
 		s.Server.db.Exec(`UPDATE characters SET cafe_time=0, cafe_reset=$1 WHERE id=$2`, cafeReset, s.CharID)
+		// nolint:errcheck
 		s.Server.db.Exec(`DELETE FROM cafe_accepted WHERE character_id=$1`, s.CharID)
 	}
 
