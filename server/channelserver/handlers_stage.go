@@ -20,6 +20,7 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleFail(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
 		stage := NewStage(pkt.StageID)
+		stage.host = s
 		stage.MaxPlayers = uint16(pkt.PlayerCount)
 		s.Server.Stages[stage.Id] = stage
 		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
@@ -43,6 +44,7 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		stage = s.Server.Stages[stageID]
 		s.Server.Unlock()
 		stage.Lock()
+		stage.host = s
 		stage.Sessions[s.CharID] = s
 		stage.Unlock()
 	}
@@ -160,7 +162,7 @@ func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 	if s.StageID == "" {
 		s.stageMoveStack.Set(pkt.StageID)
 	} else {
-		// s.Stage.ReservedClientSlots[s.CharID] = false
+		s.Stage.ReservedClientSlots[s.CharID] = false
 		s.stageMoveStack.Push(s.StageID)
 		s.stageMoveStack.Lock()
 	}
@@ -185,7 +187,7 @@ func handleMsgSysBackStage(s *Session, p mhfpacket.MHFPacket) {
 
 	delete(s.Stage.ReservedClientSlots, s.CharID)
 
-	if s.Server.Stages[backStage] != nil {
+	if _, exists := s.Server.Stages[backStage]; exists {
 		delete(s.Server.Stages[backStage].ReservedClientSlots, s.CharID)
 	}
 

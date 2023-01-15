@@ -1,8 +1,6 @@
 package channelserver
 
 import (
-	"math"
-	"math/rand"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -53,58 +51,107 @@ func handleMsgMhfEnumerateEvent(s *Session, p mhfpacket.MHFPacket) {
 }
 
 type activeFeature struct {
-	StartTime      time.Time
-	ActiveFeatures uint32
-	Unk1           uint16
+	StartTime      time.Time `db:"start_time"`
+	ActiveFeatures uint32    `db:"featured"`
 }
 
 func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetWeeklySchedule)
-	persistentEventSchedule := make([]activeFeature, 8) // generate day after weekly restart
-	for x := -1; x < 7; x++ {
-		feat := generateActiveWeapons(14) // number of active weapons
-		// TODO: only generate this once per restart (server should be restarted weekly)
-		// then load data from db instead of regenerating
-		persistentEventSchedule[x+1] = activeFeature{
-			StartTime:      Time_Current_Midnight().Add(time.Duration(24*x) * time.Hour),
-			ActiveFeatures: uint32(feat),
-			Unk1:           0,
+
+	var features []activeFeature
+	rows, _ := s.Server.db.Queryx(`SELECT start_time, featured FROM feature_weapon WHERE start_time=$1 OR start_time=$2`, Time_Current_Midnight().Add(-24*time.Hour), Time_Current_Midnight())
+	for rows.Next() {
+		var feature activeFeature
+		// nolint:errcheck
+		rows.StructScan(&feature)
+		features = append(features, feature)
+	}
+
+	if len(features) < 2 {
+		if len(features) == 0 {
+			feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, Time_Current_Midnight().Add(-24*time.Hour))
+			// feature.StartTime =
+			features = append(features, feature)
+			// nolint:errcheck
+			s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 		}
+		feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, Time_Current_Midnight())
+		// feature.StartTime =
+		features = append(features, feature)
+		// nolint:errcheck
+		s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 	}
 
-	resp := byteframe.NewByteFrame()
-	resp.WriteUint8(uint8(len(persistentEventSchedule)))                           // Entry count, client only parses the first 7 or 8.
-	resp.WriteUint32(uint32(Time_Current_Adjusted().Add(-5 * time.Minute).Unix())) // 5 minutes ago server time
-
-	for _, es := range persistentEventSchedule {
-		resp.WriteUint32(uint32(es.StartTime.Unix()))
-		resp.WriteUint32(es.ActiveFeatures)
-		resp.WriteUint16(es.Unk1)
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint8(2)
+	bf.WriteUint32(uint32(Time_Current_Adjusted().Add(-5 * time.Minute).Unix()))
+	for _, feature := range features {
+		bf.WriteUint32(uint32(feature.StartTime.Unix()))
+		bf.WriteUint32(feature.ActiveFeatures)
+		bf.WriteUint16(0)
 	}
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func generateActiveWeapons(count int) int {
-	nums := make([]int, 0)
-	var result int
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+type Weapon struct {
+	name string
+	id   uint32
+}
+
+var weaponIds = []Weapon{
+	{name: "sns", id: 16},
+	{name: "ds", id: 64},
+	{name: "gs", id: 1},
+	{name: "ls", id: 128},
+	{name: "hm", id: 4},
+	{name: "hh", id: 256},
+	{name: "lc", id: 8},
+	{name: "gl", id: 512},
+	{name: "sw", id: 4096},
+	{name: "tf", id: 2048},
+	{name: "ms", id: 8192},
+	{name: "bw", id: 1024},
+	{name: "lbg", id: 32},
+	{name: "hbg", id: 2},
+}
+
+func generateFeatureWeapons(count int, startTime time.Time) activeFeature {
+	if count > 14 {
+		count = 14
+	}
+	nums := make([]uint32, 0)
+
+	dayOfYear := startTime.YearDay()
+	weaponIndex := dayOfYear % 14
+
+	var result uint32 = 0
+
 	for len(nums) < count {
-		num := r.Intn(14)
+		if weaponIndex >= 14 {
+			weaponIndex = 0
+		}
+
+		weapon := weaponIds[weaponIndex]
 		exist := false
 		for _, v := range nums {
-			if v == num {
+			if v == weapon.id {
 				exist = true
 				break
 			}
 		}
+
 		if !exist {
-			nums = append(nums, num)
+			nums = append(nums, weapon.id)
 		}
+
+		weaponIndex++
 	}
+
 	for _, num := range nums {
-		result += int(math.Pow(2, float64(num)))
+		result += num
 	}
-	return result
+
+	return activeFeature{ActiveFeatures: result, StartTime: startTime}
 }
 
 type loginBoost struct {

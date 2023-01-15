@@ -32,6 +32,7 @@ type MsgMhfEnumerateGuild struct {
 	AckHandle      uint32
 	Type           EnumerateGuildType
 	Page           uint8
+	Sorting        bool
 	RawDataPayload []byte
 }
 
@@ -45,8 +46,10 @@ func (m *MsgMhfEnumerateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	m.AckHandle = bf.ReadUint32()
 	m.Type = EnumerateGuildType(bf.ReadUint8())
 	m.Page = bf.ReadUint8()
+	m.Sorting = bf.ReadBool()
+	_ = bf.ReadUint8()
 	m.RawDataPayload = bf.DataFromCurrent()
-	// nolint:errcheck // Error return value of `.` is not checked
+	// nolint:errcheck
 	bf.Seek(-2, io.SeekEnd)
 	return nil
 }

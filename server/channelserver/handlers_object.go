@@ -10,6 +10,7 @@ import (
 func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateObject)
 
+	s.Stage.Lock()
 	// Prevent reusing an object index
 	var nextID uint32
 	for {
@@ -26,7 +27,6 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	s.Stage.Lock()
 	newObj := &Object{
 		Id:          nextID,
 		OwnerCharID: s.CharID,

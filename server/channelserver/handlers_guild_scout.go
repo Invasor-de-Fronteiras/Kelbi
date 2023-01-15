@@ -63,10 +63,9 @@ func handleMsgMhfPostGuildScout(s *Session, p mhfpacket.MHFPacket) {
 	mail := &Mail{
 		SenderID:    s.CharID,
 		RecipientID: pkt.CharID,
-		Subject:     "Invitation!",
+		Subject:     s.Server.dict["guildInviteName"],
 		Body: fmt.Sprintf(
-			"%s has invited you to join 「%s」\nDo you want to accept?",
-			getCharacterName(s, s.CharID),
+			s.Server.dict["guildInvite"],
 			guildInfo.Name,
 		),
 		IsGuildInvite: true,
@@ -150,30 +149,30 @@ func handleMsgMhfAnswerGuildScout(s *Session, p mhfpacket.MHFPacket) {
 		err = guild.AcceptApplication(s, s.CharID)
 		mail = append(mail, Mail{
 			RecipientID:     s.CharID,
-			Subject:         "Success!",
-			Body:            fmt.Sprintf("You successfully joined 「%s」.", guild.Name),
+			Subject:         s.Server.dict["guildInviteSuccessName"],
+			Body:            fmt.Sprintf(s.Server.dict["guildInviteSuccess"], guild.Name),
 			IsSystemMessage: true,
 		})
 		mail = append(mail, Mail{
 			SenderID:        s.CharID,
 			RecipientID:     pkt.LeaderID,
-			Subject:         "Accepted",
-			Body:            fmt.Sprintf("%s accepted your invitation to join 「%s」.", s.Name, guild.Name),
+			Subject:         s.Server.dict["guildInviteAcceptedName"],
+			Body:            fmt.Sprintf(s.Server.dict["guildInviteAccepted"], guild.Name),
 			IsSystemMessage: true,
 		})
 	} else {
 		err = guild.RejectApplication(s, s.CharID)
 		mail = append(mail, Mail{
 			RecipientID:     s.CharID,
-			Subject:         "Declined",
-			Body:            fmt.Sprintf("You declined the invitation to join 「%s」.", guild.Name),
+			Subject:         s.Server.dict["guildInviteRejectName"],
+			Body:            fmt.Sprintf(s.Server.dict["guildInviteReject"], guild.Name),
 			IsSystemMessage: true,
 		})
 		mail = append(mail, Mail{
 			SenderID:        s.CharID,
 			RecipientID:     pkt.LeaderID,
-			Subject:         "Declined",
-			Body:            fmt.Sprintf("%s declined your invitation to join 「%s」.", s.Name, guild.Name),
+			Subject:         s.Server.dict["guildInviteDeclined"],
+			Body:            fmt.Sprintf(s.Server.dict["guildInviteDeclined"], guild.Name),
 			IsSystemMessage: true,
 		})
 	}
@@ -196,12 +195,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetGuildScoutList)
 	guildInfo, err := GetGuildInfoByCharacterId(s, s.CharID)
 
-	if err != nil {
-		doAckSimpleFail(s, pkt.AckHandle, nil)
-		return
-	}
-
-	if guildInfo == nil && s.PrevGuildID == 0 {
+	if (guildInfo == nil || err != nil) && s.PrevGuildID == 0 {
 		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 		return
 	} else {

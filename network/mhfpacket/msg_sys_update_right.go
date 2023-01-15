@@ -2,10 +2,13 @@ package mhfpacket
 
 import (
 	"errors"
-
 	"erupe-ce/common/byteframe"
+	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network"
 	"erupe-ce/network/clientctx"
+	"math"
+
+	"golang.org/x/exp/slices"
 )
 
 /*
@@ -32,6 +35,12 @@ type ClientRight struct {
 	ID        uint16
 	Unk0      uint16
 	Timestamp uint32
+}
+
+type Course struct {
+	Aliases []string
+	ID      uint16
+	Value   uint32
 }
 
 // MsgSysUpdateRight represents the MSG_SYS_UPDATE_RIGHT
@@ -63,9 +72,49 @@ func (m *MsgSysUpdateRight) Build(bf *byteframe.ByteFrame, ctx *clientctx.Client
 		bf.WriteUint16(v.Unk0)
 		bf.WriteUint32(v.Timestamp)
 	}
-
-	bf.WriteUint16(m.UnkSize) // String of upto 0x800 bytes, update client login token / password in the game's launcherstate struct.
-	//bf.WriteBytes(m.UpdatedClientLoginToken)
-
+	ps.Uint16(bf, "", false) // update client login token / password in the game's launcherstate struct
 	return nil
+}
+
+func Courses() []Course {
+	var courses = []Course{
+		{Aliases: []string{"Trial", "TL"}, ID: 1},
+		{Aliases: []string{"HunterLife", "HL"}, ID: 2},
+		{Aliases: []string{"Extra", "ExtraA", "EX"}, ID: 3},
+		{Aliases: []string{"ExtraB"}, ID: 4},
+		{Aliases: []string{"Mobile"}, ID: 5},
+		{Aliases: []string{"Premium"}, ID: 6},
+		{Aliases: []string{"Pallone", "ExtraC"}, ID: 7},
+		{Aliases: []string{"Assist", "Legend", "Rasta"}, ID: 8}, // Legend
+		{Aliases: []string{"N"}, ID: 9},
+		{Aliases: []string{"Hiden", "Secret"}, ID: 10},                                       // Secret
+		{Aliases: []string{"HunterSupport", "HunterAid", "Support", "Aid", "Royal"}, ID: 11}, // Royal
+		{Aliases: []string{"NBoost", "NetCafeBoost", "Boost"}, ID: 12},
+		// 13-25 do nothing
+		{Aliases: []string{"NetCafe", "Cafe", "InternetCafe"}, ID: 26},
+		{Aliases: []string{"HLRenewing", "HLR", "HLRenewal", "HLRenew"}, ID: 27},
+		{Aliases: []string{"EXRenewing", "EXR", "EXRenewal", "EXRenew"}, ID: 28},
+		{Aliases: []string{"Free"}, ID: 29},
+		// 30 = real netcafe bit
+	}
+	for i := range courses {
+		courses[i].Value = uint32(math.Pow(2, float64(courses[i].ID)))
+	}
+	return courses
+}
+
+// GetCourseStruct returns a slice of Course(s) from a rights integer
+func GetCourseStruct(rights uint32) []Course {
+	var resp []Course
+	s := Courses()
+	slices.SortStableFunc(s, func(i, j Course) bool {
+		return i.ID > j.ID
+	})
+	for _, course := range s {
+		if rights-course.Value < 0x80000000 {
+			resp = append(resp, course)
+			rights -= course.Value
+		}
+	}
+	return resp
 }

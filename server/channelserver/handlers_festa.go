@@ -6,6 +6,7 @@ import (
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/network/mhfpacket"
 	"math/rand"
+	"sort"
 	"time"
 )
 
@@ -262,12 +263,20 @@ func handleMsgMhfStateFestaU(s *Session, p mhfpacket.MHFPacket) {
 		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 		return
 	}
-	var souls uint32
+	var souls, exists uint32
 	// nolint:errcheck
 	s.Server.db.QueryRow("SELECT souls FROM guild_characters WHERE character_id=$1", s.CharID).Scan(&souls)
+	err = s.Server.db.QueryRow("SELECT prize_id FROM festa_prizes_accepted WHERE prize_id=0 AND character_id=$1", s.CharID).Scan(&exists)
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint32(souls)
-	bf.WriteUint32(0) // unk
+	if err != nil {
+		bf.WriteBool(true)
+		bf.WriteBool(false)
+	} else {
+		bf.WriteBool(false)
+		bf.WriteBool(true)
+	}
+	bf.WriteUint16(0) // Unk
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
@@ -290,10 +299,10 @@ func handleMsgMhfStateFestaG(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 	resp.WriteUint32(guild.Souls)
-	resp.WriteUint32(0) // unk
-	resp.WriteUint32(0) // unk, rank?
-	resp.WriteUint32(0) // unk
-	resp.WriteUint32(0) // unk
+	resp.WriteUint32(1) // unk
+	resp.WriteUint32(1) // unk
+	resp.WriteUint32(1) // unk, rank?
+	resp.WriteUint32(1) // unk
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
@@ -312,6 +321,9 @@ func handleMsgMhfEnumerateFestaMember(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(len(members)))
 	bf.WriteUint16(0) // Unk
+	sort.Slice(members, func(i, j int) bool {
+		return members[i].Souls > members[j].Souls
+	})
 	for _, member := range members {
 		bf.WriteUint32(member.CharID)
 		bf.WriteUint32(member.Souls)
@@ -355,6 +367,8 @@ func handleMsgMhfChargeFesta(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfAcquireFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireFesta)
+	// nolint:errcheck
+	s.Server.db.Exec("INSERT INTO public.festa_prizes_accepted VALUES (0, $1)", s.CharID)
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
@@ -383,7 +397,7 @@ type Prize struct {
 
 func handleMsgMhfEnumerateFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateFestaPersonalPrize)
-	rows, _ := s.Server.db.Queryx("SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = 4) AS claimed FROM festa_prizes fp WHERE type='personal'")
+	rows, _ := s.Server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='personal'`, s.CharID)
 	var count uint32
 	prizeData := byteframe.NewByteFrame()
 	for rows.Next() {
@@ -409,7 +423,7 @@ func handleMsgMhfEnumerateFestaPersonalPrize(s *Session, p mhfpacket.MHFPacket) 
 
 func handleMsgMhfEnumerateFestaIntermediatePrize(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateFestaIntermediatePrize)
-	rows, _ := s.Server.db.Queryx("SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = 4) AS claimed FROM festa_prizes fp WHERE type='guild'")
+	rows, _ := s.Server.db.Queryx(`SELECT id, tier, souls_req, item_id, num_item, (SELECT count(*) FROM festa_prizes_accepted fpa WHERE fp.id = fpa.prize_id AND fpa.character_id = $1) AS claimed FROM festa_prizes fp WHERE type='guild'`, s.CharID)
 	var count uint32
 	prizeData := byteframe.NewByteFrame()
 	for rows.Next() {
