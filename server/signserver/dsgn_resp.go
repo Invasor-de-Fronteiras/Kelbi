@@ -123,7 +123,7 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	bf.WriteUint16(0x0001)
 	bf.WriteUint16(0x4E20)
 	ps.Uint16(bf, "", false) // unk ipv4
-	if returnExpiry.Before(time.Now()) {
+	if s.server.erupeConfig.DevModeOptions.DisableReturnBoost || returnExpiry.Before(time.Now()) {
 		// Hack to make Return work while having a non-adjusted expiry
 		bf.WriteUint32(0)
 	} else {

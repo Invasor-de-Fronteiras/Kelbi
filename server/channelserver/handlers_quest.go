@@ -54,7 +54,7 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 			// Get quest file.
 			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
-			if err != nil {
+			if err != nil || len(data) == 0 {
 				filepath := filepath.Join(s.Server.erupeConfig.BinPath, fmt.Sprintf("quests/%s.bin", pkt.Filename))
 				quest, err_bin := ioutil.ReadFile(filepath)
 
