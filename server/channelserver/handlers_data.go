@@ -49,7 +49,7 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	}
 	characterSaveData.updateStructWithSaveData()
 
-	if characterSaveData.IsNewCharacter == true {
+	if characterSaveData.IsNewCharacter {
 		s.Name = characterSaveData.Name
 	}
 
