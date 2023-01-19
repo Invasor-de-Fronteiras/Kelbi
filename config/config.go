@@ -32,6 +32,7 @@ type Config struct {
 	PatchServerFile        string // File patch server override
 	ScreenshotAPIURL       string // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool   // Attempts to save corrupted data will flag the save for deletion
+	EnableDatabaseQuests   bool   // Enable quest and questlists via database
 
 	Commands []Command
 	Courses  []Course

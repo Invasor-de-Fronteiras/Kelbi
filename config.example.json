@@ -10,6 +10,7 @@
     "PatchServerFile": "",
     "ScreenshotAPIURL": "",
     "DeleteOnSaveCorruption": false,
+    "EnableDatabaseQuests": false,
     "DevMode": true,
     "DevModeOptions": {
       "AutoCreateAccount": true,
