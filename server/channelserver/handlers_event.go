@@ -1,8 +1,6 @@
 package channelserver
 
 import (
-	"math"
-	"math/rand"
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -71,14 +69,14 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 
 	if len(features) < 2 {
 		if len(features) == 0 {
-			feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons)
-			feature.StartTime = Time_Current_Midnight().Add(-24 * time.Hour)
+			feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, Time_Current_Midnight().Add(-24*time.Hour))
+			// feature.StartTime =
 			features = append(features, feature)
 			// nolint:errcheck
 			s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 		}
-		feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons)
-		feature.StartTime = Time_Current_Midnight()
+		feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, Time_Current_Midnight())
+		// feature.StartTime =
 		features = append(features, feature)
 		// nolint:errcheck
 		s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
@@ -95,31 +93,63 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
-func generateFeatureWeapons(count int) activeFeature {
+type Weapon struct {
+	name string
+	id   uint32
+}
+
+var weaponIds = []Weapon{
+	{name: "sns", id: 16},
+	{name: "ds", id: 64},
+	{name: "gs", id: 1},
+	{name: "ls", id: 128},
+	{name: "hm", id: 4},
+	{name: "hh", id: 256},
+	{name: "lc", id: 8},
+	{name: "gl", id: 512},
+	{name: "sw", id: 4096},
+	{name: "tf", id: 2048},
+	{name: "ms", id: 8192},
+	{name: "bw", id: 1024},
+	{name: "lbg", id: 32},
+	{name: "hbg", id: 2},
+}
+
+func generateFeatureWeapons(count int, startTime time.Time) activeFeature {
 	if count > 14 {
 		count = 14
 	}
-	nums := make([]int, 0)
-	var result int
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	nums := make([]uint32, 0)
+
+	dayOfYear := startTime.YearDay()
+	weaponIndex := dayOfYear % 14
+
+	var result uint32 = 0
+
 	for len(nums) < count {
-		num := r.Intn(14)
+		if weaponIndex >= 14 {
+			weaponIndex = 0
+		}
+
+		weapon := weaponIds[weaponIndex]
 		exist := false
 		for _, v := range nums {
-			if v == num {
+			if v == weapon.id {
 				exist = true
 				break
 			}
 		}
+
 		if !exist {
-			nums = append(nums, num)
+			nums = append(nums, weapon.id)
 		}
 	}
+
 	for _, num := range nums {
-		result += int(math.Pow(2, float64(num)))
+		result += num
 	}
 
-	return activeFeature{ActiveFeatures: uint32(result)}
+	return activeFeature{ActiveFeatures: result, StartTime: startTime}
 }
 
 type loginBoost struct {
