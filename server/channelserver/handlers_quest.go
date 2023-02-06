@@ -51,6 +51,10 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 				)
 			}
 
+			if s.Stage != nil {
+				s.Stage.QuestFilename = pkt.Filename
+			}
+
 			// Get quest file.
 			data, err := s.Server.questLoader.QuestBinById(pkt.Filename)
 
@@ -92,7 +96,7 @@ func handleMsgMhfEnumerateQuest(s *Session, p mhfpacket.MHFPacket) {
 	// local files are easier for now, probably best would be to generate dynamically
 	pkt := p.(*mhfpacket.MsgMhfEnumerateQuest)
 
-	data, err := s.Server.questLoader.Quests(pkt.Take, pkt.Skip)
+	data, err := s.Server.questLoader.Quests(pkt.Take, pkt.Skip, s.Dev)
 
 	if err != nil {
 		fmt.Printf("questlists/list_%d.bin\n", pkt.Skip)

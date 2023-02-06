@@ -218,7 +218,7 @@ func questlist(s *Server) string {
 		if len(stage.Sessions) > 0 {
 			hasDeparted = " - departed"
 		}
-		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s - %s\n", stage.Id, len(stage.ReservedClientSlots), stage.MaxPlayers, hasDeparted, stage.CreatedAt)
+		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s %s - %s\n", stage.Id, len(stage.ReservedClientSlots), stage.MaxPlayers, stage.QuestFilename, hasDeparted, stage.CreatedAt)
 
 		for charid := range stage.ReservedClientSlots {
 			char, err := s.getCharacterForUser(int(charid))

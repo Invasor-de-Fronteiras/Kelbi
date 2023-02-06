@@ -25,7 +25,7 @@ func (ql *QuestLoaderErupeV9) QuestBinById(id string) (quest []byte, err error) 
 	return
 }
 
-func (ql *QuestLoaderErupeV9) Quests(_take uint16, skip uint16) (quests []byte, err error) {
+func (ql *QuestLoaderErupeV9) Quests(_take uint16, skip uint16, _dev bool) (quests []byte, err error) {
 	filename := fmt.Sprintf("questlists/list_%d.bin", skip)
 	filepath := filepath.Join(ql.erupeConfig.BinPath, filename)
 	quests, err = os.ReadFile(filepath)

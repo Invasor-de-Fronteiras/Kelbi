@@ -22,5 +22,5 @@ type Quest struct {
 
 type QuestLoader interface {
 	QuestBinById(id string) ([]byte, error)
-	Quests(take uint16, skip uint16) ([]byte, error)
+	Quests(take uint16, skip uint16, dev bool) ([]byte, error)
 }

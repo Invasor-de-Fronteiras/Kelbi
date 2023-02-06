@@ -10,6 +10,11 @@ import (
 func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateObject)
 
+	if s.Stage == nil {
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
+	}
+
 	s.Stage.Lock()
 	// Prevent reusing an object index
 	var nextID uint32

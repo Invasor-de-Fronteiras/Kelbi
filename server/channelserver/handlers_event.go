@@ -110,9 +110,9 @@ var weaponIds = []Weapon{
 	{name: "sw", id: 4096},
 	{name: "tf", id: 2048},
 	{name: "ms", id: 8192},
-	{name: "bw", id: 1024},
 	{name: "lbg", id: 32},
 	{name: "hbg", id: 2},
+	{name: "bw", id: 1024},
 }
 
 func generateFeatureWeapons(count int, startTime time.Time) activeFeature {
