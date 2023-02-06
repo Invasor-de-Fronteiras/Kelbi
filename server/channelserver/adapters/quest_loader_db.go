@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"erupe-ce/common/byteframe"
+	"fmt"
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
@@ -45,21 +46,25 @@ func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) 
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestCount() (count uint16, err error) {
-	err = ql.db.QueryRow("SELECT COUNT(*) FROM quests WHERE enable = true").Scan(&count)
+func (ql *QuestLoaderInDb) QuestCount(dev bool) (count uint16, err error) {
+	onlyDevFilter := ""
+	if !dev {
+		onlyDevFilter = " AND only_dev=false "
+	}
+	err = ql.db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM questlist WHERE enable = true %s", onlyDevFilter)).Scan(&count)
 	return
 }
 
-func (ql *QuestLoaderInDb) Quests(_take uint16, skip uint16) (questList []byte, err error) {
+func (ql *QuestLoaderInDb) Quests(_take uint16, skip uint16, dev bool) (questList []byte, err error) {
 	bf := byteframe.NewByteFrame()
 
-	buffer, returnedCount, err := ql.QuestListBuffer(100, skip)
+	buffer, returnedCount, err := ql.QuestListBuffer(100, skip, dev)
 
 	if err != nil {
 		return nil, err
 	}
 
-	totalCount, err := ql.QuestCount()
+	totalCount, err := ql.QuestCount(dev)
 
 	if totalCount == 0 {
 		return make([]byte, 18), nil
@@ -81,17 +86,22 @@ func (ql *QuestLoaderInDb) Quests(_take uint16, skip uint16) (questList []byte, 
 }
 
 type QuestListBin struct {
-	QuestList []byte `db:"quest_list_bin"`
+	QuestList []byte `db:"questlist_bin"`
 }
 
-func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16) (quests []QuestListBin, err error) {
+func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16, dev bool) (quests []QuestListBin, err error) {
 	quests = []QuestListBin{}
-	query := "SELECT quest_list_bin FROM quests WHERE enable = true LIMIT $1 OFFSET $2"
+	onlyDevFilter := ""
+	if !dev {
+		onlyDevFilter = " AND only_dev=false "
+	}
+
+	query := fmt.Sprintf("SELECT questlist_bin FROM questlist WHERE enable = true %s ORDER BY position LIMIT $1 OFFSET $2", onlyDevFilter)
 	err = ql.db.Select(&quests, query, take, skip)
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestListBuffer(take uint16, skip uint16) (buffer *byteframe.ByteFrame, count uint16, err error) {
+func (ql *QuestLoaderInDb) QuestListBuffer(take uint16, skip uint16, dev bool) (buffer *byteframe.ByteFrame, count uint16, err error) {
 	buffer = byteframe.NewByteFrame()
 	count = 0
 
@@ -100,7 +110,7 @@ func (ql *QuestLoaderInDb) QuestListBuffer(take uint16, skip uint16) (buffer *by
 
 	for bufferSize <= maxBufferSize {
 
-		quests, err := ql.QuestListBin(take, skip+count)
+		quests, err := ql.QuestListBin(take, skip+count, dev)
 
 		if err != nil {
 			break

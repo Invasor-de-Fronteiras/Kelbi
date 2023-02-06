@@ -168,6 +168,12 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		panic(err)
 	}
 
+	var dev bool
+	err = s.Server.db.QueryRow("SELECT dev FROM users WHERE users.id=(SELECT c.user_id FROM characters c WHERE c.id=$1)", s.CharID).Scan(&dev)
+	if err == nil {
+		s.Dev = dev
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 
 	updateRights(s)

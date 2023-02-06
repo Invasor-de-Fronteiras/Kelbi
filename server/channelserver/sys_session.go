@@ -44,6 +44,7 @@ type Session struct {
 	StagePass        string   `json:"stagePass"`   // Temporary storage
 	PrevGuildID      uint32   `json:"prevGuildID"` // Stores the last GuildID used in InfoGuild
 	CharID           uint32   `json:"charID"`
+	Dev              bool     `json:"dev"`
 	LogKey           []byte   `json:"logKey"`
 	SessionStart     int64    `json:"sessionStart"`
 	Rights           uint32   `json:"rights"`
@@ -86,6 +87,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		Server:           server,
 		rawConn:          conn,
 		hasLoggerName:    false,
+		Dev:              false,
 		cryptConn:        network.NewCryptConn(conn),
 		sendPackets:      make(chan packet, 20),
 		clientContext:    &clientctx.ClientContext{}, // Unused
