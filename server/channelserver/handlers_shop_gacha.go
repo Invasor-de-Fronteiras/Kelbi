@@ -69,7 +69,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.ShopType {
 	case 1: // Running gachas
 		var count uint16
-		shopEntries, err := s.Server.db.Queryx("SELECT id, min_gr, min_hr, name, link1, link2, link3, icon, type, hide FROM gacha_shop")
+		shopEntries, err := s.Server.db.Queryx("SELECT id, min_gr, min_hr, name, link1, link2, link3, icon, type, hide FROM gacha_shop ORDER BY id")
 		if err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
@@ -102,7 +102,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 		resp.WriteUint16(count)
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 	case 2: // Actual gacha
-		shopEntries, err := s.Server.db.Query("SELECT entryType, itemhash, currType, currNumber, currQuant, percentage, rarityIcon, rollsCount, itemCount, dailyLimit, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1", pkt.ShopID)
+		shopEntries, err := s.Server.db.Query("SELECT entryType, itemhash, currType, currNumber, currQuant, percentage, rarityIcon, rollsCount, itemCount, dailyLimit, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 ORDER BY itemhash", pkt.ShopID)
 		if err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
@@ -311,7 +311,7 @@ func handleMsgMhfPlayNormalGacha(s *Session, p mhfpacket.MHFPacket) {
 		data = []byte{0x00}
 	}
 	// get gacha items and iterate through them for gacha roll
-	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
+	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100 ORDER BY itemhash", pkt.GachaHash)
 	if err != nil {
 		panic(err)
 	}
@@ -485,7 +485,7 @@ func handleMsgMhfPlayStepupGacha(s *Session, p mhfpacket.MHFPacket) {
 		stepResults++
 	}
 	// get gacha items and iterate through them for gacha roll
-	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100", pkt.GachaHash)
+	shopEntries, err := s.Server.db.Query("SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity FROM gacha_shop_items WHERE shophash=$1 AND entryType=100 ORDER BY itemhash", pkt.GachaHash)
 	if err != nil {
 		panic(err)
 	}
@@ -667,6 +667,7 @@ func handleMsgMhfPlayBoxGacha(s *Session, p mhfpacket.MHFPacket) {
 	shopEntries, err := s.Server.db.Query(`SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity
 		FROM gacha_shop_items
 		WHERE shophash=$1 AND entryType=100
+		ORDER BY itemhash
 		EXCEPT ALL SELECT itemhash, percentage, rarityIcon, itemCount, itemType, itemId, quantity
 		FROM gacha_shop_items gsi JOIN lucky_box_state lbs ON gsi.itemhash = ANY(lbs.used_itemhash)
 		WHERE lbs.char_id=$2`, pkt.GachaHash, s.CharID)
