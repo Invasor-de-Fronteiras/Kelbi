@@ -29,3 +29,35 @@
 .text-center {
   text-align: center;
 }
+
+.w-full {
+  width: 100%;
+}
+
+.bg-gray-200 {
+  background-color: rgb(229 231 235);
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.h-2 {
+  height: 10px;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.bg-orange-500 {
+  background-color: rgb(249 115 22);
+}
+
+.bg-green-600 {
+  background-color: rgb(22 163 74);
+}
+
+.mt-6 {
+  margin-top: 24px;
+}
