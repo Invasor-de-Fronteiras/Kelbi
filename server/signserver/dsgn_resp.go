@@ -5,6 +5,7 @@ import (
 	ps "erupe-ce/common/pascalstring"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/common/token"
+	"erupe-ce/config"
 	"erupe-ce/server/channelserver"
 	"fmt"
 	"math/rand"
@@ -19,7 +20,15 @@ func makeSignInFailureResp(respID RespID) []byte {
 	return bf.Data()
 }
 
-func (s *Session) makeSignInResp(uid int) []byte {
+func (s *Session) getPatchServerByLanguage(language string) config.PatchServer {
+	if language == "JP" {
+		return s.server.erupeConfig.PatchServers.Jp
+	}
+
+	return s.server.erupeConfig.PatchServers.En
+}
+
+func (s *Session) makeSignInResp(uid int, language string) []byte {
 	returnExpiry := s.server.getReturnExpiry(uid)
 
 	// Get the characters from the DB.
@@ -36,7 +45,8 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	bf := byteframe.NewByteFrame()
 
 	bf.WriteUint8(1) // resp_code
-	if s.server.erupeConfig.DevMode && s.server.erupeConfig.PatchServerManifest != "" && s.server.erupeConfig.PatchServerFile != "" {
+	patchServer := s.getPatchServerByLanguage(language)
+	if s.server.erupeConfig.DevMode && patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "" {
 		bf.WriteUint8(2)
 	} else {
 		bf.WriteUint8(0)
@@ -47,9 +57,9 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	bf.WriteBytes([]byte(sessToken))          // login_token
 	bf.WriteUint32(uint32(time.Now().Unix())) // current time
 	if s.server.erupeConfig.DevMode {
-		if s.server.erupeConfig.PatchServerManifest != "" && s.server.erupeConfig.PatchServerFile != "" {
-			ps.Uint8(bf, s.server.erupeConfig.PatchServerManifest, false)
-			ps.Uint8(bf, s.server.erupeConfig.PatchServerFile, false)
+		if patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "" {
+			ps.Uint8(bf, patchServer.PatchServerManifest, false)
+			ps.Uint8(bf, patchServer.PatchServerFile, false)
 		}
 	}
 	ps.Uint8(bf, fmt.Sprintf("%s:%d", s.server.erupeConfig.Host, s.server.erupeConfig.Entrance.Port), false)
