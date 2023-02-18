@@ -110,13 +110,13 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		questEmoji := ":black_circle:"
+		isQuest := stage.isQuest()
 
-		if len(questEmojis) > 0 {
+		if isQuest && len(questEmojis) > 0 {
 			questEmoji = questEmojis[len(questEmojis)-1]
 			questEmojis = questEmojis[:len(questEmojis)-1]
 		}
 
-		isQuest := stage.isQuest()
 		for _, client := range stage.Sessions {
 			char, err := s.getCharacterForUser(int(client.CharID))
 			if err == nil {
