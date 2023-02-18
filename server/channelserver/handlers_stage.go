@@ -162,7 +162,9 @@ func handleMsgSysEnterStage(s *Session, p mhfpacket.MHFPacket) {
 	if s.StageID == "" {
 		s.stageMoveStack.Set(pkt.StageID)
 	} else {
+		s.Stage.Lock()
 		s.Stage.ReservedClientSlots[s.CharID] = false
+		s.Stage.Unlock()
 		s.stageMoveStack.Push(s.StageID)
 		s.stageMoveStack.Lock()
 	}

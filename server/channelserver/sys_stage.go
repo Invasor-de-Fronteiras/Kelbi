@@ -101,7 +101,7 @@ func (s *Stage) isCharInQuestByID(charID uint32) bool {
 }
 
 func (s *Stage) isQuest() bool {
-	return len(s.ReservedClientSlots) > 0
+	return len(s.ReservedClientSlots) > 0 && len(s.QuestFilename) > 0
 }
 
 func (s *Stage) GetName() string {

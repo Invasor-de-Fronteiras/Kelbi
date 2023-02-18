@@ -77,6 +77,7 @@ type Discord struct {
 	BotToken          string
 	ServerID          string
 	RealtimeChannelID string
+	LogsChannelID     string
 	DevRoles          []string
 	DevMode           bool
 }
