@@ -13,7 +13,7 @@ func handleMsgSysCreateObject(s *Session, p mhfpacket.MHFPacket) {
 	if s.Stage == nil {
 		message := fmt.Sprintf("Player %s failed to create object in Stage  %s", s.Name, s.StageID)
 		s.Server.logger.Error(message)
-		s.Server.discordBot.LogsChannelSend(message)
+		s.Server.DiscordLogChannelSend(message)
 		LogoutPlayer(s)
 		return
 	}
