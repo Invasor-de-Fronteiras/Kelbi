@@ -35,7 +35,7 @@ const languages = [
 
 export const ChangeLocaleButton = () => {
   const { locale, setLocale } = useTranslate();
-  const [showModal, setShowModal] = useState(true);
+  const [showModal, setShowModal] = useState(false);
 
   const lang = useMemo(() => languages.find((lang) => lang.id === locale), [locale]);
 
