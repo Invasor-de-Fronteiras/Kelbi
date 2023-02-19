@@ -10,8 +10,7 @@
   width: 300px;
   height: 100vh;
   padding: 0 40px;
-  opacity: 0.8;
-  background-color: #f8f8f8;
+   position: relative;
 }
 
 #icon-container {

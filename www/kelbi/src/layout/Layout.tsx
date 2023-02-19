@@ -35,6 +35,16 @@ export function Layout({ children }: LayoutProps) {
               <AiFillGithub className='icon' size={20} onClick={openGithub} />
             </div>
           </div>
+          <div
+            style={{
+              backgroundColor: '#f8f8f8',
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              opacity: 0.8,
+              zIndex: -999,
+            }}
+          />
         </div>
       </div>
       {showDebugger ? <DevTool /> : null}
