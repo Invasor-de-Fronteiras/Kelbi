@@ -39,7 +39,7 @@
 }
 
 .rounded-full {
-  border-radius: 100%;
+  border-radius: 999px;
 }
 
 .h-2 {
