@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useLauncher } from '../context/LauncherContext';
+import { LocaleError } from '../i18n/LocaleError';
+import { useTranslate } from '../i18n/useTranslate';
 import { LastAuthResult, SignResult } from '../utils/launcher';
 
 export interface LoginInput {
@@ -13,6 +15,8 @@ interface LoginHookProps {
 }
 
 export function useLogin({ onSuccess = () => null }: LoginHookProps) {
+  const { t } = useTranslate();
+
   const { setIsLoading, setLoggedIn } = useLauncher();
   const [state, setState] = useState<{
     isLoading: boolean;
@@ -60,11 +64,11 @@ export function useLogin({ onSuccess = () => null }: LoginHookProps) {
         if (lastAuth === LastAuthResult.AuthSuccess && signRes === SignResult.SignSuccess) {
           handleSuccess();
         } else if (signRes === SignResult.NotMatchPassword) {
-          handleError(new Error('senha incorreta!'));
+          handleError(new LocaleError('login_incorrect_password'));
         } else if (LastAuthResult.AuthErrorNet) {
-          handleError(new Error('Servidor offline, entre em contato com os administradores.'));
+          handleError(new LocaleError('server_offline_error'));
         } else {
-          handleError(new Error(`falha na autenticação! ${lastAuth} ${signRes}`));
+          handleError(new LocaleError('login_unknown_error'));
         }
       }, 100);
     } catch (err) {
