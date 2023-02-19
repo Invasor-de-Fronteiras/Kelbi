@@ -15,7 +15,7 @@ export const TranslateContext = createContext(
 );
 
 const locales: Record<Locale, Record<LocaleKeys, string>> = {
-  "pt-BR": ptBRLocales
+  'pt-BR': ptBRLocales,
 };
 
 export const TranslateProvider = ({ children }: { children: React.ReactNode }) => {
@@ -24,12 +24,21 @@ export const TranslateProvider = ({ children }: { children: React.ReactNode }) =
     return storedLocale ?? 'pt-BR';
   });
 
-  const t: TFunction = useCallback((k) => {
-    const key = k instanceof LocaleError ? k.message : k;
-    return locales[locale]?.[key] ?? key;
-  }, [locale]);
+  const t: TFunction = useCallback(
+    (k) => {
+      const key = k instanceof LocaleError ? k.message : k;
+      return locales[locale]?.[key] ?? key;
+    },
+    [locale],
+  );
 
+  const setLocalePersistent = (locale: Locale) => {
+    localStorage.setItem('language', locale);
+    setLocale(locale);
+  };
   return (
-    <TranslateContext.Provider value={{ locale, setLocale, t }}>{children}</TranslateContext.Provider>
+    <TranslateContext.Provider value={{ locale, setLocale: setLocalePersistent, t }}>
+      {children}
+    </TranslateContext.Provider>
   );
 };
