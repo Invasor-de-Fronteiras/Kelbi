@@ -17,6 +17,19 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+export const TransparentBackground = () => (
+  <div
+    style={{
+      backgroundColor: '#f8f8f8',
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      opacity: 0.8,
+      zIndex: -999,
+    }}
+  />
+);
+
 export function Layout({ children }: LayoutProps) {
   const { showDebugger } = useLauncher();
 
@@ -35,6 +48,7 @@ export function Layout({ children }: LayoutProps) {
               <AiFillGithub className='icon' size={20} onClick={openGithub} />
             </div>
           </div>
+          <TransparentBackground />
         </div>
       </div>
       {showDebugger ? <DevTool /> : null}
