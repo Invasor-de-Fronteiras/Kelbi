@@ -4,7 +4,7 @@ import { enUSLocales } from './locales/en-us';
 import { esESLocales } from './locales/es-ES';
 import { ptBRLocales } from './locales/pt-br';
 
-type Locale = 'pt-BR' | 'ja' | 'es-ES' | 'en-US';
+type Locale = 'pt-BR' | 'es-ES' | 'en-US';
 export type LocaleKeys = keyof typeof ptBRLocales;
 
 type TFunction = (key: LocaleKeys | LocaleError) => string;
