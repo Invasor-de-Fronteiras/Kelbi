@@ -1,8 +1,10 @@
 import React, { createContext, useCallback, useState } from 'react';
 import { LocaleError } from './LocaleError';
+import { enUSLocales } from './locales/en-us';
+import { esESLocales } from './locales/es-ES';
 import { ptBRLocales } from './locales/pt-br';
 
-type Locale = 'pt-BR';
+type Locale = 'pt-BR' | 'es-ES' | 'en-US';
 export type LocaleKeys = keyof typeof ptBRLocales;
 
 type TFunction = (key: LocaleKeys | LocaleError) => string;
@@ -15,7 +17,9 @@ export const TranslateContext = createContext(
 );
 
 const locales: Record<Locale, Record<LocaleKeys, string>> = {
-  "pt-BR": ptBRLocales
+  'pt-BR': ptBRLocales,
+  'en-US': enUSLocales,
+  'es-ES': esESLocales,
 };
 
 export const TranslateProvider = ({ children }: { children: React.ReactNode }) => {
@@ -24,12 +28,21 @@ export const TranslateProvider = ({ children }: { children: React.ReactNode }) =
     return storedLocale ?? 'pt-BR';
   });
 
-  const t: TFunction = useCallback((k) => {
-    const key = k instanceof LocaleError ? k.message : k;
-    return locales[locale]?.[key] ?? key;
-  }, [locale]);
+  const t: TFunction = useCallback(
+    (k) => {
+      const key = k instanceof LocaleError ? k.message : k;
+      return locales[locale]?.[key] ?? key;
+    },
+    [locale],
+  );
 
+  const setLocalePersistent = (locale: Locale) => {
+    localStorage.setItem('language', locale);
+    setLocale(locale);
+  };
   return (
-    <TranslateContext.Provider value={{ locale, setLocale, t }}>{children}</TranslateContext.Provider>
+    <TranslateContext.Provider value={{ locale, setLocale: setLocalePersistent, t }}>
+      {children}
+    </TranslateContext.Provider>
   );
 };

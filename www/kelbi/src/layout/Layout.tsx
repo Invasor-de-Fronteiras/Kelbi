@@ -12,6 +12,7 @@ import { openConfig, openDiscord, openGithub } from '../utils/launcher';
 import './Layout.css';
 import { DevTool } from '../components/DevTool';
 import { useLauncher } from '../context/LauncherContext';
+import { ChangeLocaleButton } from '../i18n/ChangeLocaleButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -43,9 +44,10 @@ export function Layout({ children }: LayoutProps) {
           <div id='left-side-body'>{children}</div>
           <div id='left-side-footer'>
             <GrConfigure className='icon' size={20} onClick={openConfig} />
-            <div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <SiDiscord className='icon discord-icon' size={20} onClick={openDiscord} />
               <AiFillGithub className='icon' size={20} onClick={openGithub} />
+              <ChangeLocaleButton />
             </div>
           </div>
           <TransparentBackground />

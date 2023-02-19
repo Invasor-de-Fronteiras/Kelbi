@@ -6,6 +6,7 @@ import { LauncherLoading } from '../components/LauncherLoading';
 import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 import { useLauncherUpdate } from '../hooks/useLauncherUpdate';
+import { LocaleKeys } from '../i18n/TranslateProvider';
 import { useTranslate } from '../i18n/useTranslate';
 import { startGame } from '../utils/launcher';
 import { playLoginSong, randomSong } from '../utils/songs';
@@ -14,7 +15,7 @@ export function SelectCharacter() {
   const { t } = useTranslate();
 
   const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
-  const [localLoadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [localLoadingMessage, setLoadingMessage] = useState<LocaleKeys | null>(null);
   const {
     startUpdate,
     updateOk,
@@ -39,23 +40,23 @@ export function SelectCharacter() {
 
   useEffect(() => {
     if (updateLoading) {
-      setLoadingMessage(t('update_files_loading'));
+      setLoadingMessage('update_files_loading');
     } else {
       setLoadingMessage(null);
     }
   }, [updateLoading]);
 
   const loading = localLoadingMessage !== null || charLoading || !updateOk;
-  const loadingMessage = localLoadingMessage ?? t('searching_data_loading');
+  const loadingMessage = localLoadingMessage ? t(localLoadingMessage) : t('searching_data_loading');
 
   const handleStartGame = () => {
     playLoginSong();
-    setLoadingMessage(t('opening_game_loading'));
+    setLoadingMessage('opening_game_loading');
     startGame(selectedCharId ?? newAccountUID);
   };
 
   const handleChangeAccount = () => {
-    setLoadingMessage(t('change_account_loading'));
+    setLoadingMessage('change_account_loading');
 
     localStorage.removeItem('autoLogin');
     localStorage.removeItem('password');
