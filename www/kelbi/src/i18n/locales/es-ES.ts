@@ -1,0 +1,28 @@
+
+export const esESLocales = {
+  login_username: 'Nombre de usuario',
+  login_password: 'Contraseña',
+  login_keep: 'mantener login',
+  login_title: 'Hacer login',
+  login_btn: 'Entrar',
+  login_error_title: 'Error!',
+  login_field_required: 'Campo obligatorio.',
+  login_incorrect_password: 'Contraseña incorrecta!',
+  login_unknown_error: 'Error desconocido, entre en contato con los administradores.',
+  server_offline_error: 'Servidor offline, entre en contato con los administradores.',
+  update_files_loading: 'Actualizando archivos!',
+  searching_data_loading: 'Buscando sus dados...',
+  opening_game_loading: 'Abriendo el jogo...',
+  change_account_loading: 'Cambiando de cuenta...',
+  new_account_message:
+    'Bienvenido! Esperamos que se divierta y haga nuevas amistades. Estamos en Discord para ajudar dentro de lo posible, cualquer duda o sugerencia entre en contato.\n~ Gracias Arca',
+  new_account_enter: 'Entrar',
+  new_account_change_account: 'Cambiar de cuenta',
+  select_char_title: 'Selecione su personaje',
+  select_char_enter: 'Entrar',
+  select_char_new_char: 'Nuevo personaje',
+  select_char_change_account: 'Cambiar de cuenta',
+  select_char_keep_account: 'Continuar conectado',
+  new_char_loading: 'Creando nuevo personaje...',
+  loading: 'Cargando...',
+};
