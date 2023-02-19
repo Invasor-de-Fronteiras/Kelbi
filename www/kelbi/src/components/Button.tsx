@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslate } from '../i18n/useTranslate';
 import { playClickSong } from '../utils/songs';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,9 +13,11 @@ export function Button({
   children,
   disabled,
   onClick,
-  loadingMessage = 'Carregando...',
+  loadingMessage,
   ...props
 }: ButtonProps) {
+  const { t } = useTranslate();
+
   return (
     <button
       {...props}
@@ -24,7 +27,7 @@ export function Button({
       }}
       disabled={disabled || isLoading}
     >
-      {isLoading ? <span className='loading'>{loadingMessage}</span> : children}
+      {isLoading ? <span className='loading'>{loadingMessage ?? t('loading')}</span> : children}
     </button>
   );
 }

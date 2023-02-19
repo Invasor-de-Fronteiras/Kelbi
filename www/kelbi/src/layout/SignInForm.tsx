@@ -8,14 +8,18 @@ import { RiErrorWarningFill } from 'react-icons/ri';
 
 import './SignInForm.css';
 import { useLogin } from '../hooks/useLogin';
+import { useTranslate } from '../i18n/useTranslate';
+import { LocaleKeys } from '../i18n/TranslateProvider';
 
 const validationSchema = Yup.object().shape({
-  username: Yup.string().required('Campo obrigatório.'),
-  password: Yup.string().required('Campo obrigatório.'),
-  autoLogin: Yup.boolean().required('Campo obrigatório.'),
+  username: Yup.string().required('login_field_required'),
+  password: Yup.string().required('login_field_required'),
+  autoLogin: Yup.boolean().required('login_field_required'),
 });
 
 export function SignInForm() {
+  const { t } = useTranslate();
+
   const { error, isLoading, mutate } = useLogin({
     onSuccess: (input) => {
       localStorage.setItem('username', input.username);
@@ -47,30 +51,30 @@ export function SignInForm() {
   return (
     <FormikProvider value={formik}>
       <form id='sign-in' onSubmit={formik.handleSubmit}>
-        <h1>Fazer login</h1>
+        <h1>{t('login_title')}</h1>
         <FieldInput
-          placeholder='Nome de usuário'
+          placeholder={t('login_username')}
           type='text'
           name='username'
           isRequired
           disabled={isLoading}
         />
         <FieldInput
-          placeholder='Senha'
+          placeholder={t('login_username')}
           type='password'
           isRequired
           name='password'
           disabled={isLoading}
         />
         <FieldCheckbox name='autoLogin' disabled={isLoading}>
-          manter login
+          {t('login_keep')}
         </FieldCheckbox>
         <Button
           type='submit'
           isLoading={isLoading}
           disabled={formik.isValidating || !formik.isValid}
         >
-          Entrar
+          {t('login_btn')}
         </Button>
         {error && <SignInError error={error} />}
       </form>
@@ -79,6 +83,8 @@ export function SignInForm() {
 }
 
 function SignInError({ error }: { error: Error }) {
+  const { t } = useTranslate();
+
   return (
     <div
       style={{
@@ -100,7 +106,7 @@ function SignInError({ error }: { error: Error }) {
             color: '#fff',
           }}
         >
-          Oops!
+          {t('login_error_title')}
         </span>
         <RiErrorWarningFill size={20} color='#fff' />
       </div>
@@ -111,7 +117,7 @@ function SignInError({ error }: { error: Error }) {
           fontSize: '14px',
         }}
       >
-        {error?.message}
+        {t(error)}
       </span>
     </div>
   );

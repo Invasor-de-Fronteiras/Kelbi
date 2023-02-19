@@ -35,8 +35,8 @@ if (process.env.NODE_ENV === 'development') {
     console.log('closeWindow');
   };
 
-  window.external.getUpdatePercentageTotal = (): void => {
-    return;
+  window.external.getUpdatePercentageTotal = () => {
+    return 100;
   };
 
   window.external.getAccountRights = (): string => {
@@ -84,6 +84,10 @@ if (process.env.NODE_ENV === 'development') {
   window.external.isEnableSessionId = (): unknown => {
     return 0;
   };
+
+  window.external.startUpdate = () => {
+    return true
+  }
 
   window.external.getCharacterInfo = (): string => {
     return `<?xml version='1.0' encoding='shift_jis'?><CharacterInfo defaultUid=''><Character name='Slayer' uid='411111' weapon='???' HR='7' GR='13' lastLogin='1653524546' sex='F' />

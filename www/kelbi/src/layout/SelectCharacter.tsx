@@ -6,10 +6,13 @@ import { LauncherLoading } from '../components/LauncherLoading';
 import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
 import { useLauncherUpdate } from '../hooks/useLauncherUpdate';
-import { openDiscord, startGame } from '../utils/launcher';
+import { useTranslate } from '../i18n/useTranslate';
+import { startGame } from '../utils/launcher';
 import { playLoginSong, randomSong } from '../utils/songs';
 
 export function SelectCharacter() {
+  const { t } = useTranslate();
+
   const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
   const [localLoadingMessage, setLoadingMessage] = useState<string | null>(null);
   const {
@@ -36,23 +39,23 @@ export function SelectCharacter() {
 
   useEffect(() => {
     if (updateLoading) {
-      setLoadingMessage('Atualizando arquivos!');
+      setLoadingMessage(t('update_files_loading'));
     } else {
       setLoadingMessage(null);
     }
   }, [updateLoading]);
 
   const loading = localLoadingMessage !== null || charLoading || !updateOk;
-  const loadingMessage = localLoadingMessage ?? 'Buscando seus dados...';
+  const loadingMessage = localLoadingMessage ?? t('searching_data_loading');
 
   const handleStartGame = () => {
     playLoginSong();
-    setLoadingMessage('Abrindo o jogo...');
+    setLoadingMessage(t('opening_game_loading'));
     startGame(selectedCharId ?? newAccountUID);
   };
 
   const handleChangeAccount = () => {
-    setLoadingMessage('Trocando de conta...');
+    setLoadingMessage(t('change_account_loading'));
 
     localStorage.removeItem('autoLogin');
     localStorage.removeItem('password');
@@ -60,7 +63,7 @@ export function SelectCharacter() {
     window.external.restartMhf();
   };
 
-  if (loading)
+  if (loading) {
     return (
       <LauncherLoading
         message={loadingMessage}
@@ -69,26 +72,15 @@ export function SelectCharacter() {
         showUpdateProgress={updateLoading}
       />
     );
+  }
 
   if (isNewAccount) {
     return (
       <div>
-        <h4 className='text-center'>
-          Bem vindo! Esperamos que você se divirta e faça novas amizades. Estamos no{' '}
-          <span
-            onClick={() => openDiscord()}
-            style={{
-              color: '#7289DA',
-            }}
-          >
-            Discord
-          </span>{' '}
-          para ajudar no que for possível, então qualquer dúvida ou sugestão entre em contato.
-          <br />~ Grato Arca
-        </h4>
+        <h4 className='text-center'>{t('new_account_message')}</h4>
         <div className='flex items-center justify-center flex-col'>
-          <Button onClick={handleStartGame}>Entrar</Button>
-          <Button onClick={handleChangeAccount}>Trocar de conta</Button>
+          <Button onClick={handleStartGame}>{t('new_account_enter')}</Button>
+          <Button onClick={handleChangeAccount}>{t('new_account_change_account')}</Button>
         </div>
       </div>
     );
@@ -123,19 +115,19 @@ export function SelectCharacter() {
         ))}
       </div>
       <div className='flex flex-col items-center'>
-        <h3 style={{}}>Selecione seu personagem</h3>
+        <h3 style={{}}>{t('select_char_title')}</h3>
         <Button onClick={handleStartGame} disabled={!selectedCharId || newCharInLoading}>
-          Entrar
+          {t('select_char_enter')}
         </Button>
         <Button
           onClick={handleCreateNewChar}
-          loadingMessage='Criando novo personagem...'
+          loadingMessage={t('new_char_loading')}
           isLoading={newCharInLoading}
         >
-          Novo personagem
+          {t('select_char_new_char')}
         </Button>
         <Button onClick={handleChangeAccount} disabled={newCharInLoading}>
-          Trocar de conta
+          {t('select_char_change_account')}
         </Button>
         <AutoLoginCheckbox />
       </div>
@@ -145,6 +137,7 @@ export function SelectCharacter() {
 
 function AutoLoginCheckbox() {
   const [checked, setChecked] = useState(() => localStorage.getItem('autoLogin') === 'true');
+  const { t } = useTranslate();
 
   function handleChange(checked: boolean) {
     localStorage.setItem('autoLogin', String(checked));
@@ -165,7 +158,7 @@ function AutoLoginCheckbox() {
         onChange={(e) => handleChange(e.target.checked)}
         checked={checked}
       />
-      <label htmlFor='auto-login'>Continuar conectado</label>
+      <label htmlFor='auto-login'>{t('select_char_keep_account')}</label>
     </div>
   );
 }
