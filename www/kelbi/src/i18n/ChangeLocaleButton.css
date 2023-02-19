@@ -1,0 +1,40 @@
+#open-locale-btn {
+  cursor: pointer;
+}
+
+#locale-modal {
+  position: fixed;
+  bottom: 40px;
+  margin-right: 30px;
+  max-height: max-content;
+  max-width: 200px;
+  width: 100%;
+  padding: 2px 0px;
+  background-color: #fff;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+#locale-modal ul {
+  list-style-type: none;
+}
+
+#locale-modal ul li {
+  padding: 3px 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+#locale-modal ul li:hover {
+  background-color: #e3e3e3;
+}
+
+#locale-modal .selected {
+  background-color: rgb(22, 163, 74);
+  color: #fff;
+}
+
+#locale-modal .selected:hover {
+  background-color: rgb(22, 163, 74);
+  cursor: auto;
+}

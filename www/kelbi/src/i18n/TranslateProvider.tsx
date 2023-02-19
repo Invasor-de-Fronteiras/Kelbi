@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useState } from 'react';
 import { LocaleError } from './LocaleError';
 import { ptBRLocales } from './locales/pt-br';
 
-type Locale = 'pt-BR';
+type Locale = 'pt-BR' | 'ja' | 'es-ES' | 'en-US';
 export type LocaleKeys = keyof typeof ptBRLocales;
 
 type TFunction = (key: LocaleKeys | LocaleError) => string;
