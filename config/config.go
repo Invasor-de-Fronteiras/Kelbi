@@ -28,8 +28,7 @@ type Config struct {
 	FeaturedWeapons        int    // Number of Active Feature weapons to generate daily
 	HideLoginNotice        bool   // Hide the Erupe notice on login
 	LoginNotice            string // MHFML string of the login notice displayed
-	PatchServerManifest    string // Manifest patch server override
-	PatchServerFile        string // File patch server override
+	PatchServers           PatchServers
 	ScreenshotAPIURL       string // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool   // Attempts to save corrupted data will flag the save for deletion
 	EnableDatabaseQuests   bool   // Enable quest and questlists via database
@@ -39,6 +38,16 @@ type Config struct {
 	SignV2   SignV2
 	Channel  Channel
 	Entrance Entrance
+}
+
+type PatchServer struct {
+	PatchServerManifest string // Manifest patch server override
+	PatchServerFile     string // File patch server override
+}
+
+type PatchServers struct {
+	En PatchServer
+	Jp PatchServer
 }
 
 // DevModeOptions holds various debug/temporary options for use while developing Erupe.

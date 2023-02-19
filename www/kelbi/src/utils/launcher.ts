@@ -10,7 +10,6 @@ declare global {
     minimizeWindow(): void;
     openMhlConfig(): void;
     closeWindow(): void;
-    getUpdatePercentageTotal(): unknown;
     getAccountRights(): string;
     getMhfBootMode(): BoostModeTypes;
     getIniLastServerIndex(): unknown;
@@ -23,11 +22,14 @@ declare global {
     isEnableSessionId(): unknown;
     getCharacterInfo(): string;
     extractLog(): unknown;
-    getUpdateStatus(): number;
     getLauncherReturnCode(): 'NORMAL';
     selectCharacter(charUid: string, charUid1: string): void;
     exitLauncher(): void;
     loginCog(username: string, password: string, confirmPassword: string): void;
+    startUpdate(): boolean;
+    getUpdatePercentageTotal(): number;
+    getUpdatePercentageFile(): number;
+    getUpdateStatus(): UpdateStatus;
   }
 }
 
@@ -46,6 +48,12 @@ export enum SignResult {
   None = 'SIGN_UNKNOWN',
   SignSuccess = 'SIGN_SUCCESS',
   NotMatchPassword = 'SIGN_EPASS',
+}
+
+export enum UpdateStatus {
+  None = '0',
+  UpdateStart = 'UM_UPDATE_START',
+  UpdateOk = 'UM_UPDATE_OK',
 }
 
 export function openBrowser(url: string) {

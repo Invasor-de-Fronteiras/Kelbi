@@ -14,11 +14,11 @@ const _UPD_BAR_PER = 0.01 * _UPD_BAR_WID;
 export function DevTool() {
   const [data, setData] = useState({});
   const [showLogin, setShowLogin] = useState(false);
+  const [startUpdateResult, setStartUpdateResult] = useState(null);
 
   useEffect(() => {
     const timeout = setInterval(() => {
       try {
-        const updatePercentageTotal = window.external.getUpdatePercentageTotal();
         const accountRights = window.external.getAccountRights();
         const mhfBootMode = window.external.getMhfBootMode();
         const lastServerIndex = window.external.getIniLastServerIndex();
@@ -31,12 +31,13 @@ export function DevTool() {
         const enableSessionId = window.external.isEnableSessionId();
         const charsXML = window.external.getCharacterInfo();
         const extractLog = window.external.extractLog();
-        const updateStatus = window.external.getUpdateStatus();
         const launcherReturnCode = window.external.getLauncherReturnCode();
+        const updateStatus = window.external.getUpdateStatus();
+        const updatePercentageTotal = window.external.getUpdatePercentageTotal();
+        const updatePercentageFile = window.external.getUpdatePercentageFile();
 
         setData({
           browserLang: navigator.language,
-          updatePercentageTotal,
           accountRights,
           mhfBootMode,
           lastServerIndex,
@@ -47,8 +48,11 @@ export function DevTool() {
           enableSessionId,
           charsXML,
           extractLog,
-          updateStatus,
           launcherReturnCode,
+          startUpdateResult,
+          updateStatus,
+          updatePercentageFile,
+          updatePercentageTotal,
           calcUpdatePercentageTotal: Math.ceil(Number(updatePercentageTotal) * _UPD_BAR_PER),
           ...(showLogin ? { userId, password } : {}),
         });
@@ -63,7 +67,12 @@ export function DevTool() {
       }
     }, 100);
     return () => clearInterval(timeout);
-  }, [showLogin]);
+  }, [showLogin, startUpdateResult]);
+
+  const onStartUpdate = () => {
+    const result = window.external.startUpdate();
+    setStartUpdateResult(result);
+  };
 
   return (
     <div id='debugger'>
@@ -77,12 +86,14 @@ export function DevTool() {
           <input type='checkbox' checked={showLogin} onClick={() => setShowLogin((e) => !e)} />
           <label>Show Login</label>
         </div>
+        <button onClick={onStartUpdate}>Start update</button>
       </div>
       <table>
         <caption>WATCH</caption>
         <thead>
           <tr>
             <th>State</th>
+            <th>Type</th>
             <th>Value</th>
             <th>Copy</th>
           </tr>
@@ -115,6 +126,7 @@ function DebugItem({ data, name }: DebugItemProps) {
       <td>
         <strong>{name}</strong>
       </td>
+      <td>{typeof data}</td>
       <td>{value}</td>
       <td>
         <input value={value} />

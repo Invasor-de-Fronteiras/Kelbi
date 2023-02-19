@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react';
 
-import BarbaryWalking from '../assets/loading/banbaro-walking.gif';
 import { Button } from '../components/Button';
 import { CharacterCard } from '../components/CharacterCard';
+import { LauncherLoading } from '../components/LauncherLoading';
 import { useCreateCharacter } from '../hooks/useCreateCharacter';
 import { useGetCharacters } from '../hooks/useGetCharacters';
+import { useLauncherUpdate } from '../hooks/useLauncherUpdate';
 import { openDiscord, startGame } from '../utils/launcher';
 import { playLoginSong, randomSong } from '../utils/songs';
 
 export function SelectCharacter() {
   const { mutate: handleCreateNewChar, isLoading: newCharInLoading } = useCreateCharacter();
   const [localLoadingMessage, setLoadingMessage] = useState<string | null>(null);
-
+  const {
+    startUpdate,
+    updateOk,
+    fileProgress,
+    totalProgress,
+    loading: updateLoading,
+  } = useLauncherUpdate();
   const { characters, isNewAccount, newAccountUID, loading: charLoading } = useGetCharacters();
   const [selectedCharId, setSelectedCharId] = useState('');
 
@@ -21,7 +28,21 @@ export function SelectCharacter() {
     }
   }, [characters]);
 
-  const loading = localLoadingMessage !== null || charLoading;
+  useEffect(() => {
+    if (!charLoading) {
+      startUpdate();
+    }
+  }, [charLoading]);
+
+  useEffect(() => {
+    if (updateLoading) {
+      setLoadingMessage('Atualizando arquivos!');
+    } else {
+      setLoadingMessage(null);
+    }
+  }, [updateLoading]);
+
+  const loading = localLoadingMessage !== null || charLoading || !updateOk;
   const loadingMessage = localLoadingMessage ?? 'Buscando seus dados...';
 
   const handleStartGame = () => {
@@ -39,7 +60,15 @@ export function SelectCharacter() {
     window.external.restartMhf();
   };
 
-  if (loading) return <SelectCharacterLoading message={loadingMessage} />;
+  if (loading)
+    return (
+      <LauncherLoading
+        message={loadingMessage}
+        fileProgress={fileProgress}
+        totalProgress={totalProgress}
+        showUpdateProgress={updateLoading}
+      />
+    );
 
   if (isNewAccount) {
     return (
@@ -137,21 +166,6 @@ function AutoLoginCheckbox() {
         checked={checked}
       />
       <label htmlFor='auto-login'>Continuar conectado</label>
-    </div>
-  );
-}
-
-function SelectCharacterLoading({ message }: { message: string }) {
-  return (
-    <div className='flex items-center justify-center flex-col'>
-      <img id='img-bg' src={BarbaryWalking} height='100%' width='100%' />
-      <span
-        style={{
-          marginTop: '5px',
-        }}
-      >
-        {message}
-      </span>
     </div>
   );
 }

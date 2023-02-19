@@ -87,8 +87,9 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 	var (
 		id       int
 		password string
+		lang     string
 	)
-	err := s.server.db.QueryRow("SELECT id, password FROM users WHERE username = $1", reqUsername).Scan(&id, &password)
+	err := s.server.db.QueryRow("SELECT id, password, language FROM users WHERE username = $1", reqUsername).Scan(&id, &password, &lang)
 	var serverRespBytes []byte
 	switch {
 	case err == sql.ErrNoRows:
@@ -107,14 +108,15 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 		}
 
 		var id int
-		err = s.server.db.QueryRow("SELECT id FROM users WHERE username = $1", reqUsername).Scan(&id)
+		var lang string
+		err = s.server.db.QueryRow("SELECT id, language FROM users WHERE username = $1", reqUsername).Scan(&id, &lang)
 		if err != nil {
 			s.logger.Info("Error on querying account id", zap.Error(err))
 			serverRespBytes = makeSignInFailureResp(SIGN_EABORT)
 			break
 		}
 
-		serverRespBytes = s.makeSignInResp(id)
+		serverRespBytes = s.makeSignInResp(id, lang)
 		//nolint:gosimple
 		break
 	case err != nil:
@@ -140,7 +142,7 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 			// 	serverRespBytes = makeSignInFailureResp(SIGN_EABORT)
 			// 	break
 			// }
-			serverRespBytes = s.makeSignInResp(id)
+			serverRespBytes = s.makeSignInResp(id, lang)
 		} else {
 			s.logger.Info("Passwords don't match!")
 			serverRespBytes = makeSignInFailureResp(SIGN_EPASS)
