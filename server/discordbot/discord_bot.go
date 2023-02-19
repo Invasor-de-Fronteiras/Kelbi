@@ -14,6 +14,7 @@ type DiscordBot struct {
 	logger          *zap.Logger
 	MainGuild       *discordgo.Guild
 	RealtimeChannel *discordgo.Channel
+	LogsChannel     *discordgo.Channel
 }
 
 type DiscordBotOptions struct {
@@ -36,11 +37,21 @@ func NewDiscordBot(options DiscordBotOptions) (discordBot *DiscordBot, err error
 		return nil, err
 	}
 
+	var logsChannel *discordgo.Channel = nil
+
+	if options.Config.Discord.LogsChannelID != "" {
+		channel, _ := session.Channel(options.Config.Discord.LogsChannelID)
+		if channel != nil {
+			logsChannel = channel
+		}
+	}
+
 	discordBot = &DiscordBot{
 		config:          options.Config,
 		logger:          options.Logger,
 		Session:         session,
 		RealtimeChannel: realtimeChannel,
+		LogsChannel:     logsChannel,
 	}
 
 	return
@@ -76,6 +87,14 @@ func (bot *DiscordBot) NormalizeDiscordMessage(message string) string {
 
 func (bot *DiscordBot) RealtimeChannelSend(message string) (err error) {
 	_, err = bot.Session.ChannelMessageSend(bot.RealtimeChannel.ID, message)
+
+	return
+}
+
+func (bot *DiscordBot) LogsChannelSend(message string) (err error) {
+	if bot.LogsChannel != nil {
+		_, err = bot.Session.ChannelMessageSend(bot.LogsChannel.ID, message)
+	}
 
 	return
 }

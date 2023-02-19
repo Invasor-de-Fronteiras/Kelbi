@@ -389,6 +389,13 @@ func (s *Server) DiscordChannelSend(charName string, content string) {
 	}
 }
 
+func (s *Server) DiscordLogChannelSend(message string) {
+	if s.erupeConfig.Discord.Enabled && s.discordBot != nil {
+		// nolint:errcheck // rror return value of `s.discordBot.LogsChannelSend` is not checked (errcheck)
+		s.discordBot.LogsChannelSend(message)
+	}
+}
+
 func (s *Server) FindSessionByCharID(charID uint32) *Session {
 	for _, c := range s.Channels {
 		for _, client := range c.Sessions {
