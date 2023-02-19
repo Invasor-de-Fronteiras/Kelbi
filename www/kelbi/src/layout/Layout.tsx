@@ -27,6 +27,8 @@ export const TransparentBackground = () => (
       position: 'absolute',
       opacity: 0.8,
       zIndex: -999,
+      top: 0,
+      left: 0,
     }}
   />
 );
