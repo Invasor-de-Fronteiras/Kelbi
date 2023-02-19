@@ -1,4 +1,4 @@
-export const ptBRLocales = {
+export const enUSLocales = {
   login_username: 'User Name',
   login_password: 'Password',
   login_keep: 'Keep Login',
