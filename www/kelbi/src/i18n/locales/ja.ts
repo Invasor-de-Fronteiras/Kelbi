@@ -21,7 +21,7 @@ export const jaLocales = {
   select_char_enter: 'ゲームスタート',
   select_char_new_char: 'キャラクターの追加',
   select_char_change_account: 'アカウントを切り替える',
-  select_char_keep_account: 'ログオフ状態を維持する',
+  select_char_keep_account: 'ログイン状態を維持する',
   new_char_loading: '新キャラクターを作成中・・・',
   loading: '読み込み中・・・',
 };
