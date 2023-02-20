@@ -8,7 +8,7 @@ import { useTranslate } from './useTranslate';
 import enUS from '../assets/flags/en-US.png';
 import esES from '../assets/flags/es-ES.png';
 import ptBR from '../assets/flags/pt-BR.png';
-// import ja from '../assets/flags/ja.png';
+import ja from '../assets/flags/ja.png';
 
 const languages = [
   {
@@ -26,11 +26,11 @@ const languages = [
     title: 'Português do Brasil',
     icon: ptBR,
   },
-  // {
-  //   id: 'ja',
-  //   title: '日本語',
-  //   icon: ja,
-  // },
+  {
+    id: 'ja',
+    title: '日本語',
+    icon: ja,
+  },
 ] as const;
 
 export const ChangeLocaleButton = () => {

@@ -2,9 +2,10 @@ import React, { createContext, useCallback, useState } from 'react';
 import { LocaleError } from './LocaleError';
 import { enUSLocales } from './locales/en-us';
 import { esESLocales } from './locales/es-ES';
+import { jaLocales } from './locales/ja';
 import { ptBRLocales } from './locales/pt-br';
 
-type Locale = 'pt-BR' | 'es-ES' | 'en-US';
+type Locale = 'pt-BR' | 'es-ES' | 'en-US' | 'ja';
 export type LocaleKeys = keyof typeof ptBRLocales;
 
 type TFunction = (key: LocaleKeys | LocaleError) => string;
@@ -20,6 +21,7 @@ const locales: Record<Locale, Record<LocaleKeys, string>> = {
   'pt-BR': ptBRLocales,
   'en-US': enUSLocales,
   'es-ES': esESLocales,
+  'ja': jaLocales,
 };
 
 export const TranslateProvider = ({ children }: { children: React.ReactNode }) => {
