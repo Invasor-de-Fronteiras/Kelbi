@@ -115,9 +115,11 @@ func handleMsgMhfEnumerateRengokuRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateRengokuRanking)
 
 	guild, _ := GetGuildInfoByCharacterId(s, s.CharID)
-	isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
-	if isApplicant {
-		guild = nil
+	if guild != nil {
+		isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
+		if isApplicant {
+			guild = nil
+		}
 	}
 
 	if pkt.Leaderboard == 2 || pkt.Leaderboard == 3 || pkt.Leaderboard == 6 || pkt.Leaderboard == 7 {
