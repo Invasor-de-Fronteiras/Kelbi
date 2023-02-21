@@ -3,7 +3,7 @@ package launcherserver
 import (
 	"fmt"
 	"html"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -81,6 +81,7 @@ func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 		}
 
 		result := s.getPatchServerVersion(s.erupeConfig.PatchServers.En.PatchServerManifest)
+		// nolint:errcheck
 		w.Write(result)
 	})
 
@@ -94,6 +95,7 @@ func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 		}
 
 		result := s.getPatchServerVersion(s.erupeConfig.PatchServers.Jp.PatchServerManifest)
+		// nolint:errcheck
 		w.Write(result)
 	})
 }
@@ -105,7 +107,7 @@ func (s *Server) getPatchServerVersion(serverUrl string) []byte {
 		return nil
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil
 	}
