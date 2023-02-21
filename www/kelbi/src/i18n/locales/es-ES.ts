@@ -11,6 +11,7 @@ export const esESLocales = {
   login_unknown_error: 'Error desconocido, entre en contato con los administradores.',
   server_offline_error: 'Servidor offline, entre en contato con los administradores.',
   update_files_loading: 'Actualizando archivos!',
+  update_files_button: 'Actualizar archivos!',
   searching_data_loading: 'Buscando sus dados...',
   opening_game_loading: 'Abriendo el jogo...',
   change_account_loading: 'Cambiando de cuenta...',

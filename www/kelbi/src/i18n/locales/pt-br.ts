@@ -10,6 +10,7 @@ export const ptBRLocales = {
   login_unknown_error: 'Erro desconhecido, entre em contato com os administradores.',
   server_offline_error: 'Servidor offline, entre em contato com os administradores.',
   update_files_loading: 'Atualizando arquivos!',
+  update_files_button: 'Atualizar arquivos',
   searching_data_loading: 'Buscando seus dados...',
   opening_game_loading: 'Abrindo o jogo...',
   change_account_loading: 'Trocando de conta...',

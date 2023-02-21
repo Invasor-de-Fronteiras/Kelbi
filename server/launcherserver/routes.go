@@ -3,6 +3,7 @@ package launcherserver
 import (
 	"fmt"
 	"html"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -73,8 +74,41 @@ func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 	// TW
 	twMain := r.Host("mhfg.capcom.com.tw").Subrouter()
 	twMain.PathPrefix("/g6_launcher/").Handler(http.StripPrefix("/g6_launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
+	twMain.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.erupeConfig.PatchServers.En.PatchServerManifest == "" {
+			w.WriteHeader(404)
+			return
+		}
+
+		result := s.getPatchServerVersion(s.erupeConfig.PatchServers.En.PatchServerManifest)
+		w.Write(result)
+	})
 
 	// JP
 	jpMain := r.Host("cog-members.mhf-z.jp").Subrouter()
 	jpMain.PathPrefix("/launcher/").Handler(http.StripPrefix("/launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
+	jpMain.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.erupeConfig.PatchServers.Jp.PatchServerManifest == "" {
+			w.WriteHeader(404)
+			return
+		}
+
+		result := s.getPatchServerVersion(s.erupeConfig.PatchServers.Jp.PatchServerManifest)
+		w.Write(result)
+	})
+}
+
+func (s *Server) getPatchServerVersion(serverUrl string) []byte {
+	resp, err := http.Get(fmt.Sprintf("http://%s/version.txt", serverUrl))
+
+	if err != nil {
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	return body
 }
