@@ -10,6 +10,7 @@ export const jaLocales = {
   login_unknown_error: '不明なエラーです。管理者に連絡してください。',
   server_offline_error: 'サーバーはオフラインです。管理者に連絡してください。',
   update_files_loading: '更新中！',
+  update_files_button: 'データの更新',
   searching_data_loading: '読み込み中・・・',
   opening_game_loading: 'ゲームを起動しています・・・',
   change_account_loading: 'アカウントを切り替え中・・・',

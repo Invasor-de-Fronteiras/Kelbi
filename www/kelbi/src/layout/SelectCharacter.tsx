@@ -18,6 +18,7 @@ export function SelectCharacter() {
   const [localLoadingMessage, setLoadingMessage] = useState<LocaleKeys | null>(null);
   const {
     startUpdate,
+    verifyUpdates,
     updateOk,
     fileProgress,
     totalProgress,
@@ -34,7 +35,7 @@ export function SelectCharacter() {
 
   useEffect(() => {
     if (!charLoading) {
-      startUpdate();
+      verifyUpdates();
     }
   }, [charLoading]);
 
@@ -81,6 +82,7 @@ export function SelectCharacter() {
         <h4 className='text-center'>{t('new_account_message')}</h4>
         <div className='flex items-center justify-center flex-col'>
           <Button onClick={handleStartGame}>{t('new_account_enter')}</Button>
+          <Button onClick={startUpdate}>{t('update_files_button')}</Button>
           <Button onClick={handleChangeAccount}>{t('new_account_change_account')}</Button>
         </div>
       </div>
@@ -127,6 +129,7 @@ export function SelectCharacter() {
         >
           {t('select_char_new_char')}
         </Button>
+        <Button onClick={startUpdate}>{t('update_files_button')}</Button>
         <Button onClick={handleChangeAccount} disabled={newCharInLoading}>
           {t('select_char_change_account')}
         </Button>

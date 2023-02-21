@@ -10,6 +10,7 @@ export const enUSLocales = {
   login_unknown_error: 'Error, contact staff.',
   server_offline_error: 'Server offline, contact staff.',
   update_files_loading: 'Update!',
+  update_files_button: 'Update files',
   searching_data_loading: 'loading data...',
   opening_game_loading: 'Open...',
   change_account_loading: 'Change account...',
