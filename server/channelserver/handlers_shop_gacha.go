@@ -228,12 +228,12 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
+	_, week := time.Now().ISOWeek()
+	// writing out to an editable shop enumeration
 	pkt := p.(*mhfpacket.MsgMhfAcquireExchangeShop)
-	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
-	exchanges := int(bf.ReadUint16())
-	_, weekYear := time.Now().ISOWeek()
-	week := weekYear % 4
-	for i := 0; i < exchanges; i++ {
+	if pkt.DataSize == 10 {
+		bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
+		_ = bf.ReadUint16() // unk, always 1 in examples
 		itemHash := bf.ReadUint32()
 		buyCount := bf.ReadUint32()
 		_, err := s.Server.db.Exec(`INSERT INTO shop_item_state (char_id, itemhash, usedquantity, week)
