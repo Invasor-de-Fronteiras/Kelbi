@@ -18,6 +18,11 @@ import (
 	"erupe-ce/server/signv2server"
 	"erupe-ce/utils"
 
+	"github.com/TheZeroSlave/zapsentry"
+	"github.com/getsentry/sentry-go"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -33,6 +38,29 @@ func cleanDB(db *sqlx.DB) {
 	_ = db.MustExec("DELETE FROM users")
 }
 
+func modifyToSentryLogger(log *zap.Logger, client *sentry.Client) *zap.Logger {
+	cfg := zapsentry.Configuration{
+		Level:             zapcore.ErrorLevel, //when to send message to sentry
+		EnableBreadcrumbs: true,               // enable sending breadcrumbs to Sentry
+		BreadcrumbLevel:   zapcore.InfoLevel,  // at what level should we sent breadcrumbs to sentry
+		Tags: map[string]string{
+			"component": "system",
+		},
+	}
+	core, err := zapsentry.NewCore(cfg, zapsentry.NewSentryClientFromClient(client))
+
+	//in case of err it will return noop core. so we can safely attach it
+	if err != nil {
+		log.Warn("failed to init zap", zap.Error(err))
+	}
+
+	log = zapsentry.AttachCoreToLogger(core, log)
+
+	// to use breadcrumbs feature - create new scope explicitly
+	// and attach after attaching the core
+	return log.With(zapsentry.NewScope())
+}
+
 func main() {
 	var err error
 	zapLogger, _ := utils.NewLogger()
@@ -44,6 +72,23 @@ func main() {
 	erupeConfig, err = config.LoadConfig()
 	if err != nil {
 		preventClose(fmt.Sprintf("Failed to load config: %s", err.Error()))
+	}
+
+	if erupeConfig.Sentry.Enabled {
+		sentryClient, err := sentry.NewClient(sentry.ClientOptions{
+			Dsn: erupeConfig.Sentry.DSN,
+			// Set TracesSampleRate to 1.0 to capture 100%
+			// of transactions for performance monitoring.
+			// We recommend adjusting this value in production,
+			TracesSampleRate: 1.0,
+		})
+
+		if err != nil {
+			logger.Fatal("sentry.Init: %s", zap.Error(err))
+		}
+
+		logger = modifyToSentryLogger(logger, sentryClient)
+		defer sentry.Flush(2 * time.Second)
 	}
 
 	if erupeConfig.Database.Password == "" {

@@ -53,6 +53,10 @@
     "Port": "4000",
     "Enabled": false
   },
+  "Sentry": {
+    "DSN": "",
+    "Enabled": false
+  },
   "Commands": [
     {
       "Name": "Rights",
@@ -189,5 +193,3 @@
     ]
   }
 }
-
-  

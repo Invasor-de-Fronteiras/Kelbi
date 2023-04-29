@@ -16,13 +16,13 @@ type Config struct {
 	BinPath          string `mapstructure:"BinPath"`
 	DisableSoftCrash bool   // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
 	DevMode          bool
-
-	DevModeOptions DevModeOptions
-	Discord        Discord
-	Database       Database
-	ServerHttp     ServerHttp
-	Launcher       Launcher
-	Sign           Sign
+	Sentry           Sentry
+	DevModeOptions   DevModeOptions
+	Discord          Discord
+	Database         Database
+	ServerHttp       ServerHttp
+	Launcher         Launcher
+	Sign             Sign
 
 	Language               string
 	FeaturedWeapons        int    // Number of Active Feature weapons to generate daily
@@ -138,6 +138,11 @@ type Sign struct {
 type SignV2 struct {
 	Enabled bool
 	Port    int
+}
+
+type Sentry struct {
+	Enabled bool
+	DSN     string
 }
 
 type Channel struct {
