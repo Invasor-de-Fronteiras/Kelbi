@@ -115,8 +115,9 @@ type Database struct {
 
 // Server Http.
 type ServerHttp struct {
-	Port  int
-	Token string
+	Port    int
+	Token   string
+	Enabled bool
 }
 
 // Launcher holds the launcher server config.

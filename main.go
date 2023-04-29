@@ -240,14 +240,16 @@ func main() {
 			c.Channels = channels
 		}
 
-		httpContext := httpserver.HttpServerContext{
-			Servers:     channels,
-			ErupeConfig: erupeConfig,
-			Address:     fmt.Sprintf("0.0.0.0:%d", erupeConfig.ServerHttp.Port),
-			Token:       erupeConfig.ServerHttp.Token,
-		}
+		if erupeConfig.ServerHttp.Enabled {
+			httpContext := httpserver.HttpServerContext{
+				Servers:     channels,
+				ErupeConfig: erupeConfig,
+				Address:     fmt.Sprintf("0.0.0.0:%d", erupeConfig.ServerHttp.Port),
+				Token:       erupeConfig.ServerHttp.Token,
+			}
 
-		go httpserver.RunHttpServer(&httpContext)
+			go httpserver.RunHttpServer(&httpContext)
+		}
 	}
 
 	// Wait for exit or interrupt with ctrl+C.
