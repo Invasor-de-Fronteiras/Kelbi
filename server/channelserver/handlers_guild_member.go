@@ -13,9 +13,11 @@ type GuildMember struct {
 	CharID          uint32     `db:"character_id"`
 	JoinedAt        *time.Time `db:"joined_at"`
 	Souls           uint32     `db:"souls"`
+	RPToday         uint16     `db:"rp_today"`
+	RPYesterday     uint16     `db:"rp_yesterday"`
 	Name            string     `db:"name"`
 	IsApplicant     bool       `db:"is_applicant"`
-	OrderIndex      uint8      `db:"order_index"`
+	OrderIndex      uint16     `db:"order_index"`
 	LastLogin       uint32     `db:"last_login"`
 	Recruiter       bool       `db:"recruiter"`
 	AvoidLeadership bool       `db:"avoid_leadership"`
@@ -23,7 +25,7 @@ type GuildMember struct {
 	HRP             uint16     `db:"hrp"`
 	GR              uint16     `db:"gr"`
 	WeaponID        uint16     `db:"weapon_id"`
-	WeaponType      uint16     `db:"weapon_type"`
+	WeaponType      uint8      `db:"weapon_type"`
 }
 
 func (gm *GuildMember) CanRecruit() bool {
@@ -63,6 +65,8 @@ SELECT
 	g.id as guild_id,
 	joined_at,
 	coalesce(souls, 0) as souls,
+	COALESCE(rp_today, 0) AS rp_today,
+	COALESCE(rp_yesterday, 0) AS rp_yesterday,
 	c.name,
 	character.character_id,
 	coalesce(gc.order_index, 0) as order_index,

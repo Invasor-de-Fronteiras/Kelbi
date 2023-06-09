@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 
 	"erupe-ce/config"
@@ -58,7 +59,7 @@ func (s *Server) Start() error {
 
 // Shutdown exits the server gracefully.
 func (s *Server) Shutdown() {
-	s.logger.Debug("Shutting down")
+	s.logger.Debug("Shutting down...")
 
 	s.Lock()
 	s.isShuttingDown = true
@@ -111,9 +112,15 @@ func (s *Server) handleEntranceServerConnection(conn net.Conn) {
 		return
 	}
 
-	s.logger.Debug("Got entrance server command:\n", zap.String("raw", hex.Dump(pkt)))
+	if s.erupeConfig.DevMode && s.erupeConfig.DevModeOptions.LogInboundMessages {
+		fmt.Printf("[Client] -> [Server]\nData [%d bytes]:\n%s\n", len(pkt), hex.Dump(pkt))
+	}
 
-	data := makeSv2Resp(s.erupeConfig, s)
+	local := false
+	if strings.Split(conn.RemoteAddr().String(), ":")[0] == "127.0.0.1" {
+		local = true
+	}
+	data := makeSv2Resp(s.erupeConfig, s, local)
 	if len(pkt) > 5 {
 		data = append(data, makeUsrResp(pkt, s)...)
 	}

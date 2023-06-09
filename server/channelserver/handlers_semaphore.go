@@ -58,12 +58,11 @@ func releaseRaviSemaphore(s *Session, sema *Semaphore) {
 
 func handleMsgSysDeleteSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysDeleteSemaphore)
-	sem := pkt.AckHandle
 	if s.Server.Semaphore != nil {
 		destructEmptySemaphores(s)
 		s.Server.semaphoreLock.Lock()
 		for id, sema := range s.Server.Semaphore {
-			if sema.Id == sem {
+			if sema.Id == pkt.SemaphoreID {
 				if strings.HasPrefix(id, "hs_l0u3B5") {
 					releaseRaviSemaphore(s, sema)
 					s.Server.semaphoreLock.Unlock()

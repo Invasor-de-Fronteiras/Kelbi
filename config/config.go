@@ -27,11 +27,12 @@ type Config struct {
 	Language               string
 	FeaturedWeapons        int    // Number of Active Feature weapons to generate daily
 	HideLoginNotice        bool   // Hide the Erupe notice on login
-	LoginNotice            string // MHFML string of the login notice displayed
+	LoginNotices           []string // MHFML string of the login notices displayed
 	PatchServers           PatchServers
 	ScreenshotAPIURL       string // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool   // Attempts to save corrupted data will flag the save for deletion
 	EnableDatabaseQuests   bool   // Enable quest and questlists via database
+	GameplayOptions GameplayOptions
 
 	Commands []Command
 	Courses  []Course
@@ -78,6 +79,21 @@ type DevModeOptions struct {
 type SaveDumpOptions struct {
 	Enabled   bool
 	OutputDir string
+}
+
+// GameplayOptions has various gameplay modifiers
+type GameplayOptions struct {
+	FeaturedWeapons     int    // Number of Active Feature weapons to generate daily
+	MaximumNP           int    // Maximum number of NP held by a player
+	MaximumRP           uint16 // Maximum number of RP held by a player
+	DisableLoginBoost   bool   // Disables the Login Boost system
+	DisableBoostTime    bool   // Disables the daily NetCafe Boost Time
+	BoostTimeDuration   int    // The number of minutes NetCafe Boost Time lasts for
+	GuildMealDuration   int    // The number of minutes a Guild Meal can be activated for after cooking
+	BonusQuestAllowance uint32 // Number of Bonus Point Quests to allow daily
+	DailyQuestAllowance uint32 // Number of Daily Quests to allow daily
+	MezfesSoloTickets   uint32 // Number of solo tickets given weekly
+	MezfesGroupTickets  uint32 // Number of group tickets given weekly
 }
 
 // Discord holds the discord integration config.

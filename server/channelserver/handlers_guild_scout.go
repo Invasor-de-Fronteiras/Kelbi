@@ -1,13 +1,11 @@
 package channelserver
 
 import (
-	"fmt"
-	"io"
-	"time"
-
 	"erupe-ce/common/byteframe"
 	"erupe-ce/common/stringsupport"
 	"erupe-ce/network/mhfpacket"
+	"fmt"
+	"io"
 
 	"go.uber.org/zap"
 )
@@ -207,7 +205,7 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	rows, err := s.Server.db.Queryx(`
-		SELECT c.id, c.name, ga.actor_id
+		SELECT c.id, c.name, c.hrp, c.gr, ga.actor_id
 			FROM guild_applications ga 
 			JOIN characters c ON c.id = ga.character_id
 		WHERE ga.guild_id = $1 AND ga.application_type = 'invited'
@@ -232,14 +230,14 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 
 	for rows.Next() {
 		var charName string
-		var charID uint32
-		var actorID uint32
+		var charID, actorID uint32
+		var hrp, gr uint16
 
-		err = rows.Scan(&charID, &charName, &actorID)
+		err = rows.Scan(&charID, &charName, &hrp, &gr, &actorID)
 
 		if err != nil {
 			doAckSimpleFail(s, pkt.AckHandle, nil)
-			panic(err)
+			continue
 		}
 
 		// This seems to be used as a unique ID for the invitation sent
@@ -248,14 +246,10 @@ func handleMsgMhfGetGuildScoutList(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(charID)
 		bf.WriteUint32(actorID)
 		bf.WriteUint32(charID)
-		bf.WriteUint32(uint32(time.Now().Unix()))
-		bf.WriteUint16(0x00) // HR?
-		bf.WriteUint16(0x00) // GR?
-
-		charNameBytes, _ := stringsupport.ConvertUTF8ToShiftJIS(charName)
-
-		bf.WriteBytes(charNameBytes)
-		bf.WriteBytes(make([]byte, 32-len(charNameBytes))) // Fixed length string
+		bf.WriteUint32(uint32(TimeAdjusted().Unix()))
+		bf.WriteUint16(hrp) // HR?
+		bf.WriteUint16(gr)  // GR?
+		bf.WriteBytes(stringsupport.PaddedString(charName, 32, true))
 		count++
 	}
 

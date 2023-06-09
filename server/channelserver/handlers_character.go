@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"encoding/binary"
+	"errors"
 	"erupe-ce/common/bfutil"
 	"erupe-ce/common/stringsupport"
 
@@ -12,7 +13,7 @@ import (
 )
 
 const (
-	pointerGender        = 0x81    // +1
+	pointerGender        = 0x51    // +1
 	pointerRP            = 0x22D16 // +2
 	pointerHouseTier     = 0x1FB6C // +5
 	pointerHouseData     = 0x1FE01 // +195
@@ -59,6 +60,7 @@ func GetCharacterSaveData(s *Session, charID uint32) (*CharacterSaveData, error)
 	}
 	defer result.Close()
 	if !result.Next() {
+		err = errors.New("no savedata found")
 		s.logger.Error("No savedata found", zap.Uint32("charID", charID))
 		return nil, err
 	}

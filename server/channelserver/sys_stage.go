@@ -2,7 +2,6 @@ package channelserver
 
 import (
 	"sync"
-
 	"time"
 
 	"erupe-ce/common/byteframe"
@@ -72,7 +71,8 @@ func NewStage(ID string) *Stage {
 
 // BroadcastMHF queues a MHFPacket to be sent to all sessions in the stage.
 func (s *Stage) BroadcastMHF(pkt mhfpacket.MHFPacket, ignoredSession *Session) {
-	// Broadcast the data.
+	s.Lock()
+	defer s.Unlock()
 	for _, session := range s.Sessions {
 		if session == ignoredSession {
 			continue
