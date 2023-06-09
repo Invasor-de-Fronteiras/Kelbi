@@ -1365,22 +1365,6 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		guild, err = GetGuildInfoByCharacterId(s, s.CharID)
 	}
 
-	if guild == nil && s.PrevGuildID > 0 {
-		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
-	}
-
-	if guild != nil {
-		isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
-		if isApplicant {
-			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		}
-	}
-
-	if guild == nil && s.PrevGuildID > 0 {
-		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
-	}
-
 	if guild != nil {
 		isApplicant, _ := guild.HasApplicationForCharID(s, s.CharID)
 		if isApplicant {

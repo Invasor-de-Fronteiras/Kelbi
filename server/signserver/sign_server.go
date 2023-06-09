@@ -8,7 +8,6 @@ import (
 
 	"erupe-ce/config"
 	"erupe-ce/network"
-
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
@@ -25,6 +24,7 @@ type Server struct {
 	sync.Mutex
 	logger         *zap.Logger
 	erupeConfig    *config.Config
+	sessions       map[int]*Session
 	db             *sqlx.DB
 	listener       net.Listener
 	isShuttingDown bool

@@ -316,6 +316,7 @@ func handleMsgMhfSaveDecoMyset(s *Session, p mhfpacket.MHFPacket) {
 			}
 			loadData[1] = savedSets // update set count
 		}
+		dumpSaveData(s, loadData, "decomyset")
 		_, err := s.Server.db.Exec("UPDATE characters SET decomyset=$1 WHERE id=$2", loadData, s.CharID)
 		if err != nil {
 			s.logger.Error("Failed to save decomyset", zap.Error(err))
@@ -564,5 +565,4 @@ func handleMsgMhfUpdateWarehouse(s *Session, p mhfpacket.MHFPacket) {
 	}
 	// nolint:errcheck
 	s.Server.db.Exec(fmt.Sprintf("UPDATE warehouse SET %s%d=$1 WHERE character_id=$2", pkt.BoxType, pkt.BoxIndex), boxToBytes(cleanedBox, pkt.BoxType), s.CharID)
-	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
