@@ -1481,15 +1481,6 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
-	if guild == nil && s.PrevGuildID != 0 {
-		guild, err = GetGuildInfoByID(s, s.PrevGuildID)
-		s.PrevGuildID = 0
-		if guild == nil || err != nil {
-			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
-			return
-		}
-	}
-
 	if err != nil {
 		s.logger.Warn("failed to respond to manage rights message")
 		return
