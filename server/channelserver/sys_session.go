@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
 	"erupe-ce/common/byteframe"
+	"erupe-ce/common/mhfcourse"
 	"erupe-ce/common/stringstack"
 	"erupe-ce/network"
 	"erupe-ce/network/binpacket"
@@ -35,20 +35,19 @@ type Session struct {
 	cryptConn     *network.CryptConn
 	sendPackets   chan packet
 	clientContext *clientctx.ClientContext
+	lastPacket    time.Time
 
-	UserEnteredStage bool     `json:"userEnteredStage"` // If the user has entered a stage before
-	MySeries         MySeries `json:"mySeries"`
-	StageID          string   `json:"stageID"`
-	Stage            *Stage   `json:"-"`
-	ReservationStage *Stage   `json:"-"`           // Required for the stateful MsgSysUnreserveStage packet.
-	StagePass        string   `json:"stagePass"`   // Temporary storage
-	PrevGuildID      uint32   `json:"prevGuildID"` // Stores the last GuildID used in InfoGuild
-	CharID           uint32   `json:"charID"`
-	Dev              bool     `json:"dev"`
-	LogKey           []byte   `json:"logKey"`
-	SessionStart     int64    `json:"sessionStart"`
-	Rights           uint32   `json:"rights"`
-	courses          []mhfpacket.Course
+	UserEnteredStage bool   `json:"userEnteredStage"` // If the user has entered a stage before
+	StageID          string `json:"stageID"`
+	Stage            *Stage `json:"-"`
+	ReservationStage *Stage `json:"-"`           // Required for the stateful MsgSysUnreserveStage packet.
+	StagePass        string `json:"stagePass"`   // Temporary storage
+	PrevGuildID      uint32 `json:"prevGuildID"` // Stores the last GuildID used in InfoGuild
+	CharID           uint32 `json:"charID"`
+	Dev              bool   `json:"dev"`
+	LogKey           []byte `json:"logKey"`
+	SessionStart     int64  `json:"sessionStart"`
+	courses          []mhfcourse.Course
 	Token            string `json:"token"`
 	kqf              []byte
 	kqfOverride      bool
@@ -92,7 +91,8 @@ func NewSession(server *Server, conn net.Conn) *Session {
 		sendPackets:      make(chan packet, 20),
 		clientContext:    &clientctx.ClientContext{}, // Unused
 		UserEnteredStage: false,
-		SessionStart:     Time_Current_Adjusted().Unix(),
+		lastPacket:       time.Now(),
+		SessionStart:     TimeAdjusted().Unix(),
 		stageMoveStack:   stringstack.New(),
 	}
 	return s
@@ -101,7 +101,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 // Start starts the session packet send and recv loop(s).
 func (s *Session) Start() {
 	go func() {
-		s.logger.Info("Channel server got connection!", zap.String("remoteaddr", s.rawConn.RemoteAddr().String()))
+		s.logger.Debug("New connection", zap.String("RemoteAddr", s.rawConn.RemoteAddr().String()))
 		// Unlike the sign and entrance server,
 		// the client DOES NOT initalize the channel connection with 8 NULL bytes.
 		go s.sendLoop()
@@ -191,6 +191,10 @@ func (s *Session) sendLoop() {
 
 func (s *Session) recvLoop() {
 	for {
+		if time.Now().Add(-30 * time.Second).After(s.lastPacket) {
+			LogoutPlayer(s)
+			return
+		}
 		if s.closed {
 			LogoutPlayer(s)
 			return
@@ -212,6 +216,7 @@ func (s *Session) recvLoop() {
 }
 
 func (s *Session) handlePacketGroup(pktGroup []byte) {
+	s.lastPacket = time.Now()
 	bf := byteframe.NewByteFrameFromBytes(pktGroup)
 	opcodeUint16 := bf.ReadUint16()
 	opcode := network.PacketID(opcodeUint16)
@@ -261,7 +266,6 @@ func ignored(opcode network.PacketID) bool {
 		network.MSG_SYS_TIME,
 		network.MSG_SYS_EXTEND_THRESHOLD,
 		network.MSG_SYS_POSITION_OBJECT,
-		network.MSG_MHF_ENUMERATE_QUEST,
 		network.MSG_MHF_SAVEDATA,
 	}
 	set := make(map[network.PacketID]struct{}, len(ignoreList))
@@ -318,15 +322,4 @@ func (s *Session) SendMessage(SenderName string, message string) {
 	}
 
 	s.QueueSendMHF(castedBin)
-}
-
-func (s *Session) FindCourse(name string) mhfpacket.Course {
-	for _, course := range s.courses {
-		for _, alias := range course.Aliases {
-			if strings.EqualFold(strings.ToLower(name), strings.ToLower(alias)) {
-				return course
-			}
-		}
-	}
-	return mhfpacket.Course{}
 }

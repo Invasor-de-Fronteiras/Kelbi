@@ -86,12 +86,13 @@ func handleMsgSysRotateObject(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgSysDuplicateObject(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgSysSetObjectBinary)
-	for _, session := range s.Server.Sessions {
-		if session.CharID == s.CharID {
-			s.Server.userBinaryPartsLock.Lock()
-			s.Server.userBinaryParts[userBinaryPartID{charID: s.CharID, index: 3}] = pkt.RawDataPayload
-			s.Server.userBinaryPartsLock.Unlock()
+	_ = p.(*mhfpacket.MsgSysSetObjectBinary)
+	/* This causes issues with PS3 as this actually sends with endiness!
+	for _, session := range s.server.sessions {
+		if session.charID == s.charID {
+			s.server.userBinaryPartsLock.Lock()
+			s.server.userBinaryParts[userBinaryPartID{charID: s.charID, index: 3}] = pkt.RawDataPayload
+			s.server.userBinaryPartsLock.Unlock()
 			msg := &mhfpacket.MsgSysNotifyUserBinary{
 				CharID:     s.CharID,
 				BinaryType: 3,
@@ -99,6 +100,7 @@ func handleMsgSysSetObjectBinary(s *Session, p mhfpacket.MHFPacket) {
 			s.Server.BroadcastMHF(msg, s)
 		}
 	}
+	*/
 }
 
 func handleMsgSysGetObjectBinary(s *Session, p mhfpacket.MHFPacket) {}

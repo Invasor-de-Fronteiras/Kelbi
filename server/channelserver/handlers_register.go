@@ -21,7 +21,7 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			resp.WriteUint8(1)
 			resp.WriteUint8(dest)
 			ref := &s.Server.raviente.state.stateData[dest]
-			damageMultiplier := s.Server.raviente.state.damageMultiplier
+			damageMultiplier := s.Server.raviente.GetRaviMultiplier(s.Server)
 			switch op {
 			case 2:
 				resp.WriteUint32(*ref)
@@ -36,8 +36,9 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 						resp.WriteUint32(*ref)
 					}
 				} else {
-					resp.WriteUint32(*ref + data*damageMultiplier)
-					*ref += data * damageMultiplier
+					data = uint32(float64(data) * damageMultiplier)
+					resp.WriteUint32(*ref + data)
+					*ref += data
 				}
 			case 13:
 				fallthrough
@@ -255,21 +256,21 @@ func (s *Session) notifyRavi() {
 	// nolint:errcheck
 	temp.Build(raviNotif, s.clientContext)
 	raviNotif.WriteUint16(0x0010) // End it.
-	sema := getRaviSemaphore(s)
-	if sema != "" {
-		for session := range s.Server.Semaphore[sema].clients {
+	sema := getRaviSemaphore(s.Server)
+	if sema != nil {
+		for session := range sema.clients {
 			session.QueueSend(raviNotif.Data())
 		}
 	}
 }
 
-func getRaviSemaphore(s *Session) string {
-	for _, semaphore := range s.Server.Semaphore {
-		if strings.HasPrefix(semaphore.StageId, "hs_l0u3B5") && strings.HasSuffix(semaphore.StageId, "4") {
-			return semaphore.StageId
+func getRaviSemaphore(s *Server) *Semaphore {
+	for _, semaphore := range s.Semaphore {
+		if strings.HasPrefix(semaphore.StageId, "hs_l0u3B5") && strings.HasSuffix(semaphore.StageId, "3") {
+			return semaphore
 		}
 	}
-	return ""
+	return nil
 }
 
 func resetRavi(s *Session) {
@@ -281,7 +282,6 @@ func resetRavi(s *Session) {
 	s.Server.raviente.register.ravienteType = 0
 	s.Server.raviente.register.maxPlayers = 0
 	s.Server.raviente.register.carveQuest = 0
-	s.Server.raviente.state.damageMultiplier = 1
 	s.Server.raviente.register.register = []uint32{0, 0, 0, 0, 0}
 	s.Server.raviente.state.stateData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	s.Server.raviente.support.supportData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}

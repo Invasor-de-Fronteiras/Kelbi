@@ -13,7 +13,7 @@ func handleMsgMhfAddKouryouPoint(s *Session, p mhfpacket.MHFPacket) {
 	var points int
 	err := s.Server.db.QueryRow("UPDATE characters SET kouryou_point=COALESCE(kouryou_point + $1, $1) WHERE id=$2 RETURNING kouryou_point", pkt.KouryouPoints, s.CharID).Scan(&points)
 	if err != nil {
-		s.logger.Fatal("Failed to update KouryouPoint in db", zap.Error(err))
+		s.logger.Error("Failed to update KouryouPoint in db", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(uint32(points))
@@ -25,7 +25,7 @@ func handleMsgMhfGetKouryouPoint(s *Session, p mhfpacket.MHFPacket) {
 	var points int
 	err := s.Server.db.QueryRow("SELECT COALESCE(kouryou_point, 0) FROM characters WHERE id = $1", s.CharID).Scan(&points)
 	if err != nil {
-		s.logger.Fatal("Failed to get kouryou_point savedata from db", zap.Error(err))
+		s.logger.Error("Failed to get kouryou_point savedata from db", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(uint32(points))
@@ -38,7 +38,7 @@ func handleMsgMhfExchangeKouryouPoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfExchangeKouryouPoint)
 	err := s.Server.db.QueryRow("UPDATE characters SET kouryou_point=kouryou_point - $1 WHERE id=$2 RETURNING kouryou_point", pkt.KouryouPoints, s.CharID).Scan(&points)
 	if err != nil {
-		s.logger.Fatal("Failed to update platemyset savedata in db", zap.Error(err))
+		s.logger.Error("Failed to update platemyset savedata in db", zap.Error(err))
 	}
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(uint32(points))

@@ -11,7 +11,7 @@ import (
 // MsgMhfGetStepupStatus represents the MSG_MHF_GET_STEPUP_STATUS
 type MsgMhfGetStepupStatus struct {
 	AckHandle uint32
-	GachaHash uint32
+	GachaID   uint32
 	Unk       uint8
 }
 
@@ -23,7 +23,7 @@ func (m *MsgMhfGetStepupStatus) Opcode() network.PacketID {
 // Parse parses the packet from binary
 func (m *MsgMhfGetStepupStatus) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
 	m.AckHandle = bf.ReadUint32()
-	m.GachaHash = bf.ReadUint32()
+	m.GachaID = bf.ReadUint32()
 	m.Unk = bf.ReadUint8()
 	return nil
 }

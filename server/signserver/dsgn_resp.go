@@ -8,8 +8,7 @@ import (
 	"erupe-ce/config"
 	"erupe-ce/server/channelserver"
 	"fmt"
-	"math/rand"
-	"time"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -28,41 +27,51 @@ func (s *Session) getPatchServerByLanguage(language string) config.PatchServer {
 	return s.server.erupeConfig.PatchServers.En
 }
 
-func (s *Session) makeSignInResp(uid int, language string) []byte {
-	returnExpiry := s.server.getReturnExpiry(uid)
-
+func (s *Session) makeSignResponse(uid int, language string) []byte {
 	// Get the characters from the DB.
 	chars, err := s.server.getCharactersForUser(uid)
+	if len(chars) == 0 {
+		err = s.server.newUserChara(uid)
+		if err == nil {
+			chars, err = s.server.getCharactersForUser(uid)
+		}
+	}
 	if err != nil {
 		s.logger.Warn("Error getting characters from DB", zap.Error(err))
 	}
 
-	rand.Seed(time.Now().UnixNano())
 	sessToken := token.Generate(16)
 	// nolint:errcheck
-	s.server.registerToken(uid, sessToken)
+	_ = s.server.registerToken(uid, sessToken)
 
 	bf := byteframe.NewByteFrame()
 
-	bf.WriteUint8(1) // resp_code
+	bf.WriteUint8(uint8(SIGN_SUCCESS)) // resp_code
 	patchServer := s.getPatchServerByLanguage(language)
-	if s.server.erupeConfig.DevMode && patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "" {
+	if (patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "") || s.client == PS3 {
 		bf.WriteUint8(2)
 	} else {
 		bf.WriteUint8(0)
 	}
-	bf.WriteUint8(1)                          // entrance server count
-	bf.WriteUint8(uint8(len(chars)))          // character count
-	bf.WriteUint32(0xFFFFFFFF)                // login_token_number
-	bf.WriteBytes([]byte(sessToken))          // login_token
-	bf.WriteUint32(uint32(time.Now().Unix())) // current time
-	if s.server.erupeConfig.DevMode {
+	bf.WriteUint8(1) // entrance server count
+	bf.WriteUint8(uint8(len(chars)))
+	bf.WriteUint32(0xFFFFFFFF) // login_token_number
+	bf.WriteBytes([]byte(sessToken))
+	bf.WriteUint32(uint32(channelserver.TimeAdjusted().Unix()))
+	if s.client == PS3 {
+		ps.Uint8(bf, fmt.Sprintf(`ps3-%s.zerulight.cc`, s.server.erupeConfig.Language), false)
+		ps.Uint8(bf, fmt.Sprintf(`ps3-%s.zerulight.cc`, s.server.erupeConfig.Language), false)
+	} else {
 		if patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "" {
 			ps.Uint8(bf, patchServer.PatchServerManifest, false)
 			ps.Uint8(bf, patchServer.PatchServerFile, false)
 		}
 	}
-	ps.Uint8(bf, fmt.Sprintf("%s:%d", s.server.erupeConfig.Host, s.server.erupeConfig.Entrance.Port), false)
+	if strings.Split(s.rawConn.RemoteAddr().String(), ":")[0] == "127.0.0.1" {
+		ps.Uint8(bf, fmt.Sprintf("127.0.0.1:%d", s.server.erupeConfig.Entrance.Port), false)
+	} else {
+		ps.Uint8(bf, fmt.Sprintf("%s:%d", s.server.erupeConfig.Host, s.server.erupeConfig.Entrance.Port), false)
+	}
 
 	lastPlayed := uint32(0)
 	for _, char := range chars {
@@ -115,16 +124,20 @@ func (s *Session) makeSignInResp(uid int, language string) []byte {
 	}
 
 	if s.server.erupeConfig.HideLoginNotice {
-		bf.WriteUint8(0)
+		bf.WriteBool(false)
 	} else {
-		bf.WriteUint8(1) // Notice count
-		noticeText := s.server.erupeConfig.LoginNotice
-		ps.Uint32(bf, noticeText, true)
+		bf.WriteBool(true)
+		ps.Uint32(bf, strings.Join(s.server.erupeConfig.LoginNotices[:], "<PAGE>"), true)
 	}
 
 	bf.WriteUint32(s.server.getLastCID(uid))
 	bf.WriteUint32(s.server.getUserRights(uid))
 	ps.Uint16(bf, "", false) // filters
+	if s.client == VITA || s.client == PS3 {
+		var psnUser string
+		s.server.db.QueryRow("SELECT psn_id FROM users WHERE id = $1", uid).Scan(&psnUser)
+		bf.WriteBytes(stringsupport.PaddedString(psnUser, 20, true))
+	}
 	bf.WriteUint16(0xCA10)
 	bf.WriteUint16(0x4E20)
 	ps.Uint16(bf, "", false) // unk key
@@ -133,12 +146,7 @@ func (s *Session) makeSignInResp(uid int, language string) []byte {
 	bf.WriteUint16(0x0001)
 	bf.WriteUint16(0x4E20)
 	ps.Uint16(bf, "", false) // unk ipv4
-	if s.server.erupeConfig.DevModeOptions.DisableReturnBoost || returnExpiry.Before(time.Now()) {
-		// Hack to make Return work while having a non-adjusted expiry
-		bf.WriteUint32(0)
-	} else {
-		bf.WriteUint32(uint32(returnExpiry.Unix()))
-	}
+	bf.WriteUint32(uint32(s.server.getReturnExpiry(uid).Unix()))
 	bf.WriteUint32(0x00000000)
 	bf.WriteUint32(0x0A5197DF) // unk id
 
@@ -146,12 +154,12 @@ func (s *Session) makeSignInResp(uid int, language string) []byte {
 	alt := s.server.erupeConfig.DevModeOptions.MezFesAlt
 	if mezfes {
 		// Start time
-		bf.WriteUint32(uint32(channelserver.Time_Current_Adjusted().Add(-5 * time.Minute).Unix()))
+		bf.WriteUint32(uint32(channelserver.TimeWeekStart().Unix()))
 		// End time
-		bf.WriteUint32(uint32(channelserver.Time_Current_Adjusted().Add(24 * time.Hour * 7).Unix()))
-		bf.WriteUint8(2)   // Unk
-		bf.WriteUint32(20) // Single tickets
-		bf.WriteUint32(10) // Group tickets
+		bf.WriteUint32(uint32(channelserver.TimeWeekNext().Unix()))
+		bf.WriteUint8(2) // Unk
+		bf.WriteUint32(s.server.erupeConfig.GameplayOptions.MezfesSoloTickets)
+		bf.WriteUint32(s.server.erupeConfig.GameplayOptions.MezfesGroupTickets)
 		bf.WriteUint8(8)   // Stalls open
 		bf.WriteUint8(0xA) // Unk
 		bf.WriteUint8(0x3) // Pachinko

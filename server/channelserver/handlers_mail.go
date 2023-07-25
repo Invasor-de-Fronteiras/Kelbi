@@ -328,15 +328,8 @@ func handleMsgMhfListMail(s *Session, p mhfpacket.MHFPacket) {
 			flags |= 0x04
 		}
 
-		// Workaround until EN mail items are patched
-		if s.Server.erupeConfig.DevMode && s.Server.erupeConfig.DevModeOptions.DisableMailItems {
-			if itemAttached {
-				flags |= 0x08
-			}
-		} else {
-			if m.AttachedItemReceived {
-				flags |= 0x08
-			}
+		if m.AttachedItemReceived {
+			flags |= 0x08
 		}
 
 		if m.IsGuildInvite {
@@ -394,24 +387,29 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 	if pkt.RecipientID == 0 { // Guild mail
 		g, err := GetGuildInfoByCharacterId(s, s.CharID)
 		if err != nil {
-			s.logger.Fatal("Failed to get guild info for mail")
+			s.logger.Error("Failed to get guild info for mail")
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
 		}
 		gm, err := GetGuildMembers(s, g.ID, false)
 		if err != nil {
-			s.logger.Fatal("Failed to get guild members for mail")
+			s.logger.Error("Failed to get guild members for mail")
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
 		}
 		for i := 0; i < len(gm); i++ {
 			_, err := s.Server.db.Exec(query, s.CharID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false)
 			if err != nil {
-				s.logger.Fatal("Failed to send mail")
+				s.logger.Error("Failed to send mail")
+				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+				return
 			}
 		}
 	} else {
 		_, err := s.Server.db.Exec(query, s.CharID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
 		if err != nil {
-			s.logger.Fatal("Failed to send mail")
+			s.logger.Error("Failed to send mail")
 		}
 	}
-
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
