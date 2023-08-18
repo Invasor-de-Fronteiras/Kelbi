@@ -69,13 +69,13 @@ func handleMsgMhfGetWeeklySchedule(s *Session, p mhfpacket.MHFPacket) {
 
 	if len(features) < 2 {
 		if len(features) == 0 {
-			feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, TimeMidnight().Add(-24*time.Hour))
+			feature := generateFeatureWeapons(s.Server.erupeConfig.GameplayOptions.FeaturedWeapons, TimeMidnight().Add(-24*time.Hour))
 			// feature.StartTime =
 			features = append(features, feature)
 			// nolint:errcheck
 			s.Server.db.Exec(`INSERT INTO feature_weapon VALUES ($1, $2)`, feature.StartTime, feature.ActiveFeatures)
 		}
-		feature := generateFeatureWeapons(s.Server.erupeConfig.FeaturedWeapons, TimeMidnight())
+		feature := generateFeatureWeapons(s.Server.erupeConfig.GameplayOptions.FeaturedWeapons, TimeMidnight())
 		// feature.StartTime =
 		features = append(features, feature)
 		// nolint:errcheck
