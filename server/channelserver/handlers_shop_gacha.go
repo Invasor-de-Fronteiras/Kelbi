@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"encoding/hex"
 	ps "erupe-ce/common/pascalstring"
 	"fmt"
 	"strings"
@@ -145,7 +146,7 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	switch pkt.ShopType {
 	case 1: // Running gachas
 		var count uint16
-		shopEntries, err := s.Server.db.Queryx("SELECT id, min_gr, min_hr, name, url_banner, url_feature, url_thumbnail, wide, recommended, gacha_type, hidden FROM gacha_shop")
+		shopEntries, err := s.Server.db.Queryx("SELECT id, min_gr, min_hr, name, url_banner, url_feature, url_thumbnail, wide, recommended, gacha_type, hidden FROM gacha_shop ORDER BY id")
 		if err != nil {
 			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
@@ -250,9 +251,18 @@ func handleMsgMhfEnumerateShop(s *Session, p mhfpacket.MHFPacket) {
 	case 6: // Gacha coin->Item
 		fallthrough
 	case 7: // Item->GCP
-		fallthrough
+		data, _ := hex.DecodeString("000300033a9186fb000033860000000a000100000000000000000000000000000000097fdb1c0000067e0000000a0001000000000000000000000000000000001374db29000027c300000064000100000000000000000000000000000000")
+		doAckBufSucceed(s, pkt.AckHandle, data)
 	case 8: // Diva
-		fallthrough
+		switch pkt.ShopID {
+		case 0: // Normal exchange
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		case 5: // GCP skills
+			data, _ := hex.DecodeString("001f001f2c9365c1000000010000001e000a0000000000000000000a0000000000001979f1c2000000020000003c000a0000000000000000000a0000000000003e5197df000000030000003c000a0000000000000000000a000000000000219337c0000000040000001e000a0000000000000000000a00000000000009b24c9d000000140000001e000a0000000000000000000a0000000000001f1d496e000000150000001e000a0000000000000000000a0000000000003b918fcb000000160000003c000a0000000000000000000a0000000000000b7fd81c000000170000003c000a0000000000000000000a0000000000001374f239000000180000003c000a0000000000000000000a00000000000026950cba0000001c0000003c000a0000000000000000000a0000000000003797eae70000001d0000003c000a012b000000000000000a00000000000015758ad8000000050000003c00000000000000000000000a0000000000003c7035050000000600000050000a0000000000000001000a00000000000024f3b5560000000700000050000a0000000000000001000a00000000000000b600330000000800000050000a0000000000000001000a0000000000002efdce840000001900000050000a0000000000000001000a0000000000002d9365f10000001a00000050000a0000000000000001000a0000000000001979f3420000001f00000050000a012b000000000001000a0000000000003f5397cf0000002000000050000a012b000000000001000a000000000000319337c00000002100000050000a012b000000000001000a00000000000008b04cbd0000000900000064000a0000000000000002000a0000000000000b1d4b6e0000000a00000064000a0000000000000002000a0000000000003b918feb0000000b00000064000a0000000000000002000a0000000000001b7fd81c0000000c00000064000a0000000000000002000a0000000000001276f2290000000d00000064000a0000000000000002000a00000000000022950cba0000000e000000c8000a0000000000000002000a0000000000003697ead70000000f000001f4000a0000000000000003000a00000000000005758a5800000010000003e8000a0000000000000003000a0000000000003c7035250000001b000001f4000a0000000000010003000a00000000000034f3b5d60000001e00000064000a012b000000000003000a00000000000000b600030000002200000064000a0000000000010003000a000000000000")
+			doAckBufSucceed(s, pkt.AckHandle, data)
+		case 7: // Note exchange
+			doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+		}
 	case 9: // Diva song shop
 		fallthrough
 	case 10: // Item shop, 0-8
@@ -274,19 +284,22 @@ func handleMsgMhfAcquireExchangeShop(s *Session, p mhfpacket.MHFPacket) {
 			continue
 		}
 		buyCount := bf.ReadUint32()
-		s.Server.db.Exec(`INSERT INTO shop_items_bought (character_id, shop_item_id, bought, week)
+		_, err := s.Server.db.Exec(`INSERT INTO shop_items_bought (character_id, shop_item_id, bought, week)
 			VALUES ($1,$2,$3,$4) ON CONFLICT (character_id, shop_item_id)
-			DO UPDATE SET bought = bought + $3
+			DO UPDATE SET bought = shop_items_bought.bought + $3
 			WHERE EXCLUDED.character_id=$1 AND EXCLUDED.shop_item_id=$2
 		`, s.CharID, itemHash, buyCount, week)
+		if err != nil {
+			s.logger.Fatal("Failed to insertOrUpdate shop_items_bought in db", zap.Error(err))
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func clearShopItemState(s *Session, charId uint32, itemHash uint32) {
-	_, err := s.Server.db.Exec(`DELETE FROM shop_item_state WHERE char_id=$1 AND itemhash=$2`, charId, itemHash)
+	_, err := s.Server.db.Exec(`DELETE FROM shop_items_bought WHERE character_id=$1 AND shop_item_id=$2`, charId, itemHash)
 	if err != nil {
-		s.logger.Fatal("Failed to delete shop_item_state in db", zap.Error(err))
+		s.logger.Fatal("Failed to delete shop_items_bought in db", zap.Error(err))
 	}
 }
 

@@ -1745,13 +1745,13 @@ type GuildMeal struct {
 	ID        uint32    `db:"id"`
 	MealID    uint32    `db:"meal_id"`
 	Level     uint32    `db:"level"`
-	CreatedAt time.Time `db:"created_at"`
+	ExpiresAt time.Time `db:"expires_at"`
 }
 
 func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildCooking)
 	guild, _ := GetGuildInfoByCharacterId(s, s.CharID)
-	data, err := s.Server.db.Queryx("SELECT id, meal_id, level, created_at FROM guild_meals WHERE guild_id = $1", guild.ID)
+	data, err := s.Server.db.Queryx("SELECT id, meal_id, level, expires_at FROM guild_meals WHERE guild_id = $1", guild.ID)
 	if err != nil {
 		s.logger.Error("Failed to get guild meals from db", zap.Error(err))
 		doAckBufSucceed(s, pkt.AckHandle, make([]byte, 2))
@@ -1764,7 +1764,7 @@ func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 		if err != nil {
 			continue
 		}
-		if temp.CreatedAt.Add(60 * time.Minute).After(TimeAdjusted()) {
+		if temp.ExpiresAt.After(TimeAdjusted()) {
 			meals = append(meals, temp)
 		}
 	}
@@ -1774,7 +1774,7 @@ func handleMsgMhfLoadGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(meal.ID)
 		bf.WriteUint32(meal.MealID)
 		bf.WriteUint32(meal.Level)
-		bf.WriteUint32(uint32(meal.CreatedAt.Unix()))
+		bf.WriteUint32(uint32(meal.ExpiresAt.Unix()))
 	}
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
@@ -1784,9 +1784,9 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 	guild, _ := GetGuildInfoByCharacterId(s, s.CharID)
 	currentTime := TimeAdjusted().Add(time.Duration(s.Server.erupeConfig.GameplayOptions.GuildMealDuration-60) * time.Minute)
 	if pkt.OverwriteID != 0 {
-		s.Server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, created_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, currentTime, pkt.OverwriteID)
+		s.Server.db.Exec("UPDATE guild_meals SET meal_id = $1, level = $2, expires_at = $3 WHERE id = $4", pkt.MealID, pkt.Success, currentTime, pkt.OverwriteID)
 	} else {
-		s.Server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, created_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, currentTime).Scan(&pkt.OverwriteID)
+		s.Server.db.QueryRow("INSERT INTO guild_meals (guild_id, meal_id, level, expires_at) VALUES ($1, $2, $3, $4) RETURNING id", guild.ID, pkt.MealID, pkt.Success, currentTime).Scan(&pkt.OverwriteID)
 	}
 	bf := byteframe.NewByteFrame()
 	bf.WriteUint16(1)

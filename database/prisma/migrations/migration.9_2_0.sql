@@ -160,6 +160,8 @@ ALTER TABLE IF EXISTS public.guild_meals DROP COLUMN IF EXISTS expires;
 
 ALTER TABLE IF EXISTS public.guild_meals ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE;
 
+ALTER TABLE IF EXISTS public.guild_meals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
+
 DROP TABLE IF EXISTS public.account_ban;
 
 DROP TABLE IF EXISTS public.account_history;
@@ -214,6 +216,9 @@ CREATE TABLE IF NOT EXISTS public.shop_items_bought (
     bought INTEGER,
 	week INTEGER
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "shop_items_bought_char_id_item_id" ON "shop_items_bought"("character_id", "shop_item_id");
 
 UPDATE users SET rights = rights-2;
 

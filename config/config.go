@@ -25,14 +25,13 @@ type Config struct {
 	Sign             Sign
 
 	Language               string
-	FeaturedWeapons        int    // Number of Active Feature weapons to generate daily
-	HideLoginNotice        bool   // Hide the Erupe notice on login
+	HideLoginNotice        bool     // Hide the Erupe notice on login
 	LoginNotices           []string // MHFML string of the login notices displayed
 	PatchServers           PatchServers
 	ScreenshotAPIURL       string // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool   // Attempts to save corrupted data will flag the save for deletion
 	EnableDatabaseQuests   bool   // Enable quest and questlists via database
-	GameplayOptions GameplayOptions
+	GameplayOptions        GameplayOptions
 
 	Commands []Command
 	Courses  []Course
