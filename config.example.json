@@ -19,7 +19,7 @@
   },
   "ScreenshotAPIURL": "",
   "DeleteOnSaveCorruption": false,
-  "EnableDatabaseQuests": false,
+  "QuestLoader": "events_folder",
   "DevMode": true,
   "DevModeOptions": {
     "AutoCreateAccount": true,

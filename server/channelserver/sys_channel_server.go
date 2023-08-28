@@ -167,11 +167,7 @@ func (r *Raviente) GetRaviMultiplier(s *Server) float64 {
 func NewServer(config *Config) *Server {
 
 	// Logic to change adapter from config
-	questLoader := adapters.NewQuestLoaderErupeV9(config.ErupeConfig)
-
-	if config.ErupeConfig.EnableDatabaseQuests {
-		questLoader = adapters.NewQuestLoaderInDb(config.DB)
-	}
+	questLoader := adapters.GetQuestLoader(config.ErupeConfig, config.DB)
 
 	s := &Server{
 		questLoader:     questLoader,

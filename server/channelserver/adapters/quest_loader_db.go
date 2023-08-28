@@ -8,15 +8,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type QuestLoaderInDb struct {
+type QuestLoaderDb struct {
 	db *sqlx.DB
 }
 
-func NewQuestLoaderInDb(db *sqlx.DB) QuestLoader {
-	return &QuestLoaderInDb{db: db}
+func NewQuestLoaderDb(db *sqlx.DB) QuestLoader {
+	return &QuestLoaderDb{db: db}
 }
 
-func (*QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string, season string, err error) {
+func (*QuestLoaderDb) IdFromFilename(id string) (questId uint64, period string, season string, err error) {
 	questId, _ = strconv.ParseUint(id[0:5], 10, 32)
 
 	if string(id[5]) == "d" {
@@ -39,14 +39,14 @@ func (*QuestLoaderInDb) IdFromFilename(id string) (questId uint64, period string
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestBinById(id string) (questBin []byte, err error) {
+func (ql *QuestLoaderDb) QuestBinById(id string) (questBin []byte, err error) {
 	questId, period, season, _ := ql.IdFromFilename(id)
 	query := "SELECT quest_bin FROM quests WHERE quest_id = $1 AND period = $2 AND season = $3"
 	err = ql.db.QueryRow(query, questId, period, season).Scan(&questBin)
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestCount(dev bool) (count uint16, err error) {
+func (ql *QuestLoaderDb) QuestCount(dev bool) (count uint16, err error) {
 	onlyDevFilter := ""
 	if !dev {
 		onlyDevFilter = " AND only_dev=false "
@@ -55,7 +55,7 @@ func (ql *QuestLoaderInDb) QuestCount(dev bool) (count uint16, err error) {
 	return
 }
 
-func (ql *QuestLoaderInDb) Quests(_take uint16, skip uint16, dev bool) (questList []byte, err error) {
+func (ql *QuestLoaderDb) Quests(_take uint16, skip uint16, dev bool) (questList []byte, err error) {
 	bf := byteframe.NewByteFrame()
 
 	buffer, returnedCount, err := ql.QuestListBuffer(100, skip, dev)
@@ -89,7 +89,7 @@ type QuestListBin struct {
 	QuestList []byte `db:"questlist_bin"`
 }
 
-func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16, dev bool) (quests []QuestListBin, err error) {
+func (ql *QuestLoaderDb) QuestListBin(take uint16, skip uint16, dev bool) (quests []QuestListBin, err error) {
 	quests = []QuestListBin{}
 	onlyDevFilter := ""
 	if !dev {
@@ -101,7 +101,7 @@ func (ql *QuestLoaderInDb) QuestListBin(take uint16, skip uint16, dev bool) (que
 	return
 }
 
-func (ql *QuestLoaderInDb) QuestListBuffer(take uint16, skip uint16, dev bool) (buffer *byteframe.ByteFrame, count uint16, err error) {
+func (ql *QuestLoaderDb) QuestListBuffer(take uint16, skip uint16, dev bool) (buffer *byteframe.ByteFrame, count uint16, err error) {
 	buffer = byteframe.NewByteFrame()
 	count = 0
 
