@@ -30,7 +30,7 @@ type Config struct {
 	PatchServers           PatchServers
 	ScreenshotAPIURL       string // Destination for screenshots uploaded to BBS
 	DeleteOnSaveCorruption bool   // Attempts to save corrupted data will flag the save for deletion
-	EnableDatabaseQuests   bool   // Enable quest and questlists via database
+	QuestLoader            string // QuestLoader type (db, questlist, events_folder)
 	GameplayOptions        GameplayOptions
 
 	Commands []Command

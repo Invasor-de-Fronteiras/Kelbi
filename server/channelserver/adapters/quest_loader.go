@@ -1,5 +1,11 @@
 package adapters
 
+import (
+	"erupe-ce/config"
+
+	"github.com/jmoiron/sqlx"
+)
+
 type QuestCategory = string
 
 const (
@@ -23,4 +29,17 @@ type Quest struct {
 type QuestLoader interface {
 	QuestBinById(id string) ([]byte, error)
 	Quests(take uint16, skip uint16, dev bool) ([]byte, error)
+}
+
+func GetQuestLoader(erupeConfig *config.Config, db *sqlx.DB) QuestLoader {
+	switch erupeConfig.QuestLoader {
+	case "db":
+		return NewQuestLoaderDb(db)
+	case "questlist":
+		return NewQuestLoaderQuestlist(erupeConfig)
+	case "events_folder":
+		return NewQuestLoaderEventsFolder(erupeConfig, db)
+	default:
+		return NewQuestLoaderEventsFolder(erupeConfig, db)
+	}
 }
