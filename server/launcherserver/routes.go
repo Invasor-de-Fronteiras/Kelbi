@@ -72,9 +72,8 @@ func (s *Server) setupOriginalLauncherRotues(r *mux.Router) {
 func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 
 	// TW
-	twMain := r.Host("mhfg.capcom.com.tw").Subrouter()
-	twMain.PathPrefix("/g6_launcher/").Handler(http.StripPrefix("/g6_launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
-	twMain.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.PathPrefix("/g6_launcher/").Handler(http.StripPrefix("/g6_launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
+	r.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.erupeConfig.PatchServers.En.PatchServerManifest == "" {
 			w.WriteHeader(404)
 			return
@@ -86,9 +85,8 @@ func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 	})
 
 	// JP
-	jpMain := r.Host("cog-members.mhf-z.jp").Subrouter()
-	jpMain.PathPrefix("/launcher/").Handler(http.StripPrefix("/launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
-	jpMain.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.PathPrefix("/launcher/").Handler(http.StripPrefix("/launcher/", http.FileServer(http.Dir(s.erupeConfig.Launcher.Path))))
+	r.PathPrefix("/version").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.erupeConfig.PatchServers.Jp.PatchServerManifest == "" {
 			w.WriteHeader(404)
 			return

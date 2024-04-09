@@ -221,6 +221,7 @@ func getOutboundIP4() net.IP {
 // LoadConfig loads the given config toml file.
 func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config")
+	viper.AddConfigPath("/etc/config")
 	viper.AddConfigPath(".")
 
 	viper.SetDefault("DevModeOptions.SaveDumps", SaveDumpOptions{
