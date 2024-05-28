@@ -178,8 +178,10 @@ func main() {
 	logger.Info("Database: Started successfully")
 
 	// Clear stale data
-	_ = db.MustExec("DELETE FROM sign_sessions")
-	_ = db.MustExec("DELETE FROM servers")
+	if erupeConfig.ClearAllServersFromDatabase {
+		_ = db.MustExec("DELETE FROM sign_sessions")
+		_ = db.MustExec("DELETE FROM servers")
+	}
 
 	// Clean the DB if the option is on.
 	if erupeConfig.DevMode && erupeConfig.DevModeOptions.CleanDB {
@@ -267,7 +269,46 @@ func main() {
 
 	var channels []*channelserver.Server
 
-	if config.ErupeConfig.Channel.Enabled {
+	if config.ErupeConfig.Entry.Enabled {
+		entry := config.ErupeConfig.Entry
+
+		si := entry.Server - 1
+		ci := entry.Land - 1
+		sid := (4096 + si*256) + (16 + ci)
+
+		c := *channelserver.NewServer(&channelserver.Config{
+			ID:          uint16(sid),
+			Logger:      logger.Named("server-" + fmt.Sprint(si) + "-channel-" + fmt.Sprint(ci)),
+			ErupeConfig: erupeConfig,
+			DB:          db,
+			Name:        entry.Name,
+			DiscordBot:  discordBot,
+		})
+
+		if entry.IP == "" {
+			c.IP = config.ErupeConfig.Host
+		} else {
+			c.IP = entry.IP
+		}
+
+		c.Port = entry.Port
+		c.GlobalID = fmt.Sprintf("%02d%02d", si, ci)
+		err = c.Start()
+
+		if err != nil {
+			preventClose(fmt.Sprintf("Server %s -> Channel: Failed to start, %s", entry.Name, err.Error()))
+		} else {
+			channels = append(channels, &c)
+			logger.Info(fmt.Sprintf("Server %s -> Channel %d (%d): Started successfully", entry.Name, entry.Land, c.Port))
+		}
+
+		for _, c := range channels {
+			_ = c.RegisterServer()
+			c.Channels = channels
+		}
+	}
+
+	if config.ErupeConfig.Channel.Enabled && !config.ErupeConfig.Entry.Enabled {
 		channelQuery := ""
 		si := 0
 		ci := 0
@@ -281,7 +322,6 @@ func main() {
 					ErupeConfig: erupeConfig,
 					DB:          db,
 					Name:        ee.Name,
-					Enable:      ce.MaxPlayers > 0,
 					DiscordBot:  discordBot,
 				})
 				if ee.IP == "" {
@@ -312,17 +352,17 @@ func main() {
 		for _, c := range channels {
 			c.Channels = channels
 		}
+	}
 
-		if erupeConfig.ServerHttp.Enabled {
-			httpContext := httpserver.HttpServerContext{
-				Servers:     channels,
-				ErupeConfig: erupeConfig,
-				Address:     fmt.Sprintf("0.0.0.0:%d", erupeConfig.ServerHttp.Port),
-				Token:       erupeConfig.ServerHttp.Token,
-			}
-
-			go httpserver.RunHttpServer(&httpContext)
+	if erupeConfig.ServerHttp.Enabled {
+		httpContext := httpserver.HttpServerContext{
+			Servers:     channels,
+			ErupeConfig: erupeConfig,
+			Address:     fmt.Sprintf("0.0.0.0:%d", erupeConfig.ServerHttp.Port),
+			Token:       erupeConfig.ServerHttp.Token,
 		}
+
+		go httpserver.RunHttpServer(&httpContext)
 	}
 
 	logger.Info("Finished starting Erupe")

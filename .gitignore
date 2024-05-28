@@ -16,6 +16,7 @@ savedata/*/
 *.bat
 
 config.json
+config-*.json
 .env
 
 logging.txt

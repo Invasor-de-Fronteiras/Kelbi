@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -12,17 +13,19 @@ import (
 
 // Config holds the global server-wide config.
 type Config struct {
-	Host             string `mapstructure:"Host"`
-	BinPath          string `mapstructure:"BinPath"`
-	DisableSoftCrash bool   // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
-	DevMode          bool
-	Sentry           Sentry
-	DevModeOptions   DevModeOptions
-	Discord          Discord
-	Database         Database
-	ServerHttp       ServerHttp
-	Launcher         Launcher
-	Sign             Sign
+	Host                        string `mapstructure:"Host"`
+	Teste                       string `mapstructure:"TESTE"`
+	BinPath                     string `mapstructure:"BinPath"`
+	DisableSoftCrash            bool   // Disables the 'Press Return to exit' dialog allowing scripts to reboot the server automatically
+	ClearAllServersFromDatabase bool   //Clear all servers and sessions from database
+	DevMode                     bool
+	Sentry                      Sentry
+	DevModeOptions              DevModeOptions
+	Discord                     Discord
+	Database                    Database
+	ServerHttp                  ServerHttp
+	Launcher                    Launcher
+	Sign                        Sign
 
 	Language               string
 	HideLoginNotice        bool     // Hide the Erupe notice on login
@@ -38,6 +41,7 @@ type Config struct {
 	SignV2   SignV2
 	Channel  Channel
 	Entrance Entrance
+	Entry    Entry
 }
 
 type PatchServer struct {
@@ -165,6 +169,17 @@ type Channel struct {
 }
 
 // Entrance holds the entrance server config.
+type Entry struct {
+	Enabled     bool
+	IP          string
+	Port        uint16
+	Server      uint16
+	Land        uint16
+	Name        string // Server name, 66 byte null terminated Shift-JIS(JP) or Big5(TW).
+	Description string // Server description
+}
+
+// Entrance holds the entrance server config.
 type Entrance struct {
 	Enabled bool
 	Port    uint16
@@ -218,6 +233,37 @@ func getOutboundIP4() net.IP {
 	return localAddr.IP.To4()
 }
 
+func BoolToString(value bool) string {
+	if value {
+		return "true"
+	}
+
+	return "false"
+}
+
+func LoadConfigFromEnv(config *Config) {
+	config.Launcher.Enabled = viper.GetBool("Launcher.Enabled")
+	config.Sign.Enabled = viper.GetBool("Sign.Enabled")
+	config.ServerHttp.Enabled = viper.GetBool("ServerHttp.Enabled")
+	config.Discord.Enabled = viper.GetBool("Discord.Enabled")
+	config.Entrance.Enabled = viper.GetBool("Entrance.Enabled")
+	config.Channel.Enabled = viper.GetBool("Channel.Enabled")
+
+	println("Launcher: " + BoolToString(config.Launcher.Enabled))
+	println("Discord: " + BoolToString(config.Discord.Enabled))
+	println("Entrance: " + BoolToString(config.Entrance.Enabled))
+	println("Channel: " + BoolToString(config.Channel.Enabled))
+	println("Launcher: " + BoolToString(config.Launcher.Enabled))
+
+	config.Entry.Enabled = viper.GetBool("Entry.Enabled")
+	config.Entry.IP = viper.GetString("Entry.IP")
+	config.Entry.Port = viper.GetUint16("Entry.Port")
+	config.Entry.Server = viper.GetUint16("Entry.Server")
+	config.Entry.Land = viper.GetUint16("Entry.Land")
+	config.Entry.Name = viper.GetString("Entry.Name")
+	config.Entry.Description = viper.GetString("Entry.Description")
+}
+
 // LoadConfig loads the given config toml file.
 func LoadConfig() (*Config, error) {
 	viper.SetConfigName("config")
@@ -234,11 +280,17 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	viper.SetEnvPrefix("ERUPE")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
 	c := &Config{}
 	err = viper.Unmarshal(c)
 	if err != nil {
 		return nil, err
 	}
+
+	LoadConfigFromEnv(c)
 
 	if c.Host == "" {
 		c.Host = getOutboundIP4().To4().String()

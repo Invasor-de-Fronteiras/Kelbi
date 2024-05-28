@@ -1,8 +1,9 @@
 version: "3.9"
 
 services:
-    
+
   db:
+    container_name: kelbi-db
     image: postgres
     environment:
       - POSTGRES_USER=postgres
@@ -10,9 +11,8 @@ services:
       - POSTGRES_DB=erupe
     ports: 
       - "5432:5432"
+    networks:
+      - kelbi
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
+networks:
+  kelbi:

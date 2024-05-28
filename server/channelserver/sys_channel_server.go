@@ -1,6 +1,7 @@
 package channelserver
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"sync"
@@ -42,7 +43,6 @@ type Config struct {
 	DiscordBot  *discordbot.DiscordBot
 	ErupeConfig *config.Config
 	Name        string
-	Enable      bool
 }
 
 // Map key type for a user binary part.
@@ -86,8 +86,7 @@ type Server struct {
 	// Discord chat integration
 	discordBot *discordbot.DiscordBot
 
-	Name   string `json:"name"`
-	Enable bool   `json:"enable"`
+	Name string `json:"name"`
 
 	raviente *Raviente
 
@@ -184,7 +183,6 @@ func NewServer(config *Config) *Server {
 		SemaphoreIndex:  7,
 		discordBot:      config.DiscordBot,
 		Name:            config.Name,
-		Enable:          config.Enable,
 		raviente:        NewRaviente(),
 	}
 
@@ -242,6 +240,37 @@ func (s *Server) Shutdown() {
 	s.listener.Close()
 
 	close(s.acceptConns)
+}
+
+func (s *Server) RegisterServer() sql.Result {
+	_ = s.db.MustExec("DELETE FROM servers WHERE server_id = $1", s.ID)
+	_ = s.db.MustExec("DELETE FROM sign_sessions WHERE server_id = $1", s.ID)
+
+	err := s.db.MustExec(`
+		INSERT INTO servers (
+			server_id,
+			season,
+			current_players,
+			world_name,
+			world_description,
+			land
+		) VALUES (
+			$1,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6
+		)`,
+		s.ID,
+		(s.erupeConfig.Entry.Server-1)%3,
+		0,
+		s.erupeConfig.Entry.Name,
+		s.erupeConfig.Entry.Description,
+		s.erupeConfig.Entry.Land,
+	)
+
+	return err
 }
 
 func (s *Server) acceptClients() {

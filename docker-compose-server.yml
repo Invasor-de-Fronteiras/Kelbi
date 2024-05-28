@@ -1,0 +1,200 @@
+version: "3.9"
+
+services:
+
+  launcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myapp:latest
+    container_name: kelbi-launcher
+    ports:
+      - "80:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+    environment:
+      - ERUPE_LAUNCHER_ENABLED=true
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  sign:
+    image: myapp:latest
+    container_name: kelbi-sign
+    ports:
+      - "53312:53312"
+    volumes:
+      - ./config-servers.json:/app/config.json
+    environment:
+      - ERUPE_SIGN_ENABLED=true
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  entrance:
+    image: myapp:latest
+    container_name: kelbi-entrance
+    ports:
+      - "53310:53310"
+    volumes:
+      - ./config-servers.json:/app/config.json
+    environment:
+      - ERUPE_ENTRANCE_ENABLED=true
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-newbie-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-newbie-land-1
+    ports:
+      - "54001:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Newbie
+      - ERUPE_ENTRY_SERVER=1
+      - ERUPE_ENTRY_LAND=1
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-normal-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-normal-land-1
+    ports:
+      - "54002:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Normal
+      - ERUPE_ENTRY_SERVER=2
+      - ERUPE_ENTRY_LAND=1
+      - ERUPE_DISCORD_ENABLED=true
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-normal-land-2:
+    image: myapp:latest
+    container_name: kelbi-channel-normal-land-2
+    ports:
+      - "54003:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Normal
+      - ERUPE_ENTRY_SERVER=2
+      - ERUPE_ENTRY_LAND=2
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-cities-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-cities-land-1
+    ports:
+      - "54004:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Cities
+      - ERUPE_ENTRY_SERVER=3
+      - ERUPE_ENTRY_LAND=1
+    depends_on:
+      - db
+    networks:
+      - kelbi
+    
+  channel-tavern-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-tavern-land-1
+    ports:
+      - "54005:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Tavern
+      - ERUPE_ENTRY_SERVER=4
+      - ERUPE_ENTRY_LAND=1
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-return-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-return-land-1
+    ports:
+      - "54006:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=Return
+      - ERUPE_ENTRY_SERVER=5
+      - ERUPE_ENTRY_LAND=1
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+  channel-mezfes-land-1:
+    image: myapp:latest
+    container_name: kelbi-channel-mezfes-land-1
+    ports:
+      - "54007:80"
+    volumes:
+      - ./config-servers.json:/app/config.json
+      - ./bin:/app/bin
+      - ./savedata:/app/savedata
+      - ./logging.txt:/app/logging.txt
+    environment:
+      - ERUPE_ENTRY_ENABLED=true
+      - ERUPE_ENTRY_PORT=80
+      - ERUPE_ENTRY_NAME=MezFes
+      - ERUPE_ENTRY_SERVER=6
+      - ERUPE_ENTRY_LAND=1
+      - ERUPE_DISCORD_ENABLED=true
+    depends_on:
+      - db
+    networks:
+      - kelbi
+
+networks:
+  kelbi:
