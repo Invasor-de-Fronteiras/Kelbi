@@ -242,6 +242,7 @@ func BoolToString(value bool) string {
 }
 
 func LoadConfigFromEnv(config *Config) {
+	// Enable Features
 	config.Launcher.Enabled = viper.GetBool("Launcher.Enabled")
 	config.Sign.Enabled = viper.GetBool("Sign.Enabled")
 	config.ServerHttp.Enabled = viper.GetBool("ServerHttp.Enabled")
@@ -249,12 +250,20 @@ func LoadConfigFromEnv(config *Config) {
 	config.Entrance.Enabled = viper.GetBool("Entrance.Enabled")
 	config.Channel.Enabled = viper.GetBool("Channel.Enabled")
 
-	println("Launcher: " + BoolToString(config.Launcher.Enabled))
-	println("Discord: " + BoolToString(config.Discord.Enabled))
-	println("Entrance: " + BoolToString(config.Entrance.Enabled))
-	println("Channel: " + BoolToString(config.Channel.Enabled))
-	println("Launcher: " + BoolToString(config.Launcher.Enabled))
+	// Ports
+	config.Launcher.Port = viper.GetInt("Launcher.Port")
+	config.Sign.Port = viper.GetInt("Sign.Port")
+	config.ServerHttp.Port = viper.GetInt("ServerHttp.Port")
+	config.Entrance.Port = viper.GetUint16("Entrance.Port")
 
+	// Database
+	config.Database.Host = viper.GetString("Database.Host")
+	config.Database.Port = viper.GetInt("Database.Port")
+	config.Database.Database = viper.GetString("Database.Database")
+	config.Database.User = viper.GetString("Database.User")
+	config.Database.Password = viper.GetString("Database.Password")
+
+	// Entry
 	config.Entry.Enabled = viper.GetBool("Entry.Enabled")
 	config.Entry.IP = viper.GetString("Entry.IP")
 	config.Entry.Port = viper.GetUint16("Entry.Port")
