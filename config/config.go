@@ -242,6 +242,8 @@ func BoolToString(value bool) string {
 }
 
 func LoadConfigFromEnv(config *Config) {
+	config.Host = viper.GetString("Host")
+
 	// Enable Features
 	config.Launcher.Enabled = viper.GetBool("Launcher.Enabled")
 	config.Sign.Enabled = viper.GetBool("Sign.Enabled")
