@@ -60,7 +60,7 @@ export function SignInForm() {
           disabled={isLoading}
         />
         <FieldInput
-          placeholder={t('login_username')}
+          placeholder={t('login_password')}
           type='password'
           isRequired
           name='password'
