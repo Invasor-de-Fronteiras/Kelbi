@@ -44,13 +44,11 @@ func jpLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) setupServerlistRoutes(r *mux.Router) {
 	// TW
-	twServerList := r.Host("mhf-n.capcom.com.tw").Subrouter()
-	twServerList.HandleFunc("/server/unique.php", serverUniqueName) // Name checking is also done on this host.
-	twServerList.Handle("/server/serverlist.xml", ServerHandlerFunc{s, serverList})
+	r.HandleFunc("/server/unique.php", serverUniqueName) // Name checking is also done on this host.
+	r.Handle("/server/serverlist.xml", ServerHandlerFunc{s, serverList})
 
 	// JP
-	jpServerList := r.Host("srv-mhf.capcom-networks.jp").Subrouter()
-	jpServerList.Handle("/serverlist.xml", ServerHandlerFunc{s, serverList})
+	r.Handle("/serverlist.xml", ServerHandlerFunc{s, serverList})
 }
 
 func (s *Server) setupOriginalLauncherRotues(r *mux.Router) {
