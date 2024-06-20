@@ -265,6 +265,13 @@ func LoadConfigFromEnv(config *Config) {
 	config.Database.User = viper.GetString("Database.User")
 	config.Database.Password = viper.GetString("Database.Password")
 
+	// PatchServers
+	config.PatchServers.En.PatchServerFile = viper.GetString("PatchServers.En.PatchServerFile")
+	config.PatchServers.En.PatchServerManifest = viper.GetString("PatchServers.En.PatchServerManifest")
+	config.PatchServers.Jp.PatchServerFile = viper.GetString("PatchServers.Jp.PatchServerFile")
+	config.PatchServers.Jp.PatchServerManifest = viper.GetString("PatchServers.Jp.PatchServerManifest")
+
+	// Discord
 	config.Discord.Enabled = viper.GetBool("Discord.Enabled")
 	config.Discord.BotToken = viper.GetString("Discord.BotToken")
 	config.Discord.ServerID = viper.GetString("Discord.ServerID")
