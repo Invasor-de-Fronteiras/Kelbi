@@ -265,6 +265,18 @@ func LoadConfigFromEnv(config *Config) {
 	config.Database.User = viper.GetString("Database.User")
 	config.Database.Password = viper.GetString("Database.Password")
 
+	config.Discord.Enabled = viper.GetBool("Discord.Enabled")
+	config.Discord.BotToken = viper.GetString("Discord.BotToken")
+	config.Discord.ServerID = viper.GetString("Discord.ServerID")
+	config.Discord.RealtimeChannelID = viper.GetString("Discord.RealtimeChannelID")
+	config.Discord.LogsChannelID = viper.GetString("Discord.LogsChannelID")
+	config.Discord.DevMode = viper.GetBool("Discord.DevMode")
+
+	roles := os.Getenv("ERUPE_DISCORD_DEV_ROLES")
+	if roles != "" {
+		config.Discord.DevRoles = strings.Split(roles, ",")
+	}
+
 	// Entry
 	config.Entry.Enabled = viper.GetBool("Entry.Enabled")
 	config.Entry.IP = viper.GetString("Entry.IP")
