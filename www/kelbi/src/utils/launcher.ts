@@ -122,7 +122,7 @@ export function getCharacters(): Character[] {
       lastLogin: parseCharLastLogin(attributes?.lastLogin?.value),
     };
 
-    chars.push(char);
+    chars.unshift(char);
   }
 
   return chars;
