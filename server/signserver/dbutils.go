@@ -65,7 +65,7 @@ type character struct {
 
 func (s *Server) getCharactersForUser(uid int) ([]character, error) {
 	characters := make([]character, 0)
-	err := s.db.Select(&characters, "SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = $1 AND deleted = false ORDER BY id", uid)
+	err := s.db.Select(&characters, "SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = $1 AND deleted = false ORDER BY last_login DESC", uid)
 	if err != nil {
 		return nil, err
 	}

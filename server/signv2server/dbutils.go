@@ -113,7 +113,7 @@ func (s *Server) getCharactersForUser(ctx context.Context, uid int) ([]Character
 		ctx, &characters, `
 		SELECT id, name, is_female, weapon_type, hrp, gr, last_login
 		FROM characters
-		WHERE user_id = $1 AND deleted = false AND is_new_character = false ORDER BY id ASC`,
+		WHERE user_id = $1 AND deleted = false AND is_new_character = false ORDER BY last_login DESC`,
 		uid,
 	)
 	if err != nil {
