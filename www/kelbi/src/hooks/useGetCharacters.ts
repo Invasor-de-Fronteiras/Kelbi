@@ -48,7 +48,7 @@ export function useGetCharacters(): GetCharacterHook {
         });
 
         characters.sort((a, b) =>
-          a.lastLogin > b.lastLogin ? 1 : a.lastLogin < b.lastLogin ? -1 : 0,
+          a.lastLogin > b.lastLogin ? -1 : a.lastLogin < b.lastLogin ? 1 : 0,
         );
 
         setState({
