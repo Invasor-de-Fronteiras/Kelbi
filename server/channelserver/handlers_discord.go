@@ -110,7 +110,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		questEmoji := ":black_circle:"
-		isQuest := stage.isQuest()
+		isQuest := stage.IsQuest()
 
 		if isQuest && len(questEmojis) > 0 {
 			questEmoji = questEmojis[len(questEmojis)-1]
@@ -163,7 +163,7 @@ func debug(s *Server) string {
 	list := ""
 
 	for _, stage := range s.Stages {
-		if !stage.isQuest() && len(stage.Objects) == 0 {
+		if !stage.IsQuest() && len(stage.Objects) == 0 {
 			continue
 		}
 
@@ -171,13 +171,13 @@ func debug(s *Server) string {
 		isQuest := "false"
 		hasDeparted := "false"
 
-		if stage.isQuest() {
+		if stage.IsQuest() {
 			isQuest = "true"
 		}
 
 		list += fmt.Sprintf("    '-> isQuest: %s\n", isQuest)
 
-		if stage.isQuest() {
+		if stage.IsQuest() {
 			if len(stage.Sessions) > 0 {
 				hasDeparted = "true"
 			}
@@ -210,7 +210,7 @@ func questlist(s *Server) string {
 	list := ""
 
 	for _, stage := range s.Stages {
-		if !stage.isQuest() {
+		if !stage.IsQuest() {
 			continue
 		}
 

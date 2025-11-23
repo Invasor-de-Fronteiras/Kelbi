@@ -100,7 +100,7 @@ func (s *Stage) isCharInQuestByID(charID uint32) bool {
 	return false
 }
 
-func (s *Stage) isQuest() bool {
+func (s *Stage) IsQuest() bool {
 	return len(s.ReservedClientSlots) > 0 && len(s.QuestFilename) > 0
 }
 

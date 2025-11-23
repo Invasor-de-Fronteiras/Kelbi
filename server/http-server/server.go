@@ -40,6 +40,16 @@ type SessionJSON struct {
 	ServerId uint16                 `json:"serverId"`
 }
 
+type QuestJSON struct {
+	StageId             string   `json:"stageId"`
+	ReservedClientSlots uint     `json:"reservedClientSlots"`
+	MaxPlayers          uint16   `json:"maxPlayers"`
+	QuestFilename       string   `json:"questFilename"`
+	HasDeparted         bool     `json:"hasDeparted"`
+	CreatedAt           string   `json:"createdAt"`
+	Chars               []uint32 `json:"chars"`
+}
+
 func authMiddleware(token string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("access_token")
@@ -169,6 +179,38 @@ func RunHttpServer(context *HttpServerContext) {
 		}
 
 		c.IndentedJSON(http.StatusOK, data)
+	})
+
+	router.GET("/quests", func(c *gin.Context) {
+		quests := []QuestJSON{}
+
+		for _, server := range context.Servers {
+			for _, stage := range server.Stages {
+				if !stage.IsQuest() {
+					continue
+				}
+
+				chars := []uint32{}
+
+				for charid := range stage.ReservedClientSlots {
+					chars = append(chars, charid)
+				}
+
+				quest := QuestJSON{
+					StageId:             stage.Id,
+					ReservedClientSlots: uint(len(stage.ReservedClientSlots)),
+					MaxPlayers:          stage.MaxPlayers,
+					QuestFilename:       stage.QuestFilename,
+					HasDeparted:         len(stage.Sessions) > 0,
+					CreatedAt:           stage.CreatedAt,
+					Chars:               chars,
+				}
+
+				quests = append(quests, quest)
+			}
+		}
+
+		c.IndentedJSON(http.StatusOK, quests)
 	})
 
 	router.POST("/chars/:char_id/disconnect", func(c *gin.Context) {
