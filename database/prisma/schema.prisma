@@ -617,9 +617,9 @@ model users {
   frontier_points  Int?
   psn_id           String?
   wiiu_key         String?
-  accounts         accounts?          @relation(fields: [account_id], references: [id], onDelete: Restrict, map: "User_account_id_fkey")
   characters       characters[]
   user_connections user_connections[]
+  accounts         accounts?          @relation(fields: [account_id], references: [id], onDelete: Restrict, map: "User_account_id_fkey")
 }
 
 model warehouse {
@@ -668,6 +668,33 @@ model warehouse {
   equip9name   String?
   created_at   DateTime @default(now())
   updated_at   DateTime @default(now())
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model quest_records {
+  record_id    String             @db.Uuid
+  quest_id     Int
+  period       QuestPeriod
+  season       QuestSeason
+  user_id      Int
+  character_id Int
+  party_size   Int                @db.SmallInt
+  weapon_type  Int
+  guild_id     Int?
+  status       QuestRecordStatus?
+  frames       Int
+  time         Int
+  started_at   DateTime
+  finished_at  DateTime           @default(now())
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @default(now())
+
+  @@index([character_id], map: "idx_quest_records_character_id")
+  @@index([quest_id], map: "idx_quest_records_quest_id")
+  @@index([quest_id, record_id], map: "idx_quest_records_quest_id_record_id")
+  @@index([record_id], map: "idx_quest_records_record_id")
+  @@index([user_id], map: "idx_quest_records_user_id")
+  @@ignore
 }
 
 enum ConnectionProviders {
@@ -719,4 +746,10 @@ enum logkind {
 enum prize_type {
   personal
   guild
+}
+
+enum QuestRecordStatus {
+  COMPLETED
+  FAILED
+  RETURNED
 }

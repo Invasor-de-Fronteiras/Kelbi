@@ -338,6 +338,11 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 			tmp.SetLE()
 			frame := tmp.ReadUint32()
 			sendServerChatMessage(s, fmt.Sprintf("TIME : %d'%d.%03d (%dframe)", frame/30/60, frame/30%60, int(math.Round(float64(frame%30*100)/3)), frame))
+
+			if s.Stage != nil {
+				fmt.Printf("Quest Finished: %s\n", s.Stage.QuestFilename)
+				SaveQuestRecord(s, frame, "COMPLETED")
+			}
 		}
 	}
 

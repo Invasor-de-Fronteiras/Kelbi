@@ -3,6 +3,10 @@ package channelserver
 import (
 	// "encoding/hex"
 	"fmt"
+	"math"
+	"strconv"
+	"time"
+
 	//nolint:staticcheck
 	"io/ioutil"
 	"os"
@@ -66,6 +70,8 @@ func handleMsgSysGetFile(s *Session, p mhfpacket.MHFPacket) {
 				if err_bin != nil {
 					s.logger.Fatal(fmt.Sprintf("Failed to open quest file: quests/%s.bin", pkt.Filename), zap.Error(err_bin))
 				}
+
+				s.Stage.CreatedAt = time.Now().UTC()
 				doAckBufSucceed(s, pkt.AckHandle, quest)
 				return
 			}
@@ -171,4 +177,76 @@ func handleMsgMhfGetUdBonusQuestInfo(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+func IdFromFilename(id string) (questId uint64, period string, season string, err error) {
+	questId, _ = strconv.ParseUint(id[0:5], 10, 32)
+
+	if string(id[5]) == "d" {
+		period = "DAY"
+	} else {
+		period = "NIGHT"
+	}
+
+	seasonId, _ := strconv.ParseUint(string(id[6]), 10, 32)
+
+	switch seasonId {
+	case 0:
+		season = "WARM"
+	case 1:
+		season = "COLD"
+	default:
+		season = "BREED"
+	}
+
+	return
+}
+
+func SaveQuestRecord(s *Session, frames uint32, status string) {
+	questId, period, season, _ := IdFromFilename(s.Stage.QuestFilename)
+	time := int(math.Round(float64(frames) * 1000.0 / 30.0))
+
+	char, err := s.Server.GetCharacterById(int(s.CharID))
+
+	if err != nil {
+		s.logger.Error("Failed to register quest record", zap.Error(err))
+		return
+	}
+
+	_, err = s.Server.db.Exec(
+		`
+			INSERT INTO quest_records(
+				record_id,
+				quest_id,
+				period,
+				season,
+				user_id,
+				character_id,
+				party_size,
+				weapon_type,
+				guild_id,
+				status,
+				frames,
+				"time",
+				started_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+		`,
+		s.Stage.QuestRecordId,
+		questId,
+		period,
+		season,
+		char.UserId,
+		char.ID,
+		len(s.Stage.ReservedClientSlots),
+		char.WeaponType,
+		s.PrevGuildID,
+		status,
+		frames,
+		time,
+		s.Stage.CreatedAt,
+	)
+
+	if err != nil {
+		s.logger.Error("Failed to register quest record", zap.Error(err))
+	}
 }
