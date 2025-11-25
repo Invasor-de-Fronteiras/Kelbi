@@ -244,6 +244,7 @@ model gacha_entries {
   rolls           Int?
   frontier_points Int?
   daily_limit     Int?
+  position        Int  @default(1)
 }
 
 model gacha_items {
@@ -252,6 +253,7 @@ model gacha_items {
   item_type Int?
   item_id   Int?
   quantity  Int?
+  position  Int  @default(1)
 }
 
 model gacha_shop {
@@ -265,6 +267,7 @@ model gacha_shop {
   wide          Boolean?
   recommended   Boolean?
   gacha_type    Int?
+  position      Int      @default(1)
   hidden        Boolean?
 }
 
@@ -520,6 +523,7 @@ model shop_items {
   max_quantity Int?
   road_floors  Int?
   road_fatalis Int?
+  position     Int      @default(1)
   enable_weeks String?  @db.VarChar(8)
   created_at   DateTime @default(now())
   updated_at   DateTime @default(now())
