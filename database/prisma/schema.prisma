@@ -621,6 +621,7 @@ model users {
   frontier_points  Int?
   psn_id           String?
   wiiu_key         String?
+  patch_server_url String?
   characters       characters[]
   user_connections user_connections[]
   accounts         accounts?          @relation(fields: [account_id], references: [id], onDelete: Restrict, map: "User_account_id_fkey")

@@ -93,9 +93,10 @@ func (s *Session) authenticate(username string, password string) {
 	var id int
 	var hash string
 	var lang string
+	var patchServerUrl *string
 	bf := byteframe.NewByteFrame()
 
-	err := s.server.db.QueryRow("SELECT id, password, language FROM users WHERE username = $1", username).Scan(&id, &hash, &lang)
+	err := s.server.db.QueryRow("SELECT id, password, language, patch_server_url FROM users WHERE username = $1", username).Scan(&id, &hash, &lang, &patchServerUrl)
 	switch {
 	case err == sql.ErrNoRows:
 		s.logger.Info("User not found", zap.String("Username", username))
@@ -103,7 +104,7 @@ func (s *Session) authenticate(username string, password string) {
 			s.logger.Info("Creating user", zap.String("Username", username))
 			id, err = s.server.registerDBAccount(username, password)
 			if err == nil {
-				bf.WriteBytes(s.makeSignResponse(id, "EN"))
+				bf.WriteBytes(s.makeSignResponse(id, "EN", patchServerUrl))
 			}
 		} else {
 			bf.WriteUint8(uint8(SIGN_EAUTH))
@@ -142,7 +143,7 @@ func (s *Session) authenticate(username string, password string) {
 			// 	serverRespBytes = makeSignInFailureResp(SIGN_EABORT)
 			// 	break
 			// }
-			bf.WriteBytes(s.makeSignResponse(id, lang))
+			bf.WriteBytes(s.makeSignResponse(id, lang, patchServerUrl))
 		} else {
 			s.logger.Warn("Incorrect password")
 			bf.WriteUint8(uint8(SIGN_EPASS))
