@@ -5,6 +5,7 @@ import (
 	"erupe-ce/server/channelserver"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,13 +42,13 @@ type SessionJSON struct {
 }
 
 type QuestJSON struct {
-	StageId             string   `json:"stageId"`
-	ReservedClientSlots uint     `json:"reservedClientSlots"`
-	MaxPlayers          uint16   `json:"maxPlayers"`
-	QuestFilename       string   `json:"questFilename"`
-	HasDeparted         bool     `json:"hasDeparted"`
-	CreatedAt           string   `json:"createdAt"`
-	Chars               []uint32 `json:"chars"`
+	StageId             string    `json:"stageId"`
+	ReservedClientSlots uint      `json:"reservedClientSlots"`
+	MaxPlayers          uint16    `json:"maxPlayers"`
+	QuestFilename       string    `json:"questFilename"`
+	HasDeparted         bool      `json:"hasDeparted"`
+	CreatedAt           time.Time `json:"createdAt"`
+	Chars               []uint32  `json:"chars"`
 }
 
 func authMiddleware(token string) gin.HandlerFunc {

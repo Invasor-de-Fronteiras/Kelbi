@@ -1,9 +1,9 @@
 package launcherserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
-	"io"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -97,16 +97,20 @@ func (s *Server) setupCustomLauncherRotues(r *mux.Router) {
 }
 
 func (s *Server) getPatchServerVersion(serverUrl string) []byte {
-	resp, err := http.Get(fmt.Sprintf("http://%s/version.txt", serverUrl))
-
+	resp, err := http.Get(fmt.Sprintf("http://%s/version", serverUrl))
 	if err != nil {
 		return nil
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	defer resp.Body.Close()
+
+	var payload struct {
+		Version string `json:"version"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return nil
 	}
 
-	return body
+	return []byte(payload.Version)
 }

@@ -5,16 +5,21 @@
   "main": "index.js",
   "scripts": {
     "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
     "migrate:new": "prisma migrate dev --create-only",
+    "migrate": "npx prisma migrate deploy",
     "prisma": "prisma"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "prisma": "^4.1.1"
-  },
   "dependencies": {
-    "@prisma/client": "^3.13.0"
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "dotenv": "^17.2.3",
+    "prisma": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
   }
 }

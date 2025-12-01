@@ -1,5 +1,0 @@
-BEGIN;
-
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS wiiu_key TEXT;
-
-END;

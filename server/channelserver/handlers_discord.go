@@ -11,6 +11,7 @@ import (
 
 type Character struct {
 	ID             uint32 `db:"id"`
+	UserId         uint32 `db:"user_id"`
 	IsFemale       bool   `db:"is_female"`
 	IsNewCharacter bool   `db:"is_new_character"`
 	Name           string `db:"name"`
@@ -38,9 +39,9 @@ var weapons = []string{
 	"<:ms:970861408411594842>",
 }
 
-func (s *Server) getCharacterForUser(uid int) (*Character, error) {
+func (s *Server) GetCharacterById(uid int) (*Character, error) {
 	character := Character{}
-	err := s.db.Get(&character, "SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login  FROM characters WHERE id = $1", uid)
+	err := s.db.Get(&character, "SELECT id, user_id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login  FROM characters WHERE id = $1", uid)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +119,7 @@ func getPlayerList(s *Server) ([]ListPlayer, int) {
 		}
 
 		for _, client := range stage.Sessions {
-			char, err := s.getCharacterForUser(int(client.CharID))
+			char, err := s.GetCharacterById(int(client.CharID))
 			if err == nil {
 				if len(char.Name) > bigNameLen {
 					bigNameLen = len(char.Name)
@@ -186,7 +187,7 @@ func debug(s *Server) string {
 			list += fmt.Sprintf("    '-> reserveSlots (%d/%d)\n", len(stage.ReservedClientSlots), stage.MaxPlayers)
 
 			for charid := range stage.ReservedClientSlots {
-				char, err := s.getCharacterForUser(int(charid))
+				char, err := s.GetCharacterById(int(charid))
 				if err == nil {
 					list += fmt.Sprintf("        '-> %s\n", char.Name)
 				}
@@ -221,7 +222,7 @@ func questlist(s *Server) string {
 		list += fmt.Sprintf("    '-> StageId: %s (%d/%d) %s %s - %s\n", stage.Id, len(stage.ReservedClientSlots), stage.MaxPlayers, stage.QuestFilename, hasDeparted, stage.CreatedAt)
 
 		for charid := range stage.ReservedClientSlots {
-			char, err := s.getCharacterForUser(int(charid))
+			char, err := s.GetCharacterById(int(charid))
 			if err == nil {
 				list += fmt.Sprintf("        '-> %s\n", char.Name)
 			}

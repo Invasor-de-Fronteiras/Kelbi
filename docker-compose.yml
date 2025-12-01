@@ -8,11 +8,16 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=erupe
+      - POSTGRES_DB=kelbi-dev
     ports: 
       - "5432:5432"
     networks:
       - kelbi
+    volumes:
+      - kelbi_db_data:/var/lib/postgresql/18/main
+
+volumes:
+  kelbi_db_data:
 
 networks:
   kelbi:

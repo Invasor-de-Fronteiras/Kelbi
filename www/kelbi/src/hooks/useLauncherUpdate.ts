@@ -14,7 +14,7 @@ interface LauncherUpdateHook {
 const getCurrentVersion = () => {
   try {
     const xmlHttp = new XMLHttpRequest();
-    xmlHttp.open('GET', 'http://cog-members.mhf-z.jp/version', false);
+    xmlHttp.open('GET', 'http://launcher.arcamh.com/version', false);
     xmlHttp.send(null);
     if (xmlHttp.status === 404) {
       return null;

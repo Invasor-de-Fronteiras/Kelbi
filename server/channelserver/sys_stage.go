@@ -6,6 +6,8 @@ import (
 
 	"erupe-ce/common/byteframe"
 	"erupe-ce/network/mhfpacket"
+
+	"github.com/google/uuid"
 )
 
 // Object holds infomation about a specific object.
@@ -48,10 +50,11 @@ type Stage struct {
 	RawBinaryData map[StageBinaryKey][]byte `json:"-"`
 
 	host          *Session
-	MaxPlayers    uint16 `json:"maxPlayers"`
-	Password      string `json:"password"`
-	CreatedAt     string `json:"createdAt"`
-	QuestFilename string `json:"questFilename"`
+	MaxPlayers    uint16    `json:"maxPlayers"`
+	Password      string    `json:"password"`
+	CreatedAt     time.Time `json:"createdAt"`
+	QuestFilename string    `json:"questFilename"`
+	QuestRecordId string    `json:"questRecordId"`
 }
 
 // NewStage creates a new stage with intialized values.
@@ -64,7 +67,8 @@ func NewStage(ID string) *Stage {
 		ObjectIndex:         0,
 		RawBinaryData:       make(map[StageBinaryKey][]byte),
 		MaxPlayers:          4,
-		CreatedAt:           time.Now().Format("01-02-2006 15:04:05"),
+		CreatedAt:           time.Now().UTC(),
+		QuestRecordId:       uuid.New().String(),
 	}
 	return s
 }

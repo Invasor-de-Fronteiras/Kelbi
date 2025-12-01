@@ -19,7 +19,14 @@ func makeSignInFailureResp(respID RespID) []byte {
 	return bf.Data()
 }
 
-func (s *Session) getPatchServerByLanguage(language string) config.PatchServer {
+func (s *Session) getPatchServerUrl(language string, patchServerUrl *string) config.PatchServer {
+	if patchServerUrl != nil && *patchServerUrl != "" {
+		return config.PatchServer{
+			PatchServerManifest: *patchServerUrl,
+			PatchServerFile:     *patchServerUrl,
+		}
+	}
+
 	if language == "JP" {
 		return s.server.erupeConfig.PatchServers.Jp
 	}
@@ -27,7 +34,7 @@ func (s *Session) getPatchServerByLanguage(language string) config.PatchServer {
 	return s.server.erupeConfig.PatchServers.En
 }
 
-func (s *Session) makeSignResponse(uid int, language string) []byte {
+func (s *Session) makeSignResponse(uid int, language string, patchServerUrl *string) []byte {
 	// Get the characters from the DB.
 	chars, err := s.server.getCharactersForUser(uid)
 	if len(chars) == 0 {
@@ -47,7 +54,7 @@ func (s *Session) makeSignResponse(uid int, language string) []byte {
 	bf := byteframe.NewByteFrame()
 
 	bf.WriteUint8(uint8(SIGN_SUCCESS)) // resp_code
-	patchServer := s.getPatchServerByLanguage(language)
+	patchServer := s.getPatchServerUrl(language, patchServerUrl)
 	if (patchServer.PatchServerManifest != "" && patchServer.PatchServerFile != "") || s.client == PS3 {
 		bf.WriteUint8(2)
 	} else {
