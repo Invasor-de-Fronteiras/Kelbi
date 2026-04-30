@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Loading } from '../components/Loading';
+import type { Server } from '../utils/launcher';
 
 interface LauncherContextProps {
   showDebugger: boolean;
@@ -8,6 +9,8 @@ interface LauncherContextProps {
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   setLoggedIn: (loggedIn: boolean) => void;
+  selectedServer: Server | null;
+  setSelectedServer: (server: Server) => void;
 }
 
 const LauncherContext = createContext({} as LauncherContextProps);
@@ -16,6 +19,7 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [showDebugger, setShowDebugger] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<Server | null>(null);
 
   return (
     <LauncherContext.Provider
@@ -26,6 +30,8 @@ export function LauncherProvider({ children }: { children: React.ReactNode }) {
         loggedIn,
         setLoggedIn,
         setIsLoading,
+        selectedServer,
+        setSelectedServer,
       }}
     >
       {children}
