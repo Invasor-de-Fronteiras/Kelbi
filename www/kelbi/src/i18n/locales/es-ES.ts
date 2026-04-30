@@ -26,4 +26,6 @@ export const esESLocales = {
   select_char_keep_account: 'Continuar conectado',
   new_char_loading: 'Creando nuevo personaje...',
   loading: 'Cargando...',
+  select_server_title: 'Selecione el servidor',
+  select_server_enter: 'Entrar',
 };

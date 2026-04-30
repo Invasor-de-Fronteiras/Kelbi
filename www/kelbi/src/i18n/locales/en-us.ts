@@ -25,4 +25,6 @@ export const enUSLocales = {
   select_char_keep_account: 'Keep connect',
   new_char_loading: 'Creating a new character...',
   loading: 'Loading...',
+  select_server_title: 'Select Server',
+  select_server_enter: 'Enter',
 };
