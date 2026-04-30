@@ -27,4 +27,5 @@ export const jaLocales = {
   loading: '読み込み中・・・',
   select_server_title: 'サーバーを選択してください',
   select_server_enter: '接続',
+  select_server_cancel: 'キャンセル',
 };

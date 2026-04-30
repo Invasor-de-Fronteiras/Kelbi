@@ -27,4 +27,5 @@ export const enUSLocales = {
   loading: 'Loading...',
   select_server_title: 'Select Server',
   select_server_enter: 'Enter',
+  select_server_cancel: 'Cancel',
 };

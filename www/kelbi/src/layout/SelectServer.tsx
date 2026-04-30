@@ -4,9 +4,13 @@ import { useLauncher } from '../context/LauncherContext';
 import { useTranslate } from '../i18n/useTranslate';
 import { Server, getServerList } from '../utils/launcher';
 
-export function SelectServer() {
+interface SelectServerProps {
+  onClose?: () => void;
+}
+
+export function SelectServer({ onClose }: SelectServerProps) {
   const { t } = useTranslate();
-  const { setSelectedServer } = useLauncher();
+  const { setSelectedServer, selectedServer } = useLauncher();
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
@@ -14,16 +18,19 @@ export function SelectServer() {
     const list = getServerList();
     setServers(list);
 
-    if (list.length === 1) {
+    if (list.length === 1 && !onClose) {
       window.external.setIniLastServerIndex(list[0].idx);
       setSelectedServer(list[0]);
       return;
     }
 
     if (list.length > 0) {
-      const lastIdx = window.external.getIniLastServerIndex();
-      const remembered = list.find((s) => s.idx === lastIdx);
-      setSelectedIdx(remembered ? remembered.idx : list[0].idx);
+      const preferredIdx =
+        onClose && selectedServer != null
+          ? selectedServer.idx
+          : window.external.getIniLastServerIndex();
+      const preferred = list.find((s) => s.idx === preferredIdx);
+      setSelectedIdx(preferred ? preferred.idx : list[0].idx);
     }
   }, []);
 
@@ -32,6 +39,7 @@ export function SelectServer() {
     if (!server) return;
     window.external.setIniLastServerIndex(server.idx);
     setSelectedServer(server);
+    if (onClose) onClose();
   };
 
   return (
@@ -59,6 +67,9 @@ export function SelectServer() {
       <Button onClick={handleEnter} disabled={selectedIdx === null}>
         {t('select_server_enter')}
       </Button>
+      {onClose && (
+        <Button onClick={onClose}>{t('select_server_cancel')}</Button>
+      )}
     </div>
   );
 }

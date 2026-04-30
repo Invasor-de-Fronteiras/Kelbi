@@ -28,4 +28,5 @@ export const esESLocales = {
   loading: 'Cargando...',
   select_server_title: 'Selecione el servidor',
   select_server_enter: 'Entrar',
+  select_server_cancel: 'Cancelar',
 };
