@@ -8,14 +8,29 @@ import (
 
 	"github.com/gorilla/mux"
 	//"github.com/julienschmidt/httprouter"
+	"erupe-ce/config"
 )
 
 func serverList(s *Server, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w,
-		`<?xml version="1.0"?><server_groups><group idx='0' nam='Erupe' ip='%s' port="%d"/></server_groups>`,
-		s.erupeConfig.Host,
-		s.erupeConfig.Sign.Port,
-	)
+	servers := s.erupeConfig.Launcher.Servers
+	if len(servers) == 0 {
+		servers = []config.LauncherServer{{
+			Name: "Kelbi",
+			IP:   s.erupeConfig.Host,
+			Port: s.erupeConfig.Sign.Port,
+		}}
+	}
+
+	var groups string
+	for i, srv := range servers {
+		ip := srv.IP
+		if ip == "" {
+			ip = s.erupeConfig.Host
+		}
+		groups += fmt.Sprintf("<group idx='%d' nam='%s' ip='%s' port='%d'/>", i, srv.Name, ip, srv.Port)
+	}
+
+	fmt.Fprintf(w, `<?xml version="1.0"?><server_groups>%s</server_groups>`, groups)
 }
 
 func serverUniqueName(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +64,7 @@ func (s *Server) setupServerlistRoutes(r *mux.Router) {
 
 	// JP
 	r.Handle("/serverlist.xml", ServerHandlerFunc{s, serverList})
+
 }
 
 func (s *Server) setupOriginalLauncherRotues(r *mux.Router) {
