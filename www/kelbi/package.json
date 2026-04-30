@@ -6,7 +6,7 @@
   "scripts": {
     "webpack": "webpack",
     "web": "cross-env NODE_ENV=development webpack serve --open",
-    "build": "cross-env NODE_ENV=production webpack --mode production",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=production webpack --mode production",
     "lint": "npx eslint --ext .tsx,.ts --fix ./src",
     "format": "prettier --write \"./**/*.{json,css,js,yml}\"",
     "test": "echo \"Error: no test specified\" && exit 1",

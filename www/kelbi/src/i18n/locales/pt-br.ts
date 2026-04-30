@@ -2,7 +2,7 @@ export const ptBRLocales = {
   login_username: 'Nome de usuário',
   login_password: 'Senha',
   login_keep: 'manter login',
-  login_title: 'awd login',
+  login_title: 'Fazer login',
   login_btn: 'Entrar',
   login_error_title: 'Oops!',
   login_field_required: 'Campo obrigatório.',
