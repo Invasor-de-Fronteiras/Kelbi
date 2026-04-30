@@ -87,7 +87,11 @@ func (s *Session) makeSignResponse(uid int, language string, patchServerUrl *str
 		}
 		bf.WriteUint32(char.ID)
 
-		// Exp, HR[x] is split by 0, 1, 30, 50, 99, 299, 998, 999
+		// HRP thresholds: 0, 1, 30, 50, 99, 299, 998, 999 → HR1–HR7.
+		// MaxLauncherHR forces HRP=999 so all players appear in the same entrance
+		// hall regardless of rank. Without it, low-HR players land in a beginner
+		// hall and cannot see the senior channels. Side effect: the launcher always
+		// displays HR7 for every character.
 		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.MaxLauncherHR {
 			bf.WriteUint16(999)
 		} else {
