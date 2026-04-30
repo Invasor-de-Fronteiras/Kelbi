@@ -48,14 +48,18 @@ if (process.env.NODE_ENV === 'development') {
     return '_MHF_NORMAL';
   };
 
-  window.external.getIniLastServerIndex = (): unknown => {
-    // console.log('getIniLastServerIndex');
-    return;
+  let lastServerIndex = 0;
+
+  window.external.getIniLastServerIndex = (): number => {
+    return lastServerIndex;
+  };
+
+  window.external.setIniLastServerIndex = (idx: number): void => {
+    lastServerIndex = idx;
   };
 
   window.external.getServerListXml = (): string => {
-    // console.log('getServerListXml');
-    return `<?xml version="1.0"?><server_groups><group idx='0' nam='Erupe' ip='0.0.0.0' port="53312"/></server_groups>`;
+    return `<?xml version="1.0"?><server_groups><group idx='0' nam='Kelbi' ip='127.0.0.1' port='53312'/><group idx='1' nam='Kelbi Test' ip='127.0.0.2' port='53312'/></server_groups>`;
   };
 
   window.external.getMhfMutexNumber = (): number => {

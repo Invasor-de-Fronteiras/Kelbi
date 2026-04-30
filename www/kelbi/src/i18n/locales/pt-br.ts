@@ -25,4 +25,7 @@ export const ptBRLocales = {
   select_char_keep_account: 'Continuar conectado',
   new_char_loading: 'Criando novo personagem...',
   loading: 'Carregando...',
+  select_server_title: 'Selecione o servidor',
+  select_server_enter: 'Entrar',
+  select_server_cancel: 'Cancelar',
 };

@@ -12,7 +12,8 @@ declare global {
     closeWindow(): void;
     getAccountRights(): string;
     getMhfBootMode(): BoostModeTypes;
-    getIniLastServerIndex(): unknown;
+    getIniLastServerIndex(): number;
+    setIniLastServerIndex(idx: number): void;
     getServerListXml(): string;
     getMhfMutexNumber(): number;
     getUserId(): string;
@@ -250,4 +251,33 @@ export function createNewCharacter(
   } catch (error) {
     onError(error);
   }
+}
+
+export interface Server {
+  idx: number;
+  name: string;
+  ip: string;
+  port: number;
+}
+
+export function getServerList(): Server[] {
+  const xml = window.external.getServerListXml();
+  if (!xml) return [];
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'text/xml');
+  const groups = doc.getElementsByTagName('group');
+
+  const servers: Server[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    servers.push({
+      idx: parseInt(g.getAttribute('idx') ?? '0', 10),
+      name: g.getAttribute('nam') ?? '',
+      ip: g.getAttribute('ip') ?? '',
+      port: parseInt(g.getAttribute('port') ?? '0', 10),
+    });
+  }
+
+  return servers;
 }
