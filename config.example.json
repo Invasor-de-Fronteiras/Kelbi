@@ -130,7 +130,8 @@
     "Path": "./www/kelbi/build",
     "Enabled": true,
     "Port": 80,
-    "UseOriginalLauncherFiles": false
+    "UseOriginalLauncherFiles": false,
+    "Servers": []
   },
   "Sign": {
     "Enabled": true,

@@ -139,12 +139,20 @@ type ServerHttp struct {
 	Enabled bool
 }
 
+// LauncherServer represents one server entry in the serverlist.xml.
+type LauncherServer struct {
+	Name string
+	IP   string
+	Port int
+}
+
 // Launcher holds the launcher server config.
 type Launcher struct {
 	Enabled                  bool // Enables the launcher server to be served on port 80
 	Path                     string
 	Port                     int
 	UseOriginalLauncherFiles bool
+	Servers                  []LauncherServer
 }
 
 // Sign holds the sign server config.
